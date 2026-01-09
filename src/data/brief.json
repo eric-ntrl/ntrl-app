@@ -1,0 +1,30 @@
+{
+  "generated_at": "2025-12-14T21:00:00-05:00",
+  "sections": [
+    {
+      "key": "world",
+      "title": "Worldwide",
+      "items": [
+        {
+          "id": "w-001",
+          "source": "BBC",
+          "published_at": "2025-12-14T16:20:00Z",
+          "headline": "Leaders meet to discuss regional ceasefire framework",
+          "summary": "Officials held talks on a proposed framework; key terms are still unresolved.",
+          "url": "https://example.com/story",
+          "detail": {
+            "what_happened": "Officials met and outlined a draft ceasefire framework.",
+            "why_it_matters": "If adopted, it could reduce near-term escalation and open aid corridors.",
+            "known": ["Talks occurred", "A draft framework was discussed"],
+            "uncertain": ["Whether parties will sign", "Timeline for implementation"],
+            "removed": ["sensational adjectives", "speculation presented as fact"]
+          }
+        }
+      ]
+    },
+    { "key": "us", "title": "U.S.", "items": [] },
+    { "key": "phl", "title": "Philadelphia", "items": [] },
+    { "key": "tech", "title": "Tech & AI", "items": [] },
+    { "key": "markets", "title": "Financial Markets", "items": [] }
+  ]
+}
