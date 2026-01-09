@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import brief from '../data/brief';
+import { fetchBrief } from '../api';
 import { colors, typography, spacing, layout } from '../theme';
 import type { Item, Section, Brief } from '../types';
 
@@ -151,13 +153,75 @@ function EndOfFeed({
   );
 }
 
+function LoadingState() {
+  return (
+    <View style={styles.loadingState}>
+      <ActivityIndicator size="large" color={colors.textMuted} />
+      <Text style={styles.loadingText}>Loading your brief...</Text>
+    </View>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyMessage}>{message}</Text>
+      <Pressable
+        style={({ pressed }) => [
+          styles.retryButton,
+          pressed && styles.retryButtonPressed,
+        ]}
+        onPress={onRetry}
+      >
+        <Text style={styles.retryButtonText}>Try Again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function FeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadBrief = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      const data = await fetchBrief();
+      setBrief(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load brief';
+      if (message.includes('No daily brief available')) {
+        setError('No stories yet. Check back later.');
+      } else {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBrief();
+  }, [loadBrief]);
+
+  const onRefresh = useCallback(() => {
+    loadBrief(true);
+  }, [loadBrief]);
 
   // Use current time as anchor for all calculations
   const now = useMemo(() => new Date(), []);
   const headerDate = formatHeaderDate(now);
-  const rows = useMemo(() => flatten(brief, now), [now]);
+  const rows = useMemo(() => (brief ? flatten(brief, now) : []), [brief, now]);
 
   const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {
@@ -195,7 +259,11 @@ export default function FeedScreen({ navigation }: Props) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <Header date={headerDate} />
 
-      {!hasContent ? (
+      {loading && !brief ? (
+        <LoadingState />
+      ) : error && !brief ? (
+        <ErrorState message={error} onRetry={() => loadBrief()} />
+      ) : !hasContent ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyMessage}>No new updates right now.</Text>
           <Pressable
@@ -221,6 +289,13 @@ export default function FeedScreen({ navigation }: Props) {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.textMuted}
+            />
+          }
         />
       )}
     </View>
@@ -334,6 +409,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
+  // Loading state
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: layout.screenPadding,
+  },
+  loadingText: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: colors.textMuted,
+    marginTop: spacing.lg,
+  },
+
   // Empty state
   emptyState: {
     flex: 1,
@@ -346,5 +435,22 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textMuted,
     marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+
+  // Retry button
+  retryButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.textPrimary,
+    borderRadius: 8,
+  },
+  retryButtonPressed: {
+    opacity: 0.7,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.background,
   },
 });
