@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, layout } from '../theme';
+import { colors, spacing, layout } from '../theme';
 import { openExternalUrl } from '../utils/links';
 import type { Item } from '../types';
 
@@ -19,30 +19,17 @@ type Props = {
 };
 
 /**
- * Format date for header display
+ * Format date/time for footer display
  */
-function formatHeaderDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
+function formatUpdatedTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
-}
-
-/**
- * Format relative time for display
- */
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return 'Today';
 }
 
 function BackButton({ onPress }: { onPress: () => void }) {
@@ -60,22 +47,58 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Header({
-  onBack,
-  date,
-}: {
-  onBack: () => void;
-  date: string;
-}) {
+function Header({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
       <BackButton onPress={onBack} />
-      <View style={styles.headerCenter}>
-        <Text style={styles.headerBrand}>NTRL</Text>
-        <Text style={styles.headerDate}>{date}</Text>
-      </View>
+      <Text style={styles.headerTitle}>Transparency</Text>
       <View style={styles.headerSpacer} />
     </View>
+  );
+}
+
+/**
+ * Render original text with soft highlights on removed phrases
+ */
+function HighlightedText({
+  text,
+  highlights,
+}: {
+  text: string;
+  highlights: string[];
+}) {
+  if (!text) {
+    return null;
+  }
+
+  if (!highlights || highlights.length === 0) {
+    return <Text style={styles.originalText}>{text}</Text>;
+  }
+
+  // Build regex pattern for all highlights (case-insensitive)
+  const escapedHighlights = highlights.map((h) =>
+    h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  );
+  const pattern = new RegExp(`(${escapedHighlights.join('|')})`, 'gi');
+
+  // Split text by highlight matches
+  const parts = text.split(pattern);
+
+  return (
+    <Text style={styles.originalText}>
+      {parts.map((part, index) => {
+        const isHighlighted = highlights.some(
+          (h) => h.toLowerCase() === part.toLowerCase()
+        );
+        return isHighlighted ? (
+          <Text key={index} style={styles.highlightedSpan}>
+            {part}
+          </Text>
+        ) : (
+          <Text key={index}>{part}</Text>
+        );
+      })}
+    </Text>
   );
 }
 
@@ -117,14 +140,14 @@ function SourceUnavailableModal({
   );
 }
 
-export default function ArticleDetailScreen({ route, navigation }: Props) {
+export default function RedlineScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const item: Item = route.params.item;
-  const headerDate = formatHeaderDate();
-  const timeLabel = formatRelativeTime(item.published_at);
+  const updatedTime = formatUpdatedTime(item.published_at);
 
   const [showSourceError, setShowSourceError] = useState(false);
 
+  const hasOriginalText = !!item.original_text;
   const hasRemovedContent =
     item.detail.removed && item.detail.removed.length > 0;
 
@@ -139,73 +162,51 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} date={headerDate} />
+      <Header onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Headline */}
-        <Text style={styles.headline}>{item.headline}</Text>
-
-        {/* Body - Clean filtered content only */}
-        <View style={styles.bodySection}>
-          <Text style={styles.bodyText}>{item.detail.what_happened}</Text>
-
-          <Text style={styles.bodyText}>{item.detail.why_it_matters}</Text>
-
-          {item.detail.known.length > 0 && (
-            <Text style={styles.bodyText}>
-              <Text style={styles.bodyLabel}>What is known: </Text>
-              {item.detail.known.join('. ')}.
-            </Text>
-          )}
-
-          {item.detail.uncertain.length > 0 && (
-            <Text style={styles.bodyText}>
-              <Text style={styles.bodyLabel}>What remains uncertain: </Text>
-              {item.detail.uncertain.join('. ')}.
-            </Text>
-          )}
-        </View>
-
-        {/* Metadata */}
-        <Text style={styles.meta}>
-          {item.source} · {timeLabel}
+        {/* Intro copy */}
+        <Text style={styles.intro}>
+          This view shows the original article text.
+          {hasRemovedContent &&
+            ' Language removed by the NTRL Filter is highlighted.'}
         </Text>
 
-        {/* Disclosure */}
-        {hasRemovedContent && (
-          <Text style={styles.disclosure}>Manipulative language removed.</Text>
+        {/* Original text with highlights */}
+        {hasOriginalText ? (
+          <View style={styles.originalSection}>
+            <HighlightedText
+              text={item.original_text!}
+              highlights={item.detail.removed || []}
+            />
+          </View>
+        ) : (
+          <View style={styles.unavailableSection}>
+            <Text style={styles.unavailableText}>
+              Original text unavailable for this article.
+            </Text>
+          </View>
         )}
 
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* End links */}
-        <View style={styles.endLinks}>
-          {/* View transparency & redlines - internal navigation */}
+        {/* Footer */}
+        <View style={styles.footer}>
           <Pressable
             style={({ pressed }) => [
-              styles.endLink,
-              pressed && styles.endLinkPressed,
-            ]}
-            onPress={() => navigation.navigate('Redline', { item })}
-          >
-            <Text style={styles.endLinkText}>View transparency & redlines</Text>
-          </Pressable>
-
-          {/* View original source - external with error handling */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.endLink,
-              pressed && styles.endLinkPressed,
+              styles.footerLink,
+              pressed && styles.footerLinkPressed,
             ]}
             onPress={handleViewSource}
           >
-            <Text style={styles.endLinkText}>View original source</Text>
+            <Text style={styles.footerLinkText}>
+              View original on {item.source}
+            </Text>
           </Pressable>
+
+          <Text style={styles.footerMeta}>Updated: {updatedTime}</Text>
         </View>
       </ScrollView>
 
@@ -249,20 +250,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: -4,
   },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerBrand: {
+  headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '600',
     color: colors.textPrimary,
-  },
-  headerDate: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: colors.textMuted,
-    marginTop: 2,
   },
   headerSpacer: {
     width: 40,
@@ -278,62 +269,67 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
 
-  // Article content
-  headline: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 28,
-    color: colors.textPrimary,
+  // Intro
+  intro: {
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 20,
+    color: colors.textMuted,
+    fontStyle: 'italic',
     marginBottom: spacing.xl,
   },
-  bodySection: {
-    marginBottom: spacing.lg,
+
+  // Original text section
+  originalSection: {
+    marginBottom: spacing.xxl,
   },
-  bodyText: {
+  originalText: {
     fontSize: 16,
     fontWeight: '400',
-    lineHeight: 24,
+    lineHeight: 26,
     color: colors.textPrimary,
-    marginBottom: spacing.lg,
   },
-  bodyLabel: {
-    fontWeight: '600',
+  highlightedSpan: {
+    backgroundColor: colors.highlight,
+    borderRadius: 2,
   },
-  meta: {
-    fontSize: 13,
+
+  // Unavailable state
+  unavailableSection: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+  },
+  unavailableText: {
+    fontSize: 14,
     fontWeight: '400',
     color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+
+  // Footer
+  footer: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.divider,
+    alignItems: 'center',
+  },
+  footerLink: {
+    paddingVertical: spacing.sm,
     marginBottom: spacing.md,
   },
-  disclosure: {
-    fontSize: 13,
-    fontWeight: '400',
-    fontStyle: 'italic',
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
-
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.xl,
-  },
-
-  // End links
-  endLinks: {
-    gap: spacing.md,
-  },
-  endLink: {
-    paddingVertical: spacing.sm,
-  },
-  endLinkPressed: {
+  footerLinkPressed: {
     opacity: 0.5,
   },
-  endLinkText: {
+  footerLinkText: {
     fontSize: 14,
     fontWeight: '500',
     color: colors.textMuted,
+  },
+  footerMeta: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.textSubtle,
   },
 
   // Modal

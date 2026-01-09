@@ -9,10 +9,12 @@ export type Detail = {
 export type Item = {
   id: string;
   source: string;
+  source_url?: string; // Canonical source homepage (fallback)
   published_at: string;
   headline: string;
   summary: string;
-  url: string;
+  url: string; // Article URL (may 404)
+  original_text?: string; // Original article text before neutralization
   detail: Detail;
 };
 

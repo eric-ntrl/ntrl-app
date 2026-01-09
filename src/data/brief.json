@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-14T21:00:00-05:00",
+  "generated_at": "2026-01-08T12:00:00Z",
   "sections": [
     {
       "key": "world",
@@ -8,10 +8,12 @@
         {
           "id": "w-001",
           "source": "Reuters",
-          "published_at": "2025-12-14T19:20:00Z",
+          "source_url": "https://www.reuters.com",
+          "published_at": "2026-01-08T09:20:00Z",
           "headline": "Climate summit reaches framework agreement on emissions targets",
           "summary": "Representatives from 147 countries agreed on a baseline structure for reducing industrial emissions. Implementation timelines remain under discussion.",
-          "url": "https://reuters.com/story",
+          "url": "https://www.reuters.com/world/climate-summit-2026",
+          "original_text": "In a landmark moment, leaders hailed the breakthrough agreement as a major victory after tense overnight negotiations. Critics warned the plan could be dangerously weak unless countries commit immediately to aggressive enforcement. Supporters said the framework offers a realistic path forward and provides hope for communities already facing severe impacts.",
           "detail": {
             "what_happened": "Delegates approved a framework that sets target ranges for emissions reductions across multiple sectors. The agreement includes reporting guidelines and review intervals.",
             "why_it_matters": "The framework establishes a common baseline for future negotiations and may influence domestic policy in participating nations.",
@@ -23,16 +25,18 @@
         {
           "id": "w-002",
           "source": "Bloomberg",
-          "published_at": "2025-12-14T15:45:00Z",
+          "source_url": "https://www.bloomberg.com",
+          "published_at": "2026-01-08T06:45:00Z",
           "headline": "International trade volume increases for third consecutive quarter",
           "summary": "Global shipping data shows a 3.2% rise in container movements compared to previous period. Analysts note stable demand across regions.",
-          "url": "https://bloomberg.com/story",
+          "url": "https://www.bloomberg.com/news/trade-volume-2026",
+          "original_text": "Global trade is surging as shipping volumes hit record levels. The dramatic 3.2% jump signals a booming economy that experts say could reshape markets worldwide.",
           "detail": {
             "what_happened": "Container shipping volumes rose 3.2% quarter-over-quarter according to industry tracking data.",
             "why_it_matters": "Trade volume trends can indicate broader economic activity patterns.",
             "known": ["3.2% increase measured", "Third consecutive quarter of growth"],
             "uncertain": ["Whether growth rate will continue", "Impact of pending trade policy changes"],
-            "removed": []
+            "removed": ["surging", "record levels", "dramatic", "booming", "reshape markets"]
           }
         }
       ]
@@ -44,16 +48,18 @@
         {
           "id": "us-001",
           "source": "AP",
-          "published_at": "2025-12-14T17:30:00Z",
+          "source_url": "https://apnews.com",
+          "published_at": "2026-01-08T08:30:00Z",
           "headline": "Federal Reserve maintains current interest rate policy",
           "summary": "The central bank announced no changes to existing rates following this month's policy meeting. Officials cited current economic indicators as stable.",
-          "url": "https://apnews.com/story",
+          "url": "https://apnews.com/article/federal-reserve-rates-2026",
+          "original_text": "The Federal Reserve held interest rates steady in a move that shocked no one but left markets wondering what comes next. Fed Chair signaled cautious optimism while warning of potential headwinds ahead.",
           "detail": {
-            "what_happened": "The Federal Reserve held interest rates steady at the current target range after their December meeting.",
+            "what_happened": "The Federal Reserve held interest rates steady at the current target range after their January meeting.",
             "why_it_matters": "Interest rate decisions affect borrowing costs for consumers and businesses.",
-            "known": ["Rates unchanged", "Decision was unanimous", "Next meeting in January"],
+            "known": ["Rates unchanged", "Decision was unanimous", "Next meeting in March"],
             "uncertain": ["Future rate trajectory", "How inflation data will evolve"],
-            "removed": []
+            "removed": ["shocked", "wondering", "cautious optimism", "warning", "headwinds"]
           }
         }
       ]
@@ -65,16 +71,18 @@
         {
           "id": "b-001",
           "source": "WSJ",
-          "published_at": "2025-12-14T14:15:00Z",
+          "source_url": "https://www.wsj.com",
+          "published_at": "2026-01-08T05:15:00Z",
           "headline": "Manufacturing sector reports steady production output levels",
           "summary": "Industry survey data shows production remained consistent with previous quarter. Employment in the sector held stable across major regions.",
-          "url": "https://wsj.com/story",
+          "url": "https://www.wsj.com/business/manufacturing-output-2026",
+          "original_text": "Manufacturing activity held steady as the sector avoided a feared collapse. Industry insiders breathed a sigh of relief as employment numbers defied gloomy predictions.",
           "detail": {
             "what_happened": "The monthly manufacturing index showed production levels matching prior quarter figures.",
             "why_it_matters": "Manufacturing output is one indicator of industrial economic activity.",
             "known": ["Production levels stable", "Employment unchanged"],
             "uncertain": ["Q1 projections", "Supply chain conditions"],
-            "removed": []
+            "removed": ["feared collapse", "breathed a sigh of relief", "defied", "gloomy predictions"]
           }
         }
       ]
@@ -86,31 +94,35 @@
         {
           "id": "t-001",
           "source": "Tech Review",
-          "published_at": "2025-12-14T16:00:00Z",
+          "source_url": "https://www.technologyreview.com",
+          "published_at": "2026-01-08T07:00:00Z",
           "headline": "New battery technology enters commercial testing phase",
           "summary": "A solid-state battery design developed by research consortium begins evaluation with automotive manufacturers. Results expected within 18 months.",
-          "url": "https://techreview.com/story",
+          "url": "https://www.technologyreview.com/battery-tech-2026",
+          "original_text": "A game-changing battery breakthrough could revolutionize the EV industry. The stunning new technology promises to deliver unprecedented range and charging speeds that will leave competitors scrambling.",
           "detail": {
             "what_happened": "Researchers moved a new battery design from laboratory to commercial testing with three automotive partners.",
             "why_it_matters": "Battery technology advances could affect electric vehicle range and charging times.",
             "known": ["Testing has begun", "Three automotive partners involved", "18-month evaluation period"],
             "uncertain": ["Whether technology will scale", "Cost implications", "Performance in real conditions"],
-            "removed": ["game-changing", "revolutionary"]
+            "removed": ["game-changing", "breakthrough", "revolutionize", "stunning", "unprecedented", "leave competitors scrambling"]
           }
         },
         {
           "id": "t-002",
           "source": "Ars Technica",
-          "published_at": "2025-12-14T13:30:00Z",
+          "source_url": "https://arstechnica.com",
+          "published_at": "2026-01-08T04:30:00Z",
           "headline": "Software update addresses security vulnerabilities in common systems",
           "summary": "Multiple operating system vendors released patches for identified issues. Users are advised to install updates through standard channels.",
-          "url": "https://arstechnica.com/story",
+          "url": "https://arstechnica.com/security/patches-2026",
+          "original_text": "A critical security flaw has been urgently patched after experts warned of imminent attacks. Users must update immediately to avoid potentially devastating consequences.",
           "detail": {
             "what_happened": "Security patches were released by major OS vendors addressing multiple identified vulnerabilities.",
             "why_it_matters": "Unpatched systems may be exposed to known security issues.",
             "known": ["Patches available", "Multiple vendors affected", "Standard update channels work"],
             "uncertain": ["Extent of exploitation before patches", "Whether all issues are resolved"],
-            "removed": ["critical", "urgent", "immediately"]
+            "removed": ["critical", "urgently", "imminent attacks", "must", "immediately", "devastating"]
           }
         }
       ]

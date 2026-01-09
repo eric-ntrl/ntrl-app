@@ -5,7 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import FeedScreen from './src/screens/FeedScreen';
 import ArticleDetailScreen from './src/screens/ArticleDetailScreen';
-import TransparencyScreen from './src/screens/TransparencyScreen';
+import RedlineScreen from './src/screens/RedlineScreen';
+import AboutScreen from './src/screens/AboutScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -16,7 +17,8 @@ export default function App() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Feed" component={FeedScreen} />
           <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
-          <Stack.Screen name="Transparency" component={TransparencyScreen} />
+          <Stack.Screen name="Redline" component={RedlineScreen} />
+          <Stack.Screen name="About" component={AboutScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

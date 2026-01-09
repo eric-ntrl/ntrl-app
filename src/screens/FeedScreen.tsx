@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,155 +16,213 @@ type Props = { navigation: any };
 
 type Row =
   | { type: 'section'; section: Section }
-  | { type: 'item'; item: Item; sectionKey: string }
+  | { type: 'item'; item: Item }
   | { type: 'endOfFeed' };
 
-function flatten(b: Brief): Row[] {
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Filter items to only include those published within the last 24 hours
+ */
+function filterRecentItems(items: Item[], now: Date): Item[] {
+  const cutoff = now.getTime() - TWENTY_FOUR_HOURS_MS;
+  return items.filter((item) => {
+    const publishedAt = new Date(item.published_at).getTime();
+    return publishedAt >= cutoff;
+  });
+}
+
+/**
+ * Flatten brief into rows, filtering to 24h window
+ */
+function flatten(b: Brief, now: Date): Row[] {
   const rows: Row[] = [];
-  for (const s of b.sections) {
-    rows.push({ type: 'section', section: s });
-    for (const it of s.items) {
-      rows.push({ type: 'item', item: it, sectionKey: s.key });
+
+  for (const section of b.sections) {
+    const recentItems = filterRecentItems(section.items, now);
+
+    // Only add section if it has recent items
+    if (recentItems.length > 0) {
+      rows.push({ type: 'section', section: { ...section, items: recentItems } });
+      for (const item of recentItems) {
+        rows.push({ type: 'item', item });
+      }
     }
   }
+
   rows.push({ type: 'endOfFeed' });
   return rows;
 }
 
-function formatDate(date: Date): string {
-  const options: Intl.DateTimeFormatOptions = {
+/**
+ * Format date for header: "Wednesday, January 8"
+ */
+function formatHeaderDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-  };
-  return date.toLocaleDateString('en-US', options);
+  });
 }
 
-function formatRelativeTime(dateString: string): string {
+/**
+ * Format relative time consistently
+ * Only for items within 24h window
+ */
+function formatRelativeTime(dateString: string, now: Date): string {
   const date = new Date(dateString);
-  const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
 
+  if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  return `${diffDays}d ago`;
+  // Should not reach here due to 24h filter, but fallback
+  return 'Today';
 }
 
-function Header({ onInfoPress }: { onInfoPress: () => void }) {
-  const today = formatDate(new Date());
-
+function Header({ date }: { date: string }) {
   return (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.brand}>NTRL</Text>
-        <Text style={styles.date}>{today}</Text>
-      </View>
-      <Pressable
-        onPress={onInfoPress}
-        style={({ pressed }) => [
-          styles.infoButton,
-          pressed && styles.infoButtonPressed,
-        ]}
-        hitSlop={12}
-      >
-        <Text style={styles.infoText}>About</Text>
-      </Pressable>
+      <Text style={styles.brand}>NTRL</Text>
+      <Text style={styles.date}>{date}</Text>
     </View>
   );
 }
 
-function SectionHeader({ section }: { section: Section }) {
+function SectionHeader({ title }: { title: string }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+      <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
     </View>
   );
 }
 
 function ArticleCard({
   item,
+  timeLabel,
   onPress,
 }: {
   item: Item;
+  timeLabel: string;
   onPress: () => void;
 }) {
-  const timeAgo = formatRelativeTime(item.published_at);
-
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        pressed && styles.cardPressed,
-      ]}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
-      <Text style={styles.headline} numberOfLines={2}>
+      <Text style={styles.headline} numberOfLines={1} ellipsizeMode="tail">
         {item.headline}
       </Text>
-      <Text style={styles.summary} numberOfLines={3}>
+      <Text style={styles.summary} numberOfLines={2} ellipsizeMode="tail">
         {item.summary}
       </Text>
       <Text style={styles.meta}>
-        {item.source} · {timeAgo}
+        {item.source} · {timeLabel}
       </Text>
     </Pressable>
   );
 }
 
-function EndOfFeed() {
-  const today = formatDate(new Date());
-
+function EndOfFeed({
+  date,
+  onAboutPress,
+}: {
+  date: string;
+  onAboutPress: () => void;
+}) {
   return (
     <View style={styles.endOfFeed}>
       <View style={styles.endDivider} />
       <Text style={styles.endMessage}>You're all caught up</Text>
-      <Text style={styles.endDate}>Today · {today}</Text>
+      <Text style={styles.endDate}>Today · {date}</Text>
+      <Pressable
+        style={({ pressed }) => [
+          styles.aboutLink,
+          pressed && styles.aboutLinkPressed,
+        ]}
+        onPress={onAboutPress}
+      >
+        <Text style={styles.aboutLinkText}>About NTRL</Text>
+      </Pressable>
     </View>
   );
 }
 
 export default function FeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const rows = flatten(brief);
 
-  const renderItem = ({ item }: { item: Row }) => {
+  // Use current time as anchor for all calculations
+  const now = useMemo(() => new Date(), []);
+  const headerDate = formatHeaderDate(now);
+  const rows = useMemo(() => flatten(brief, now), [now]);
+
+  const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {
-      return <SectionHeader section={item.section} />;
+      return (
+        <SectionHeader
+          title={item.section.title}
+        />
+      );
     }
 
     if (item.type === 'endOfFeed') {
-      return <EndOfFeed />;
+      return (
+        <EndOfFeed
+          date={headerDate}
+          onAboutPress={() => navigation.navigate('About')}
+        />
+      );
     }
 
+    const timeLabel = formatRelativeTime(item.item.published_at, now);
     return (
       <ArticleCard
         item={item.item}
+        timeLabel={timeLabel}
         onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
       />
     );
   };
 
+  // Check if feed is empty (no recent items)
+  const hasContent = rows.some((r) => r.type === 'item');
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onInfoPress={() => navigation.navigate('Transparency')} />
-      <FlatList
-        data={rows}
-        keyExtractor={(r, idx) =>
-          r.type === 'section'
-            ? `s-${r.section.key}`
-            : r.type === 'endOfFeed'
-            ? 'end-of-feed'
-            : `${r.item.id}-${idx}`
-        }
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      <Header date={headerDate} />
+
+      {!hasContent ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyMessage}>No new updates right now.</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.aboutLink,
+              pressed && styles.aboutLinkPressed,
+            ]}
+            onPress={() => navigation.navigate('About')}
+          >
+            <Text style={styles.aboutLinkText}>About NTRL</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(r, idx) =>
+            r.type === 'section'
+              ? `section-${r.section.key}`
+              : r.type === 'endOfFeed'
+              ? 'end-of-feed'
+              : `item-${r.item.id}`
+          }
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -177,12 +235,9 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
   },
   brand: {
     ...typography.brand,
@@ -191,17 +246,6 @@ const styles = StyleSheet.create({
   date: {
     ...typography.date,
     marginTop: spacing.xs,
-  },
-  infoButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  infoButtonPressed: {
-    opacity: 0.5,
-  },
-  infoText: {
-    ...typography.link,
-    fontSize: 13,
   },
 
   // List
@@ -212,14 +256,14 @@ const styles = StyleSheet.create({
 
   // Section header
   sectionHeader: {
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     marginBottom: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
   },
   sectionTitle: {
-    ...typography.sectionHeader,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: colors.textSubtle,
   },
 
   // Article card
@@ -229,37 +273,78 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   cardPressed: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   headline: {
-    ...typography.headline,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 22,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   summary: {
-    ...typography.summary,
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 21,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   meta: {
-    ...typography.meta,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textMuted,
   },
 
   // End of feed
   endOfFeed: {
     alignItems: 'center',
     paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   endDivider: {
-    width: 40,
+    width: 48,
     height: 1,
     backgroundColor: colors.divider,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   endMessage: {
-    ...typography.endMessage,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textMuted,
     marginBottom: spacing.xs,
   },
   endDate: {
-    ...typography.endDate,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSubtle,
+    marginBottom: spacing.xl,
+  },
+
+  // About link (moved to footer)
+  aboutLink: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  aboutLinkPressed: {
+    opacity: 0.5,
+  },
+  aboutLinkText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textMuted,
+  },
+
+  // Empty state
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: layout.screenPadding,
+  },
+  emptyMessage: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
   },
 });

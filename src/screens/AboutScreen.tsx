@@ -8,7 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, layout } from '../theme';
+import { colors, spacing, layout } from '../theme';
 
 type Props = {
   navigation: any;
@@ -33,22 +33,28 @@ function Header({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
       <BackButton onPress={onBack} />
-      <Text style={styles.headerTitle}>Transparency</Text>
+      <Text style={styles.headerTitle}>About NTRL</Text>
       <View style={styles.headerSpacer} />
     </View>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
       {children}
     </View>
   );
 }
 
-export default function TransparencyScreen({ navigation }: Props) {
+export default function AboutScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -62,24 +68,24 @@ export default function TransparencyScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.intro}>
-          NTRL removes manipulative language from information so you can understand
-          what matters without being sold to, provoked, or worked up for someone
-          else's agenda.
+          NTRL removes manipulative language from information so you can
+          understand what matters without being sold to, provoked, or worked up
+          for someone else's agenda.
         </Text>
 
         <Section title="What this is">
           <Text style={styles.body}>
-            A reading layer that shortens, de-triggers, and structures information
-            into neutral summaries. Every article shows what happened, why it matters,
-            what is known, and what remains uncertain.
+            A reading layer that shortens, de-triggers, and structures
+            information into neutral summaries. Every article shows what
+            happened, why it matters, what is known, and what remains uncertain.
           </Text>
         </Section>
 
         <Section title="What this is not">
           <Text style={styles.body}>
-            A truth engine. NTRL removes tone and manipulation, not factual claims.
-            It can be wrong. When information is uncertain, we say so explicitly
-            instead of guessing.
+            A truth engine. NTRL removes tone and manipulation, not factual
+            claims. It can be wrong. When information is uncertain, we say so
+            explicitly instead of guessing.
           </Text>
         </Section>
 
@@ -96,16 +102,16 @@ export default function TransparencyScreen({ navigation }: Props) {
 
         <Section title="What we preserve">
           <Text style={styles.body}>
-            Facts, quotes, context, and nuance. We strip the manipulation,
-            not the information.
+            Facts, quotes, context, and nuance. We strip the manipulation, not
+            the information.
           </Text>
         </Section>
 
         <Section title="How it works">
           <Text style={styles.body}>
             Sources are ingested, content is extracted, manipulative language is
-            identified and removed, and summaries are generated. You can always
-            see what was changed by viewing the original reporting section on any article.
+            identified and removed, and summaries are generated. You can view
+            transparency and redlines from any article.
           </Text>
         </Section>
 
@@ -136,8 +142,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -145,18 +151,18 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   backArrow: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '300',
     color: colors.textPrimary,
-    marginTop: -2,
+    marginTop: -4,
   },
   headerTitle: {
-    ...typography.brand,
     fontSize: 16,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
   headerSpacer: {
-    width: 32,
+    width: 40,
   },
 
   // Content
@@ -165,14 +171,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
 
   intro: {
-    ...typography.body,
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+    color: colors.textPrimary,
     marginBottom: spacing.xxl,
   },
 
@@ -181,33 +188,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   sectionTitle: {
-    ...typography.sectionTitle,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1,
+    color: colors.textSubtle,
     marginBottom: spacing.md,
   },
   body: {
-    ...typography.body,
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 22,
     color: colors.textSecondary,
   },
 
   // List
   list: {
-    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   listItem: {
-    ...typography.body,
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 22,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
   },
 
   // Footer
   footer: {
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     paddingTop: spacing.xl,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.divider,
     alignItems: 'center',
   },
   footerText: {
-    ...typography.disclosure,
+    fontSize: 13,
+    fontWeight: '400',
+    fontStyle: 'italic',
+    color: colors.textMuted,
   },
 });
