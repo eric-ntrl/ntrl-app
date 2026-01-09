@@ -3,28 +3,117 @@
   "sections": [
     {
       "key": "world",
-      "title": "Worldwide",
+      "title": "World",
       "items": [
         {
           "id": "w-001",
-          "source": "BBC",
-          "published_at": "2025-12-14T16:20:00Z",
-          "headline": "Leaders meet to discuss regional ceasefire framework",
-          "summary": "Officials held talks on a proposed framework; key terms are still unresolved.",
-          "url": "https://example.com/story",
+          "source": "Reuters",
+          "published_at": "2025-12-14T19:20:00Z",
+          "headline": "Climate summit reaches framework agreement on emissions targets",
+          "summary": "Representatives from 147 countries agreed on a baseline structure for reducing industrial emissions. Implementation timelines remain under discussion.",
+          "url": "https://reuters.com/story",
           "detail": {
-            "what_happened": "Officials met and outlined a draft ceasefire framework.",
-            "why_it_matters": "If adopted, it could reduce near-term escalation and open aid corridors.",
-            "known": ["Talks occurred", "A draft framework was discussed"],
-            "uncertain": ["Whether parties will sign", "Timeline for implementation"],
-            "removed": ["sensational adjectives", "speculation presented as fact"]
+            "what_happened": "Delegates approved a framework that sets target ranges for emissions reductions across multiple sectors. The agreement includes reporting guidelines and review intervals.",
+            "why_it_matters": "The framework establishes a common baseline for future negotiations and may influence domestic policy in participating nations.",
+            "known": ["147 countries participated", "Framework was approved", "Includes reporting requirements"],
+            "uncertain": ["Implementation timeline", "Enforcement mechanisms", "Whether targets will be met"],
+            "removed": ["landmark", "breakthrough", "major victory", "tense", "dangerously weak", "immediately", "aggressive", "realistic path forward", "provides hope", "severe"]
+          }
+        },
+        {
+          "id": "w-002",
+          "source": "Bloomberg",
+          "published_at": "2025-12-14T15:45:00Z",
+          "headline": "International trade volume increases for third consecutive quarter",
+          "summary": "Global shipping data shows a 3.2% rise in container movements compared to previous period. Analysts note stable demand across regions.",
+          "url": "https://bloomberg.com/story",
+          "detail": {
+            "what_happened": "Container shipping volumes rose 3.2% quarter-over-quarter according to industry tracking data.",
+            "why_it_matters": "Trade volume trends can indicate broader economic activity patterns.",
+            "known": ["3.2% increase measured", "Third consecutive quarter of growth"],
+            "uncertain": ["Whether growth rate will continue", "Impact of pending trade policy changes"],
+            "removed": []
           }
         }
       ]
     },
-    { "key": "us", "title": "U.S.", "items": [] },
-    { "key": "phl", "title": "Philadelphia", "items": [] },
-    { "key": "tech", "title": "Tech & AI", "items": [] },
-    { "key": "markets", "title": "Financial Markets", "items": [] }
+    {
+      "key": "us",
+      "title": "U.S.",
+      "items": [
+        {
+          "id": "us-001",
+          "source": "AP",
+          "published_at": "2025-12-14T17:30:00Z",
+          "headline": "Federal Reserve maintains current interest rate policy",
+          "summary": "The central bank announced no changes to existing rates following this month's policy meeting. Officials cited current economic indicators as stable.",
+          "url": "https://apnews.com/story",
+          "detail": {
+            "what_happened": "The Federal Reserve held interest rates steady at the current target range after their December meeting.",
+            "why_it_matters": "Interest rate decisions affect borrowing costs for consumers and businesses.",
+            "known": ["Rates unchanged", "Decision was unanimous", "Next meeting in January"],
+            "uncertain": ["Future rate trajectory", "How inflation data will evolve"],
+            "removed": []
+          }
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "title": "Business",
+      "items": [
+        {
+          "id": "b-001",
+          "source": "WSJ",
+          "published_at": "2025-12-14T14:15:00Z",
+          "headline": "Manufacturing sector reports steady production output levels",
+          "summary": "Industry survey data shows production remained consistent with previous quarter. Employment in the sector held stable across major regions.",
+          "url": "https://wsj.com/story",
+          "detail": {
+            "what_happened": "The monthly manufacturing index showed production levels matching prior quarter figures.",
+            "why_it_matters": "Manufacturing output is one indicator of industrial economic activity.",
+            "known": ["Production levels stable", "Employment unchanged"],
+            "uncertain": ["Q1 projections", "Supply chain conditions"],
+            "removed": []
+          }
+        }
+      ]
+    },
+    {
+      "key": "technology",
+      "title": "Technology",
+      "items": [
+        {
+          "id": "t-001",
+          "source": "Tech Review",
+          "published_at": "2025-12-14T16:00:00Z",
+          "headline": "New battery technology enters commercial testing phase",
+          "summary": "A solid-state battery design developed by research consortium begins evaluation with automotive manufacturers. Results expected within 18 months.",
+          "url": "https://techreview.com/story",
+          "detail": {
+            "what_happened": "Researchers moved a new battery design from laboratory to commercial testing with three automotive partners.",
+            "why_it_matters": "Battery technology advances could affect electric vehicle range and charging times.",
+            "known": ["Testing has begun", "Three automotive partners involved", "18-month evaluation period"],
+            "uncertain": ["Whether technology will scale", "Cost implications", "Performance in real conditions"],
+            "removed": ["game-changing", "revolutionary"]
+          }
+        },
+        {
+          "id": "t-002",
+          "source": "Ars Technica",
+          "published_at": "2025-12-14T13:30:00Z",
+          "headline": "Software update addresses security vulnerabilities in common systems",
+          "summary": "Multiple operating system vendors released patches for identified issues. Users are advised to install updates through standard channels.",
+          "url": "https://arstechnica.com/story",
+          "detail": {
+            "what_happened": "Security patches were released by major OS vendors addressing multiple identified vulnerabilities.",
+            "why_it_matters": "Unpatched systems may be exposed to known security issues.",
+            "known": ["Patches available", "Multiple vendors affected", "Standard update channels work"],
+            "uncertain": ["Extent of exploitation before patches", "Whether all issues are resolved"],
+            "removed": ["critical", "urgent", "immediately"]
+          }
+        }
+      ]
+    }
   ]
 }
