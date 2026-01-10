@@ -115,15 +115,17 @@ function ArticleCard({
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
-      <Text style={styles.headline} numberOfLines={1} ellipsizeMode="tail">
-        {item.headline}
-      </Text>
-      <Text style={styles.summary} numberOfLines={2} ellipsizeMode="tail">
-        {item.summary}
-      </Text>
-      <Text style={styles.meta}>
-        {item.source} · {timeLabel}
-      </Text>
+      <View style={styles.textColumn}>
+        <Text style={styles.headline} numberOfLines={3} ellipsizeMode="tail">
+          {item.headline}
+        </Text>
+        <Text style={styles.summary} numberOfLines={2} ellipsizeMode="tail">
+          {item.summary}
+        </Text>
+        <Text style={styles.meta}>
+          {item.source} · {timeLabel}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -225,11 +227,7 @@ export default function FeedScreen({ navigation }: Props) {
 
   const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {
-      return (
-        <SectionHeader
-          title={item.section.title}
-        />
-      );
+      return <SectionHeader title={item.section.title} />;
     }
 
     if (item.type === 'endOfFeed') {
@@ -341,14 +339,22 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
   },
 
-  // Article card
+  // Article card - with text wrapping fixes
   card: {
     paddingVertical: spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.divider,
+    alignSelf: 'stretch',
+    width: '100%',
+    overflow: 'hidden',
   },
   cardPressed: {
     opacity: 0.6,
+  },
+  textColumn: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
   },
   headline: {
     fontSize: 17,
@@ -356,6 +362,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+    flexShrink: 1,
+    minWidth: 0,
   },
   summary: {
     fontSize: 15,
@@ -363,6 +371,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: colors.textSecondary,
     marginBottom: spacing.md,
+    flexShrink: 1,
+    minWidth: 0,
   },
   meta: {
     fontSize: 13,

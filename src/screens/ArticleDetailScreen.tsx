@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   Pressable,
   StatusBar,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, layout } from '../theme';
 import { openExternalUrl } from '../utils/links';
+import { getReadableArticle } from '../services/readerMode';
+import { makeCalmDetailSummary, createFallbackSummary } from '../services/detailSummary';
+import { findRedlines, type RedlineSpan } from '../services/redline';
 import type { Item } from '../types';
 
 type Props = {
@@ -43,6 +47,112 @@ function formatRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   return 'Today';
+}
+
+/**
+ * Content length constants for Article Detail
+ */
+const DETAIL_MAX_SENTENCES = 10;
+const DETAIL_MAX_PARAGRAPHS = 3;
+
+/**
+ * Filler phrases to filter out when substance exists
+ */
+const FILLER_PHRASES = [
+  'More detail may be available',
+  'Details available in the full article',
+  'Additional context',
+  'See full article for details',
+];
+
+/**
+ * Check if text contains filler language
+ */
+function containsFiller(text: string): boolean {
+  return FILLER_PHRASES.some(phrase =>
+    text.toLowerCase().includes(phrase.toLowerCase())
+  );
+}
+
+/**
+ * Count sentences in text (approximate)
+ */
+function countSentences(text: string): number {
+  return (text.match(/[.!?]+/g) || []).length || 1;
+}
+
+/**
+ * Truncate text to max sentences at sentence boundary
+ */
+function truncateToSentences(text: string, maxSentences: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  if (sentences.length <= maxSentences) {
+    return text;
+  }
+  return sentences.slice(0, maxSentences).join('').trim();
+}
+
+/**
+ * Compose article body as organic narrative paragraphs
+ * Enforces max 10 sentences / 3 paragraphs
+ * Removes filler when substance exists
+ */
+function composeBodyText(detail: Item['detail']): string[] {
+  const paragraphs: string[] = [];
+  let totalSentences = 0;
+
+  // First paragraph: what happened (primary content)
+  if (detail.what_happened && !containsFiller(detail.what_happened)) {
+    const sentences = countSentences(detail.what_happened);
+    if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
+      paragraphs.push(detail.what_happened);
+      totalSentences += sentences;
+    } else {
+      // Truncate to fit within limit
+      const remaining = DETAIL_MAX_SENTENCES - totalSentences;
+      paragraphs.push(truncateToSentences(detail.what_happened, remaining));
+      totalSentences = DETAIL_MAX_SENTENCES;
+    }
+  }
+
+  // Second paragraph: context (why it matters)
+  if (
+    paragraphs.length < DETAIL_MAX_PARAGRAPHS &&
+    totalSentences < DETAIL_MAX_SENTENCES &&
+    detail.why_it_matters &&
+    !containsFiller(detail.why_it_matters)
+  ) {
+    const sentences = countSentences(detail.why_it_matters);
+    if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
+      paragraphs.push(detail.why_it_matters);
+      totalSentences += sentences;
+    }
+  }
+
+  // Third paragraph: uncertainty expressed naturally (only if room and substance)
+  if (
+    paragraphs.length < DETAIL_MAX_PARAGRAPHS &&
+    totalSentences < DETAIL_MAX_SENTENCES &&
+    detail.uncertain &&
+    detail.uncertain.length > 0
+  ) {
+    const validUncertainties = detail.uncertain.filter(
+      u => u && !containsFiller(u)
+    );
+
+    if (validUncertainties.length > 0) {
+      const uncertaintyText = validUncertainties
+        .map(u => `It remains unclear ${u.toLowerCase().replace(/^(whether|if|when|how|why)\s*/i, '$1 ')}.`)
+        .join(' ');
+
+      const sentences = countSentences(uncertaintyText);
+      if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
+        paragraphs.push(uncertaintyText);
+      }
+    }
+  }
+
+  return paragraphs.filter(p => p.trim().length > 0);
 }
 
 function BackButton({ onPress }: { onPress: () => void }) {
@@ -124,9 +234,61 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   const timeLabel = formatRelativeTime(item.published_at);
 
   const [showSourceError, setShowSourceError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>([]);
+  const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
+  const [showThinContentNotice, setShowThinContentNotice] = useState(false);
 
-  const hasRemovedContent =
-    item.detail.removed && item.detail.removed.length > 0;
+  // Fetch and extract article on mount
+  useEffect(() => {
+    async function loadArticle() {
+      setLoading(true);
+      setShowThinContentNotice(false);
+
+      try {
+        // Try to fetch full article
+        const result = await getReadableArticle(item.url);
+
+        if (result && result.text && result.quality.okForSummary) {
+          // Good extraction - generate calm summary from full text
+          setExtractedText(result.text);
+          const summary = makeCalmDetailSummary(result.text);
+          if (summary.length > 0) {
+            setSummaryParagraphs(summary);
+          } else {
+            // Summary generation failed despite okForSummary - use fallback
+            const fallback = createFallbackSummary(item.detail);
+            setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
+            setShowThinContentNotice(true);
+          }
+          // Detect redlines on full extracted text
+          setRedlines(findRedlines(result.text));
+        } else {
+          // Thin or failed extraction - use RSS detail fallback
+          // Do NOT dump raw extracted text per NTRL spec
+          const fallback = createFallbackSummary(item.detail);
+          setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
+          setExtractedText(result?.text || null);
+          setRedlines(result?.text ? findRedlines(result.text) : []);
+          setShowThinContentNotice(true);
+        }
+      } catch (error) {
+        console.warn('[ArticleDetail] Load failed:', error);
+        // Fall back to RSS detail
+        const fallback = createFallbackSummary(item.detail);
+        setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
+        setShowThinContentNotice(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadArticle();
+  }, [item.url]);
+
+  const hasRemovedContent = redlines.length > 0 ||
+    (item.detail.removed && item.detail.removed.length > 0);
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -149,64 +311,73 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         {/* Headline */}
         <Text style={styles.headline}>{item.headline}</Text>
 
-        {/* Body - Clean filtered content only */}
-        <View style={styles.bodySection}>
-          <Text style={styles.bodyText}>{item.detail.what_happened}</Text>
+        {/* Loading state */}
+        {loading ? (
+          <View style={styles.loadingSection}>
+            <ActivityIndicator size="small" color={colors.textMuted} />
+            <Text style={styles.loadingText}>Loading article...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Body - Organic narrative flow from reader mode */}
+            <View style={styles.bodySection}>
+              {summaryParagraphs.map((paragraph, index) => (
+                <Text key={index} style={styles.bodyText}>
+                  {paragraph}
+                </Text>
+              ))}
+            </View>
 
-          <Text style={styles.bodyText}>{item.detail.why_it_matters}</Text>
-
-          {item.detail.known.length > 0 && (
-            <Text style={styles.bodyText}>
-              <Text style={styles.bodyLabel}>What is known: </Text>
-              {item.detail.known.join('. ')}.
+            {/* Metadata */}
+            <Text style={styles.meta}>
+              {item.source} · {timeLabel}
             </Text>
-          )}
 
-          {item.detail.uncertain.length > 0 && (
-            <Text style={styles.bodyText}>
-              <Text style={styles.bodyLabel}>What remains uncertain: </Text>
-              {item.detail.uncertain.join('. ')}.
-            </Text>
-          )}
-        </View>
+            {/* Disclosure */}
+            {hasRemovedContent && (
+              <Text style={styles.disclosure}>Manipulative language removed.</Text>
+            )}
 
-        {/* Metadata */}
-        <Text style={styles.meta}>
-          {item.source} · {timeLabel}
-        </Text>
+            {/* Thin content notice */}
+            {showThinContentNotice && (
+              <Text style={styles.thinContentNotice}>
+                Full text not available from this source.
+              </Text>
+            )}
 
-        {/* Disclosure */}
-        {hasRemovedContent && (
-          <Text style={styles.disclosure}>Manipulative language removed.</Text>
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* End links */}
+            <View style={styles.endLinks}>
+              {/* View transparency & redlines - internal navigation */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.endLink,
+                  pressed && styles.endLinkPressed,
+                ]}
+                onPress={() => navigation.navigate('Redline', {
+                  item,
+                  extractedText,
+                  redlines,
+                })}
+              >
+                <Text style={styles.endLinkText}>View transparency & redlines</Text>
+              </Pressable>
+
+              {/* View original source - external with error handling */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.endLink,
+                  pressed && styles.endLinkPressed,
+                ]}
+                onPress={handleViewSource}
+              >
+                <Text style={styles.endLinkText}>View original source</Text>
+              </Pressable>
+            </View>
+          </>
         )}
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* End links */}
-        <View style={styles.endLinks}>
-          {/* View transparency & redlines - internal navigation */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.endLink,
-              pressed && styles.endLinkPressed,
-            ]}
-            onPress={() => navigation.navigate('Redline', { item })}
-          >
-            <Text style={styles.endLinkText}>View transparency & redlines</Text>
-          </Pressable>
-
-          {/* View original source - external with error handling */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.endLink,
-              pressed && styles.endLinkPressed,
-            ]}
-            onPress={handleViewSource}
-          >
-            <Text style={styles.endLinkText}>View original source</Text>
-          </Pressable>
-        </View>
       </ScrollView>
 
       {/* Source error modal */}
@@ -274,43 +445,68 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xxl,       // Slightly more breathing room at top
     paddingBottom: spacing.xxxl,
   },
 
   // Article content
+  // Headline: 1.36x line-height for multi-line headlines, generous bottom margin
   headline: {
     fontSize: 22,
     fontWeight: '700',
-    lineHeight: 28,
+    lineHeight: 30,                // Was 28 → 30 (1.36x) for better multi-line rhythm
     color: colors.textPrimary,
-    marginBottom: spacing.xl,
+    letterSpacing: -0.3,           // Slight negative tracking for headlines
+    marginBottom: 24,              // Fixed 24px for consistent rhythm
   },
+  // Body section: constrain measure for optimal reading
   bodySection: {
     marginBottom: spacing.lg,
+    maxWidth: 600,                 // ~65-75 chars at 16px, optimal reading measure
   },
+  // Body text: 1.625x line-height, paragraph spacing equals line-height
   bodyText: {
     fontSize: 16,
     fontWeight: '400',
-    lineHeight: 24,
+    lineHeight: 26,                // Was 24 → 26 (1.625x) for relaxed reading
     color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    marginBottom: 20,              // Was 16 → 20, closer to line-height for rhythm
   },
-  bodyLabel: {
-    fontWeight: '600',
-  },
+  // Meta: tighter to body, slight breathing room above via bodySection margin
   meta: {
     fontSize: 13,
     fontWeight: '400',
+    lineHeight: 18,                // Explicit line-height for consistency
     color: colors.textMuted,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,      // Was md (12) → sm (8), tighter grouping
   },
   disclosure: {
     fontSize: 13,
     fontWeight: '400',
     fontStyle: 'italic',
+    lineHeight: 18,                // Match meta line-height
     color: colors.textMuted,
+    marginBottom: spacing.sm,
+  },
+  thinContentNotice: {
+    fontSize: 13,
+    fontWeight: '400',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    color: colors.textSubtle,
     marginBottom: spacing.lg,
+  },
+
+  // Loading state
+  loadingSection: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.textMuted,
   },
 
   // Divider

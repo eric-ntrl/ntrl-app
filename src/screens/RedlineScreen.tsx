@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,31 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, layout } from '../theme';
 import { openExternalUrl } from '../utils/links';
+import { findRedlines, type RedlineSpan } from '../services/redline';
 import type { Item } from '../types';
 
 type Props = {
-  route: any;
+  route: {
+    params: {
+      item: Item;
+      extractedText?: string | null;
+      // Note: redlines are now computed locally on display text for perfect alignment
+    };
+  };
   navigation: any;
 };
+
+/**
+ * Normalize text for consistent display and redline detection
+ * Ensures spans computed on this text match exactly what's rendered
+ */
+function normalizeDisplayText(text: string): string {
+  return text
+    // Normalize whitespace (collapse multiple spaces/newlines)
+    .replace(/\s+/g, ' ')
+    // Trim
+    .trim();
+}
 
 /**
  * Format date/time for footer display
@@ -58,46 +77,69 @@ function Header({ onBack }: { onBack: () => void }) {
 }
 
 /**
- * Render original text with soft highlights on removed phrases
+ * Render original text with soft highlights on redlined spans
+ * Uses position-based highlighting for accuracy
  */
 function HighlightedText({
   text,
-  highlights,
+  redlines,
 }: {
   text: string;
-  highlights: string[];
+  redlines: RedlineSpan[];
 }) {
   if (!text) {
     return null;
   }
 
-  if (!highlights || highlights.length === 0) {
+  if (!redlines || redlines.length === 0) {
     return <Text style={styles.originalText}>{text}</Text>;
   }
 
-  // Build regex pattern for all highlights (case-insensitive)
-  const escapedHighlights = highlights.map((h) =>
-    h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  );
-  const pattern = new RegExp(`(${escapedHighlights.join('|')})`, 'gi');
+  // Sort redlines by start position
+  const sortedRedlines = [...redlines].sort((a, b) => a.start - b.start);
 
-  // Split text by highlight matches
-  const parts = text.split(pattern);
+  // Build segments
+  const segments: Array<{ text: string; highlighted: boolean }> = [];
+  let currentPos = 0;
+
+  for (const redline of sortedRedlines) {
+    // Add non-highlighted segment before this redline
+    if (redline.start > currentPos) {
+      segments.push({
+        text: text.substring(currentPos, redline.start),
+        highlighted: false,
+      });
+    }
+
+    // Add highlighted segment
+    if (redline.start < text.length) {
+      segments.push({
+        text: text.substring(redline.start, Math.min(redline.end, text.length)),
+        highlighted: true,
+      });
+      currentPos = redline.end;
+    }
+  }
+
+  // Add remaining non-highlighted text
+  if (currentPos < text.length) {
+    segments.push({
+      text: text.substring(currentPos),
+      highlighted: false,
+    });
+  }
 
   return (
     <Text style={styles.originalText}>
-      {parts.map((part, index) => {
-        const isHighlighted = highlights.some(
-          (h) => h.toLowerCase() === part.toLowerCase()
-        );
-        return isHighlighted ? (
+      {segments.map((segment, index) =>
+        segment.highlighted ? (
           <Text key={index} style={styles.highlightedSpan}>
-            {part}
+            {segment.text}
           </Text>
         ) : (
-          <Text key={index}>{part}</Text>
-        );
-      })}
+          <Text key={index}>{segment.text}</Text>
+        )
+      )}
     </Text>
   );
 }
@@ -142,14 +184,25 @@ function SourceUnavailableModal({
 
 export default function RedlineScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const item: Item = route.params.item;
+  const { item, extractedText } = route.params;
   const updatedTime = formatUpdatedTime(item.published_at);
 
   const [showSourceError, setShowSourceError] = useState(false);
 
-  const hasOriginalText = !!item.original_text;
-  const hasRemovedContent =
-    item.detail.removed && item.detail.removed.length > 0;
+  // Normalize display text ONCE, then compute redlines on that exact text
+  // This guarantees span positions align perfectly with rendered content
+  const displayText = useMemo(() => {
+    const rawText = extractedText || item.original_text || null;
+    return rawText ? normalizeDisplayText(rawText) : null;
+  }, [extractedText, item.original_text]);
+
+  // Compute redlines on the exact normalized display text
+  const redlines = useMemo(() => {
+    return displayText ? findRedlines(displayText) : [];
+  }, [displayText]);
+
+  const hasOriginalText = !!displayText;
+  const hasRedlines = redlines.length > 0;
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -171,23 +224,30 @@ export default function RedlineScreen({ route, navigation }: Props) {
       >
         {/* Intro copy */}
         <Text style={styles.intro}>
-          This view shows the original article text.
-          {hasRemovedContent &&
-            ' Language removed by the NTRL Filter is highlighted.'}
+          This view shows the original article text with language NTRL would remove.
         </Text>
+
+        {/* No redlines notice - prominent position */}
+        {hasOriginalText && !hasRedlines && (
+          <View style={styles.noRedlinesNotice}>
+            <Text style={styles.noRedlinesText}>
+              No manipulative language flagged in this article.
+            </Text>
+          </View>
+        )}
 
         {/* Original text with highlights */}
         {hasOriginalText ? (
           <View style={styles.originalSection}>
             <HighlightedText
-              text={item.original_text!}
-              highlights={item.detail.removed || []}
+              text={displayText!}
+              redlines={redlines}
             />
           </View>
         ) : (
           <View style={styles.unavailableSection}>
             <Text style={styles.unavailableText}>
-              Original text unavailable for this article.
+              Original article text could not be extracted for this item.
             </Text>
           </View>
         )}
@@ -304,6 +364,20 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textMuted,
     fontStyle: 'italic',
+  },
+  // No redlines notice - prominent position near top
+  noRedlinesNotice: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  noRedlinesText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textMuted,
+    textAlign: 'center',
   },
 
   // Footer
