@@ -29,7 +29,10 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 function filterRecentItems(items: Item[], now: Date): Item[] {
   const cutoff = now.getTime() - TWENTY_FOUR_HOURS_MS;
   return items.filter((item) => {
-    const publishedAt = new Date(item.published_at).getTime();
+    // Ensure UTC parsing - API returns UTC timestamps without 'Z' suffix
+    const dateString = item.published_at;
+    const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+    const publishedAt = new Date(utcString).getTime();
     return publishedAt >= cutoff;
   });
 }
@@ -72,7 +75,9 @@ function formatHeaderDate(date: Date): string {
  * Only for items within 24h window
  */
 function formatRelativeTime(dateString: string, now: Date): string {
-  const date = new Date(dateString);
+  // Ensure UTC parsing - API returns UTC timestamps without 'Z' suffix
+  const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+  const date = new Date(utcString);
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
@@ -187,11 +192,13 @@ export default function FeedScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Triggers timestamp recalculation
 
   const loadBrief = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
+        setRefreshKey((k) => k + 1); // Update timestamps on refresh
       } else {
         setLoading(true);
       }
@@ -221,7 +228,8 @@ export default function FeedScreen({ navigation }: Props) {
   }, [loadBrief]);
 
   // Use current time as anchor for all calculations
-  const now = useMemo(() => new Date(), []);
+  // refreshKey dependency ensures timestamps update on pull-to-refresh
+  const now = useMemo(() => new Date(), [refreshKey]);
   const headerDate = formatHeaderDate(now);
   const rows = useMemo(() => (brief ? flatten(brief, now) : []), [brief, now]);
 
