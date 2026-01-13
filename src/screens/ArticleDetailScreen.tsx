@@ -256,9 +256,13 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   const timeLabel = formatRelativeTime(item.published_at);
 
   const [showSourceError, setShowSourceError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [fullArticleLoading, setFullArticleLoading] = useState(true);
   const [extractedText, setExtractedText] = useState<string | null>(null);
-  const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>([]);
+  // Initialize summary from item.detail immediately - no loading required
+  const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>(() => {
+    const fallback = createFallbackSummary(item.detail);
+    return fallback.length > 0 ? fallback : composeBodyText(item.detail);
+  });
   const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
   const [showThinContentNotice, setShowThinContentNotice] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
@@ -283,14 +287,14 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     getAvailableShareTargets().then(setShareTargets);
   }, []);
 
-  // Fetch and extract article on mount
+  // Fetch full article in background (non-blocking)
+  // Brief view is available immediately from item.detail
   useEffect(() => {
-    async function loadArticle() {
-      setLoading(true);
-      setShowThinContentNotice(false);
+    async function loadFullArticle() {
+      setFullArticleLoading(true);
 
       try {
-        // Try to fetch full article
+        // Try to fetch full article from source
         const result = await getReadableArticle(item.url);
 
         if (result && result.text && result.quality.okForSummary) {
@@ -299,35 +303,24 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           const summary = makeCalmDetailSummary(result.text);
           if (summary.length > 0) {
             setSummaryParagraphs(summary);
-          } else {
-            // Summary generation failed despite okForSummary - use fallback
-            const fallback = createFallbackSummary(item.detail);
-            setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
-            setShowThinContentNotice(true);
           }
           // Detect redlines on full extracted text
           setRedlines(findRedlines(result.text));
         } else {
-          // Thin or failed extraction - use RSS detail fallback
-          // Do NOT dump raw extracted text per NTRL spec
-          const fallback = createFallbackSummary(item.detail);
-          setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
+          // Thin or failed extraction - keep using RSS detail fallback
           setExtractedText(result?.text || null);
           setRedlines(result?.text ? findRedlines(result.text) : []);
           setShowThinContentNotice(true);
         }
       } catch (error) {
-        console.warn('[ArticleDetail] Load failed:', error);
-        // Fall back to RSS detail
-        const fallback = createFallbackSummary(item.detail);
-        setSummaryParagraphs(fallback.length > 0 ? fallback : composeBodyText(item.detail));
+        console.warn('[ArticleDetail] Full article load failed:', error);
         setShowThinContentNotice(true);
       } finally {
-        setLoading(false);
+        setFullArticleLoading(false);
       }
     }
 
-    loadArticle();
+    loadFullArticle();
   }, [item.url]);
 
   const hasRemovedContent = redlines.length > 0 ||
@@ -474,77 +467,72 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           </Animated.View>
         )}
 
-        {/* Loading state */}
-        {loading ? (
-          <View style={styles.loadingSection}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
-            <Text style={styles.loadingText}>Loading article...</Text>
-          </View>
-        ) : (
-          <>
-            {/* Body - Brief or Full mode */}
-            <View style={styles.bodySection}>
-              {viewMode === 'brief' ? (
-                // Brief mode: use ArticleBrief component
+        {/* Body - Brief or Full mode */}
+        <View style={styles.bodySection}>
+          {viewMode === 'brief' ? (
+            // Brief mode: show immediately from RSS detail
+            <ArticleBrief text={summaryParagraphs.join('\n\n')} />
+          ) : (
+            // Full mode: show extracted text, loading state, or fallback
+            fullArticleLoading ? (
+              <View style={styles.loadingSection}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Text style={styles.loadingText}>Loading full article...</Text>
+              </View>
+            ) : extractedText ? (
+              <Text style={styles.bodyText}>{extractedText}</Text>
+            ) : (
+              <>
                 <ArticleBrief text={summaryParagraphs.join('\n\n')} />
-              ) : (
-                // Full mode: show extracted text or fallback to brief
-                extractedText ? (
-                  <Text style={styles.bodyText}>{extractedText}</Text>
-                ) : (
-                  <ArticleBrief text={summaryParagraphs.join('\n\n')} />
-                )
-              )}
-            </View>
+                {showThinContentNotice && (
+                  <Text style={styles.thinContentNotice}>
+                    Full text not available from this source.
+                  </Text>
+                )}
+              </>
+            )
+          )}
+        </View>
 
-            {/* Disclosure */}
-            {hasRemovedContent && (
-              <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
-            )}
-
-            {/* Thin content notice */}
-            {showThinContentNotice && viewMode === 'full' && !extractedText && (
-              <Text style={styles.thinContentNotice}>
-                Full text not available from this source.
-              </Text>
-            )}
-
-            {/* Breathing space before footer actions */}
-            <View style={styles.footerSpacer} />
-
-            {/* Footer actions - quiet inline text row */}
-            <View style={styles.footerActions}>
-              <Pressable
-                onPress={handleToggleSave}
-                style={({ pressed }) => pressed && styles.footerActionPressed}
-                accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.footerActionText, isSaved && styles.footerActionActive]}>
-                  {isSaved ? 'Saved' : 'Save'}
-                </Text>
-              </Pressable>
-              <Text style={styles.footerSeparator}>·</Text>
-              <Pressable
-                onPress={handleShare}
-                style={({ pressed }) => pressed && styles.footerActionPressed}
-                accessibilityLabel="Share article"
-                accessibilityRole="button"
-              >
-                <Text style={styles.footerActionText}>Share</Text>
-              </Pressable>
-              <Text style={styles.footerSeparator}>·</Text>
-              <Pressable
-                onPress={handleViewSource}
-                style={({ pressed }) => pressed && styles.footerActionPressed}
-                accessibilityLabel="View original source"
-                accessibilityRole="link"
-              >
-                <Text style={styles.footerActionText}>View original</Text>
-              </Pressable>
-            </View>
-          </>
+        {/* Disclosure */}
+        {hasRemovedContent && (
+          <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
         )}
+
+        {/* Breathing space before footer actions */}
+        <View style={styles.footerSpacer} />
+
+        {/* Footer actions - quiet inline text row */}
+        <View style={styles.footerActions}>
+          <Pressable
+            onPress={handleToggleSave}
+            style={({ pressed }) => pressed && styles.footerActionPressed}
+            accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.footerActionText, isSaved && styles.footerActionActive]}>
+              {isSaved ? 'Saved' : 'Save'}
+            </Text>
+          </Pressable>
+          <Text style={styles.footerSeparator}>·</Text>
+          <Pressable
+            onPress={handleShare}
+            style={({ pressed }) => pressed && styles.footerActionPressed}
+            accessibilityLabel="Share article"
+            accessibilityRole="button"
+          >
+            <Text style={styles.footerActionText}>Share</Text>
+          </Pressable>
+          <Text style={styles.footerSeparator}>·</Text>
+          <Pressable
+            onPress={handleViewSource}
+            style={({ pressed }) => pressed && styles.footerActionPressed}
+            accessibilityLabel="View original source"
+            accessibilityRole="link"
+          >
+            <Text style={styles.footerActionText}>View original</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {/* Source error modal */}
