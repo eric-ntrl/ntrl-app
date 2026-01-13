@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchBrief } from '../api';
 import { colors, typography, spacing, layout } from '../theme';
+import { decodeHtmlEntities } from '../utils/text';
 import type { Item, Section, Brief } from '../types';
 
 type Props = { navigation: any };
@@ -89,11 +90,47 @@ function formatRelativeTime(dateString: string, now: Date): string {
   return 'Today';
 }
 
-function Header({ date }: { date: string }) {
+function Header({
+  date,
+  onSearchPress,
+  onProfilePress,
+}: {
+  date: string;
+  onSearchPress: () => void;
+  onProfilePress: () => void;
+}) {
   return (
     <View style={styles.header}>
-      <Text style={styles.brand}>NTRL</Text>
-      <Text style={styles.date}>{date}</Text>
+      <View style={styles.headerLeft}>
+        <Text style={styles.brand}>NTRL</Text>
+        <Text style={styles.date}>{date}</Text>
+      </View>
+      <View style={styles.headerRight}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.headerIcon,
+            pressed && styles.headerIconPressed,
+          ]}
+          onPress={onSearchPress}
+          hitSlop={8}
+          accessibilityLabel="Search"
+          accessibilityRole="button"
+        >
+          <Text style={styles.headerIconText}>⌕</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.headerIcon,
+            pressed && styles.headerIconPressed,
+          ]}
+          onPress={onProfilePress}
+          hitSlop={8}
+          accessibilityLabel="Profile"
+          accessibilityRole="button"
+        >
+          <Text style={styles.headerIconText}>○</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -115,6 +152,9 @@ function ArticleCard({
   timeLabel: string;
   onPress: () => void;
 }) {
+  const headline = decodeHtmlEntities(item.headline);
+  const summary = decodeHtmlEntities(item.summary);
+
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -122,10 +162,10 @@ function ArticleCard({
     >
       <View style={styles.textColumn}>
         <Text style={styles.headline} numberOfLines={3} ellipsizeMode="tail">
-          {item.headline}
+          {headline}
         </Text>
         <Text style={styles.summary} numberOfLines={2} ellipsizeMode="tail">
-          {item.summary}
+          {summary}
         </Text>
         <Text style={styles.meta}>
           {item.source} · {timeLabel}
@@ -263,7 +303,11 @@ export default function FeedScreen({ navigation }: Props) {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header date={headerDate} />
+      <Header
+        date={headerDate}
+        onSearchPress={() => navigation.navigate('Search')}
+        onProfilePress={() => navigation.navigate('Profile')}
+      />
 
       {loading && !brief ? (
         <LoadingState />
@@ -316,9 +360,33 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIconPressed: {
+    opacity: 0.5,
+  },
+  headerIconText: {
+    fontSize: 22,
+    color: colors.textMuted,
   },
   brand: {
     ...typography.brand,

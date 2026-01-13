@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,29 @@ import {
   StatusBar,
   Modal,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, layout } from '../theme';
 import { openExternalUrl } from '../utils/links';
 import { getReadableArticle } from '../services/readerMode';
 import { makeCalmDetailSummary, createFallbackSummary } from '../services/detailSummary';
 import { findRedlines, type RedlineSpan } from '../services/redline';
+import {
+  isArticleSaved,
+  saveArticle,
+  removeSavedArticle,
+  addToHistory,
+} from '../storage/storageService';
+import { decodeHtmlEntities } from '../utils/text';
+import {
+  copyStoryLink,
+  shareToTarget,
+  getAvailableShareTargets,
+  type ShareTarget,
+  type ShareTargetConfig,
+} from '../utils/sharing';
 import type { Item } from '../types';
 
 type Props = {
@@ -239,6 +255,26 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>([]);
   const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
   const [showThinContentNotice, setShowThinContentNotice] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedToast, setCopiedToast] = useState(false);
+  const [shareTargets, setShareTargets] = useState<ShareTargetConfig[]>([]);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  // Check saved status and add to history on mount
+  useEffect(() => {
+    async function initArticle() {
+      const saved = await isArticleSaved(item.id);
+      setIsSaved(saved);
+      await addToHistory(item);
+    }
+    initArticle();
+  }, [item.id]);
+
+  // Load available share targets on mount
+  useEffect(() => {
+    getAvailableShareTargets().then(setShareTargets);
+  }, []);
 
   // Fetch and extract article on mount
   useEffect(() => {
@@ -298,6 +334,56 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  // Handle save/unsave article
+  const handleToggleSave = async () => {
+    if (isSaved) {
+      await removeSavedArticle(item.id);
+      setIsSaved(false);
+    } else {
+      await saveArticle(item);
+      setIsSaved(true);
+    }
+  };
+
+  // Handle share to specific target
+  const handleShareToTarget = async (target: ShareTarget) => {
+    setShowShareMenu(false);
+    const headline = decodeHtmlEntities(item.headline);
+    await shareToTarget(target, item.id, headline);
+  };
+
+  // Handle copy link to clipboard
+  const handleCopyLink = async () => {
+    setShowShareMenu(false);
+    await copyStoryLink(item.id);
+
+    // Haptic feedback - subtle success notification
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Show animated toast
+    setCopiedToast(true);
+    toastOpacity.setValue(0);
+
+    Animated.sequence([
+      // Fade in
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      // Hold
+      Animated.delay(1500),
+      // Fade out
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCopiedToast(false);
+    });
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
@@ -309,7 +395,45 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Headline */}
-        <Text style={styles.headline}>{item.headline}</Text>
+        <Text style={styles.headline}>{decodeHtmlEntities(item.headline)}</Text>
+
+        {/* Action buttons - Save & Share */}
+        <View style={styles.actionRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.actionButtonPressed,
+            ]}
+            onPress={handleToggleSave}
+            accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.actionIcon, isSaved && styles.actionIconActive]}>
+              {isSaved ? '★' : '☆'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.actionButtonPressed,
+            ]}
+            onPress={() => setShowShareMenu(true)}
+            accessibilityLabel="Share article"
+            accessibilityRole="button"
+          >
+            <Text style={styles.actionIcon}>↗</Text>
+          </Pressable>
+        </View>
+
+        {/* Copied toast */}
+        {copiedToast && (
+          <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+            <View style={styles.toastContent}>
+              <Text style={styles.toastCheck}>✓</Text>
+              <Text style={styles.toastText}>Link copied</Text>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Loading state */}
         {loading ? (
@@ -385,6 +509,65 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         visible={showSourceError}
         onClose={() => setShowSourceError(false)}
       />
+
+      {/* Share menu modal */}
+      <Modal
+        visible={showShareMenu}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShareMenu(false)}
+      >
+        <View style={styles.shareMenuOverlay}>
+          <Pressable
+            style={styles.shareMenuBackdrop}
+            onPress={() => setShowShareMenu(false)}
+          />
+          <View style={styles.shareMenuContent}>
+            <View style={styles.shareMenuHandle} />
+            <Text style={styles.shareMenuTitle}>Share article</Text>
+
+            {/* All share options as consistent list */}
+            <View style={styles.shareOptionsList}>
+              {shareTargets.filter(t => t.available).map((target) => (
+                <Pressable
+                  key={target.key}
+                  style={({ pressed }) => [
+                    styles.shareOption,
+                    pressed && styles.shareOptionPressed,
+                  ]}
+                  onPress={() => handleShareToTarget(target.key)}
+                >
+                  <Text style={styles.shareOptionLabel}>{target.label}</Text>
+                  <Text style={styles.shareOptionChevron}>›</Text>
+                </Pressable>
+              ))}
+
+              {/* Copy link option */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.shareOption,
+                  pressed && styles.shareOptionPressed,
+                ]}
+                onPress={handleCopyLink}
+              >
+                <Text style={styles.shareOptionLabel}>Copy link</Text>
+                <Text style={styles.shareOptionChevron}>›</Text>
+              </Pressable>
+            </View>
+
+            {/* Cancel button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.shareMenuCancel,
+                pressed && styles.shareMenuCancelPressed,
+              ]}
+              onPress={() => setShowShareMenu(false)}
+            >
+              <Text style={styles.shareMenuCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -572,6 +755,131 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 15,
     fontWeight: '600',
+    color: colors.textMuted,
+  },
+
+  // Action buttons (Save & Share)
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonPressed: {
+    opacity: 0.5,
+  },
+  actionIcon: {
+    fontSize: 24,
+    color: colors.textMuted,
+  },
+  actionIconActive: {
+    color: colors.accent,
+  },
+
+  // Toast
+  toast: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  toastContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.textPrimary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 20,
+    gap: spacing.xs,
+  },
+  toastCheck: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.background,
+  },
+  toastText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.background,
+  },
+
+  // Share menu
+  shareMenuOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  shareMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  shareMenuContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxxl,
+  },
+  shareMenuHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: colors.divider,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  shareMenuTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  shareOptionsList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.divider,
+  },
+  shareOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: layout.screenPadding,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.divider,
+  },
+  shareOptionPressed: {
+    backgroundColor: colors.dividerSubtle,
+  },
+  shareOptionLabel: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: colors.textPrimary,
+  },
+  shareOptionChevron: {
+    fontSize: 20,
+    fontWeight: '300',
+    color: colors.textMuted,
+  },
+  shareMenuCancel: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  shareMenuCancelPressed: {
+    opacity: 0.5,
+  },
+  shareMenuCancelText: {
+    fontSize: 15,
+    fontWeight: '400',
     color: colors.textMuted,
   },
 });
