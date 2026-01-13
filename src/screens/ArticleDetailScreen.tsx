@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Animated,
+  Share,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ import {
   copyStoryLink,
   shareToTarget,
   getAvailableShareTargets,
+  getStoryShareUrl,
   type ShareTarget,
   type ShareTargetConfig,
 } from '../utils/sharing';
@@ -384,6 +386,21 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     });
   };
 
+  // Handle share button - try native share first, fall back to custom menu
+  const handleShare = async () => {
+    const headline = decodeHtmlEntities(item.headline);
+    const url = getStoryShareUrl(item.id);
+    const message = `${headline}\n\n${url}`;
+
+    try {
+      const result = await Share.share({ message });
+      // Share completed (user shared or cancelled) - no further action needed
+    } catch (error) {
+      // Native share failed - show custom menu as fallback
+      setShowShareMenu(true);
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
@@ -417,7 +434,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
               styles.actionButton,
               pressed && styles.actionButtonPressed,
             ]}
-            onPress={() => setShowShareMenu(true)}
+            onPress={handleShare}
             accessibilityLabel="Share article"
             accessibilityRole="button"
           >
