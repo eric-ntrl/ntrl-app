@@ -499,7 +499,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
 
             {/* Disclosure */}
             {hasRemovedContent && (
-              <Text style={styles.disclosure}>Manipulative language removed.</Text>
+              <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
             )}
 
             {/* Thin content notice */}
