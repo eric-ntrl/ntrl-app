@@ -34,6 +34,10 @@ import {
   type ShareTargetConfig,
 } from '../utils/sharing';
 import type { Item } from '../types';
+import SegmentedControl from '../components/SegmentedControl';
+import ArticleBrief from '../components/ArticleBrief';
+
+type ViewMode = 'brief' | 'full';
 
 type Props = {
   route: any;
@@ -257,6 +261,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>([]);
   const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
   const [showThinContentNotice, setShowThinContentNotice] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('brief');
   const [isSaved, setIsSaved] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
@@ -414,31 +419,48 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         {/* Headline */}
         <Text style={styles.headline}>{decodeHtmlEntities(item.headline)}</Text>
 
-        {/* Action buttons - Save & Share */}
-        <View style={styles.actionRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.actionButtonPressed,
+        {/* Metadata band: Source · Time | Brief | Full | ntrl view */}
+        <View style={styles.metadataBand}>
+          {/* Left: Source + Timestamp */}
+          <View style={styles.metadataLeft}>
+            <Pressable
+              onPress={() => navigation.navigate('SourceTransparency', {
+                sourceName: item.source,
+                sourceUrl: item.url,
+              })}
+              style={({ pressed }) => pressed && styles.metadataPressed}
+              accessibilityRole="link"
+              accessibilityLabel={`Source: ${item.source}. Tap for source info.`}
+            >
+              <Text style={styles.metadataSource}>{item.source}</Text>
+            </Pressable>
+            <Text style={styles.metadataSeparator}>·</Text>
+            <Text style={styles.metadataTime}>{timeLabel}</Text>
+          </View>
+
+          {/* Center: Brief | Full toggle */}
+          <SegmentedControl<ViewMode>
+            segments={[
+              { key: 'brief', label: 'Brief' },
+              { key: 'full', label: 'Full' },
             ]}
-            onPress={handleToggleSave}
-            accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.actionIcon, isSaved && styles.actionIconActive]}>
-              {isSaved ? '★' : '☆'}
-            </Text>
-          </Pressable>
+            selected={viewMode}
+            onSelect={setViewMode}
+          />
+
+          {/* Right: ntrl view */}
           <Pressable
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.actionButtonPressed,
-            ]}
-            onPress={handleShare}
-            accessibilityLabel="Share article"
-            accessibilityRole="button"
+            onPress={() => navigation.navigate('NtrlView', {
+              item,
+              fullOriginalText: extractedText,
+              // transformations will come from backend in future
+              transformations: [],
+            })}
+            style={({ pressed }) => pressed && styles.metadataPressed}
+            accessibilityRole="link"
+            accessibilityLabel="View ntrl transparency"
           >
-            <Text style={styles.actionIcon}>↗</Text>
+            <Text style={styles.metadataNtrlView}>ntrl view</Text>
           </Pressable>
         </View>
 
@@ -460,19 +482,20 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           </View>
         ) : (
           <>
-            {/* Body - Organic narrative flow from reader mode */}
+            {/* Body - Brief or Full mode */}
             <View style={styles.bodySection}>
-              {summaryParagraphs.map((paragraph, index) => (
-                <Text key={index} style={styles.bodyText}>
-                  {paragraph}
-                </Text>
-              ))}
+              {viewMode === 'brief' ? (
+                // Brief mode: use ArticleBrief component
+                <ArticleBrief text={summaryParagraphs.join('\n\n')} />
+              ) : (
+                // Full mode: show extracted text or fallback to brief
+                extractedText ? (
+                  <Text style={styles.bodyText}>{extractedText}</Text>
+                ) : (
+                  <ArticleBrief text={summaryParagraphs.join('\n\n')} />
+                )
+              )}
             </View>
-
-            {/* Metadata */}
-            <Text style={styles.meta}>
-              {item.source} · {timeLabel}
-            </Text>
 
             {/* Disclosure */}
             {hasRemovedContent && (
@@ -480,41 +503,44 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
             )}
 
             {/* Thin content notice */}
-            {showThinContentNotice && (
+            {showThinContentNotice && viewMode === 'full' && !extractedText && (
               <Text style={styles.thinContentNotice}>
                 Full text not available from this source.
               </Text>
             )}
 
-            {/* Divider */}
-            <View style={styles.divider} />
+            {/* Breathing space before footer actions */}
+            <View style={styles.footerSpacer} />
 
-            {/* End links */}
-            <View style={styles.endLinks}>
-              {/* View transparency & redlines - internal navigation */}
+            {/* Footer actions - quiet inline text row */}
+            <View style={styles.footerActions}>
               <Pressable
-                style={({ pressed }) => [
-                  styles.endLink,
-                  pressed && styles.endLinkPressed,
-                ]}
-                onPress={() => navigation.navigate('Redline', {
-                  item,
-                  extractedText,
-                  redlines,
-                })}
+                onPress={handleToggleSave}
+                style={({ pressed }) => pressed && styles.footerActionPressed}
+                accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
+                accessibilityRole="button"
               >
-                <Text style={styles.endLinkText}>View transparency & redlines</Text>
+                <Text style={[styles.footerActionText, isSaved && styles.footerActionActive]}>
+                  {isSaved ? 'Saved' : 'Save'}
+                </Text>
               </Pressable>
-
-              {/* View original source - external with error handling */}
+              <Text style={styles.footerSeparator}>·</Text>
               <Pressable
-                style={({ pressed }) => [
-                  styles.endLink,
-                  pressed && styles.endLinkPressed,
-                ]}
-                onPress={handleViewSource}
+                onPress={handleShare}
+                style={({ pressed }) => pressed && styles.footerActionPressed}
+                accessibilityLabel="Share article"
+                accessibilityRole="button"
               >
-                <Text style={styles.endLinkText}>View original source</Text>
+                <Text style={styles.footerActionText}>Share</Text>
+              </Pressable>
+              <Text style={styles.footerSeparator}>·</Text>
+              <Pressable
+                onPress={handleViewSource}
+                style={({ pressed }) => pressed && styles.footerActionPressed}
+                accessibilityLabel="View original source"
+                accessibilityRole="link"
+              >
+                <Text style={styles.footerActionText}>View original</Text>
               </Pressable>
             </View>
           </>
@@ -644,33 +670,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xxl,       // Slightly more breathing room at top
+    paddingHorizontal: spacing.xxl,   // Book-page margins (24px)
+    paddingTop: spacing.xxxl,         // Generous breathing room (32px)
     paddingBottom: spacing.xxxl,
   },
 
   // Article content
-  // Headline: 1.36x line-height for multi-line headlines, generous bottom margin
+  // Headline: 1.36x line-height for multi-line headlines
   headline: {
     fontSize: 22,
     fontWeight: '700',
-    lineHeight: 30,                // Was 28 → 30 (1.36x) for better multi-line rhythm
+    lineHeight: 30,
     color: colors.textPrimary,
-    letterSpacing: -0.3,           // Slight negative tracking for headlines
-    marginBottom: 24,              // Fixed 24px for consistent rhythm
+    letterSpacing: -0.3,
+    marginBottom: spacing.xl,         // Chapter title breathing room (20px)
+  },
+
+  // Metadata band - single line with source/time, mode toggle, ntrl view
+  metadataBand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 28,                 // Clear zone separation
+    paddingTop: spacing.xs,
+  },
+  metadataLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metadataSource: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSubtle,
+  },
+  metadataSeparator: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSubtle,
+    marginHorizontal: spacing.xs,
+  },
+  metadataTime: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSubtle,
+  },
+  metadataNtrlView: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.textSubtle,
+  },
+  metadataPressed: {
+    opacity: 0.5,
   },
   // Body section: constrain measure for optimal reading
   bodySection: {
     marginBottom: spacing.lg,
     maxWidth: 600,                 // ~65-75 chars at 16px, optimal reading measure
   },
-  // Body text: 1.625x line-height, paragraph spacing equals line-height
+  // Body text: book-like reading experience
   bodyText: {
     fontSize: 16,
     fontWeight: '400',
-    lineHeight: 26,                // Was 24 → 26 (1.625x) for relaxed reading
+    lineHeight: 28,                // 1.75x for book-like reading
+    letterSpacing: 0.3,            // Subtle improvement for reading flow
     color: colors.textPrimary,
-    marginBottom: 20,              // Was 16 → 20, closer to line-height for rhythm
   },
   // Meta: tighter to body, slight breathing room above via bodySection margin
   meta: {
@@ -709,27 +772,34 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  // Divider
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.xl,
+  // Footer spacer - breathing room before actions
+  footerSpacer: {
+    height: spacing.xxxl,
   },
 
-  // End links
-  endLinks: {
-    gap: spacing.md,
+  // Footer actions - quiet inline text row (non-sticky)
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
   },
-  endLink: {
-    paddingVertical: spacing.sm,
+  footerActionText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.textSubtle,
   },
-  endLinkPressed: {
+  footerActionActive: {
+    color: colors.textMuted,
+  },
+  footerActionPressed: {
     opacity: 0.5,
   },
-  endLinkText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
+  footerSeparator: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.textSubtle,
+    marginHorizontal: spacing.sm,
   },
 
   // Modal
@@ -773,30 +843,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: colors.textMuted,
-  },
-
-  // Action buttons (Save & Share)
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  actionButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonPressed: {
-    opacity: 0.5,
-  },
-  actionIcon: {
-    fontSize: 24,
-    color: colors.textMuted,
-  },
-  actionIconActive: {
-    color: colors.accent,
   },
 
   // Toast

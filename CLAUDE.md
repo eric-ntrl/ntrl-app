@@ -1,0 +1,63 @@
+# NTRL App - Project Context
+
+## What is NTRL?
+A "neutral news" app that strips manipulative language from news articles and presents them in a calm, deterministic feed. No engagement metrics, no personalization, no urgency.
+
+## Tech Stack
+- **Framework:** React Native 0.81.5 with Expo 54
+- **Language:** TypeScript 5.9
+- **Navigation:** React Navigation (Native Stack)
+- **Platforms:** iOS, Android, Web
+
+## Project Structure
+```
+src/
+├── screens/          # App screens
+│   ├── FeedScreen.tsx           # Main daily brief
+│   ├── ArticleDetailScreen.tsx  # Full article view
+│   ├── RedlineScreen.tsx        # Transparency view
+│   └── AboutScreen.tsx          # App info
+├── services/         # Business logic
+│   ├── readerMode.ts            # Article extraction
+│   ├── redline.ts               # Manipulation detection
+│   └── detailSummary.ts         # Summary composition
+├── api.ts            # API client (calls ntrl-api backend)
+├── config.ts         # API_BASE_URL configuration
+├── theme.ts          # Design system (colors, typography, spacing)
+├── types.ts          # TypeScript interfaces
+└── utils/            # Helper functions
+```
+
+## Design System
+All UI must use values from `src/theme.ts`:
+- **Colors:** Warm off-white background, dark gray text, muted accents
+- **Typography:** Defined scale from 11-22px
+- **Spacing:** xs(4) sm(8) md(12) lg(16) xl(20) xxl(24) xxxl(32)
+
+Visual target: "A calm sunny morning with blue skies and coffee"
+
+## API Integration
+Backend: `ntrl-api` (FastAPI/Python)
+- `GET /v1/brief` - Daily brief with sections
+- `GET /v1/stories/{id}` - Story detail
+- `GET /v1/stories/{id}/transparency` - What was neutralized
+
+## Core Principles (MUST FOLLOW)
+1. **No engagement** - No likes, saves, shares, comments, ever
+2. **No urgency** - No "breaking", "just in", "trending"
+3. **Calm UX** - Subtle animations, muted colors, no flashy effects
+4. **Transparency** - Always show what was changed/removed
+5. **Determinism** - Same content for all users
+
+## Commands
+```bash
+npm start          # Start Expo dev server
+npm run ios        # Run on iOS simulator
+npm run android    # Run on Android emulator
+npm run web        # Run in browser
+```
+
+## Related Files
+- API backend: `../ntrl-api/`
+- Design specs: `../../Screen Mocks/`
+- Brand guidelines: `../../Brand/`

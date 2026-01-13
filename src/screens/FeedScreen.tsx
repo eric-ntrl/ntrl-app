@@ -161,10 +161,10 @@ function ArticleCard({
       onPress={onPress}
     >
       <View style={styles.textColumn}>
-        <Text style={styles.headline} numberOfLines={3} ellipsizeMode="tail">
+        <Text style={styles.headline} numberOfLines={2} ellipsizeMode="tail">
           {headline}
         </Text>
-        <Text style={styles.summary} numberOfLines={2} ellipsizeMode="tail">
+        <Text style={styles.summary} numberOfLines={3} ellipsizeMode="tail">
           {summary}
         </Text>
         <Text style={styles.meta}>

@@ -11,6 +11,8 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import SavedArticlesScreen from './src/screens/SavedArticlesScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SearchScreen from './src/screens/SearchScreen';
+import NtrlViewScreen from './src/screens/NtrlViewScreen';
+import SourceTransparencyScreen from './src/screens/SourceTransparencyScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +29,8 @@ export default function App() {
           <Stack.Screen name="SavedArticles" component={SavedArticlesScreen} />
           <Stack.Screen name="History" component={HistoryScreen} />
           <Stack.Screen name="Search" component={SearchScreen} />
+          <Stack.Screen name="NtrlView" component={NtrlViewScreen} />
+          <Stack.Screen name="SourceTransparency" component={SourceTransparencyScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
