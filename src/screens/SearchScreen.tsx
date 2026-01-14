@@ -18,10 +18,7 @@ import { decodeHtmlEntities } from '../utils/text';
 import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../storage/storageService';
 import type { RecentSearch } from '../storage/types';
 import type { Item, Brief } from '../types';
-
-type Props = {
-  navigation: any;
-};
+import type { SearchScreenProps } from '../navigation/types';
 
 /**
  * Format relative time for search results
@@ -200,7 +197,7 @@ function EmptyResults({
   );
 }
 
-export default function SearchScreen({ navigation }: Props) {
+export default function SearchScreen({ navigation }: SearchScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

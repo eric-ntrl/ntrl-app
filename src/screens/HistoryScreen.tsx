@@ -16,10 +16,7 @@ import { getHistory, clearHistory } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
 import type { HistoryEntry } from '../storage/types';
 import type { Item } from '../types';
-
-type Props = {
-  navigation: any;
-};
+import type { HistoryScreenProps } from '../navigation/types';
 
 /**
  * Format relative time for history entries
@@ -160,7 +157,7 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
   );
 }
 
-export default function HistoryScreen({ navigation }: Props) {
+export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

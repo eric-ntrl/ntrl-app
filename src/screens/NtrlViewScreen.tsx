@@ -4,41 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
-import type { Item } from '../types';
-
-/**
- * Transformation types - categories of changes made by NTRL
- */
-type TransformationType =
-  | 'urgency'
-  | 'emotional'
-  | 'clickbait'
-  | 'sensational'
-  | 'opinion'
-  | 'other';
-
-/**
- * A single transformation/change made to the article
- */
-type Transformation = {
-  start: number;
-  end: number;
-  type: TransformationType;
-  original: string;
-  filtered: string;
-};
-
-type Props = {
-  route: {
-    params: {
-      item: Item;
-      fullOriginalText?: string | null;
-      fullFilteredText?: string | null;
-      transformations?: Transformation[];
-    };
-  };
-  navigation: any;
-};
+import type { NtrlViewScreenProps, TransformationType, Transformation } from '../navigation/types';
 
 /**
  * Get human-readable label for transformation type
@@ -214,7 +180,7 @@ function ChangeCategories({
   );
 }
 
-export default function NtrlViewScreen({ route, navigation }: Props) {
+export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

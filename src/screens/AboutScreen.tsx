@@ -3,10 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-
-type Props = {
-  navigation: any;
-};
+import type { AboutScreenProps } from '../navigation/types';
 
 function BackButton({
   onPress,
@@ -61,7 +58,7 @@ function Section({
   );
 }
 
-export default function AboutScreen({ navigation }: Props) {
+export default function AboutScreen({ navigation }: AboutScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

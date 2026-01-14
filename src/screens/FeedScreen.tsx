@@ -15,8 +15,7 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
 import type { Item, Section, Brief } from '../types';
-
-type Props = { navigation: any };
+import type { FeedScreenProps } from '../navigation/types';
 
 type Row =
   | { type: 'section'; section: Section }
@@ -243,7 +242,7 @@ function ErrorState({
   );
 }
 
-export default function FeedScreen({ navigation }: Props) {
+export default function FeedScreen({ navigation }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors, typography, spacing, layout } = theme;

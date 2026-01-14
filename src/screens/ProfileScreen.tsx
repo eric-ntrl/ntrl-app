@@ -5,10 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme, TextSizePreference, ColorModePreference } from '../theme/types';
 import { getPreferences, updatePreferences } from '../storage/storageService';
-
-type Props = {
-  navigation: any;
-};
+import type { ProfileScreenProps } from '../navigation/types';
 
 // Topic options matching API sections
 const TOPICS = [
@@ -194,7 +191,7 @@ function ColorModeOption({
   );
 }
 
-export default function ProfileScreen({ navigation }: Props) {
+export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, textSize, setTextSize, colorMode, colorModePreference, setColorMode } = useTheme();
   const { colors } = theme;

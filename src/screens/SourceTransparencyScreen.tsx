@@ -4,16 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
-
-type Props = {
-  route: {
-    params: {
-      sourceName: string;
-      sourceUrl?: string | null;
-    };
-  };
-  navigation: any;
-};
+import type { SourceTransparencyScreenProps } from '../navigation/types';
 
 function BackButton({
   onPress,
@@ -80,7 +71,10 @@ function SourceUnavailableModal({
   );
 }
 
-export default function SourceTransparencyScreen({ route, navigation }: Props) {
+export default function SourceTransparencyScreen({
+  route,
+  navigation,
+}: SourceTransparencyScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

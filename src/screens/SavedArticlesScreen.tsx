@@ -16,10 +16,7 @@ import { getSavedArticles, removeSavedArticle } from '../storage/storageService'
 import { decodeHtmlEntities } from '../utils/text';
 import type { SavedArticle } from '../storage/types';
 import type { Item } from '../types';
-
-type Props = {
-  navigation: any;
-};
+import type { SavedArticlesScreenProps } from '../navigation/types';
 
 /**
  * Format relative time for saved articles
@@ -137,7 +134,7 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
   );
 }
 
-export default function SavedArticlesScreen({ navigation }: Props) {
+export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

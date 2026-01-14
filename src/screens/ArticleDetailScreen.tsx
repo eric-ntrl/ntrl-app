@@ -35,15 +35,11 @@ import {
   type ShareTargetConfig,
 } from '../utils/sharing';
 import type { Item } from '../types';
+import type { ArticleDetailScreenProps } from '../navigation/types';
 import SegmentedControl from '../components/SegmentedControl';
 import ArticleBrief from '../components/ArticleBrief';
 
 type ViewMode = 'brief' | 'full';
-
-type Props = {
-  route: any;
-  navigation: any;
-};
 
 /**
  * Format date for header display
@@ -248,13 +244,13 @@ function SourceUnavailableModal({
   );
 }
 
-export default function ArticleDetailScreen({ route, navigation }: Props) {
+export default function ArticleDetailScreen({ route, navigation }: ArticleDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const item: Item = route.params.item;
+  const { item } = route.params;
   const headerDate = formatHeaderDate();
   const timeLabel = formatRelativeTime(item.published_at);
 

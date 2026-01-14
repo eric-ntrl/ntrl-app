@@ -5,18 +5,7 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
 import { findRedlines, type RedlineSpan } from '../services/redline';
-import type { Item } from '../types';
-
-type Props = {
-  route: {
-    params: {
-      item: Item;
-      extractedText?: string | null;
-      // Note: redlines are now computed locally on display text for perfect alignment
-    };
-  };
-  navigation: any;
-};
+import type { RedlineScreenProps } from '../navigation/types';
 
 /**
  * Normalize text for consistent display and redline detection
@@ -184,7 +173,7 @@ function SourceUnavailableModal({
   );
 }
 
-export default function RedlineScreen({ route, navigation }: Props) {
+export default function RedlineScreen({ route, navigation }: RedlineScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
