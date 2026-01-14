@@ -270,6 +270,8 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const [copiedToast, setCopiedToast] = useState(false);
   const [shareTargets, setShareTargets] = useState<ShareTargetConfig[]>([]);
   const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const isMountedRef = useRef(true);
 
   // Check saved status and add to history on mount
   useEffect(() => {
@@ -284,6 +286,16 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   // Load available share targets on mount
   useEffect(() => {
     getAvailableShareTargets().then(setShareTargets);
+  }, []);
+
+  // Cleanup animations on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (toastAnimationRef.current) {
+        toastAnimationRef.current.stop();
+      }
+    };
   }, []);
 
   // Fetch full article in background (non-blocking)
@@ -359,11 +371,16 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     // Haptic feedback - subtle success notification
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    // Stop any existing animation
+    if (toastAnimationRef.current) {
+      toastAnimationRef.current.stop();
+    }
+
     // Show animated toast
     setCopiedToast(true);
     toastOpacity.setValue(0);
 
-    Animated.sequence([
+    toastAnimationRef.current = Animated.sequence([
       // Fade in
       Animated.timing(toastOpacity, {
         toValue: 1,
@@ -378,8 +395,13 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         duration: 300,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      setCopiedToast(false);
+    ]);
+
+    toastAnimationRef.current.start(() => {
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setCopiedToast(false);
+      }
     });
   };
 

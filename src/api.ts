@@ -104,7 +104,89 @@ export type BriefFetchResult = {
   fromCache: boolean;
 };
 
+// Retry configuration
 const FETCH_TIMEOUT_MS = 10000; // 10 seconds
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000; // 1 second
+
+/**
+ * Delay execution for specified milliseconds
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if an error is retryable (network errors, 5xx server errors)
+ */
+function isRetryableError(error: unknown, response?: Response): boolean {
+  // Network errors (no response)
+  if (!response && error instanceof Error) {
+    return true;
+  }
+  // Server errors (5xx)
+  if (response && response.status >= 500) {
+    return true;
+  }
+  // Request timeout
+  if (error instanceof Error && error.name === 'AbortError') {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fetch with retry logic and exponential backoff
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  retries = MAX_RETRIES
+): Promise<Response> {
+  let lastError: Error | null = null;
+  let lastResponse: Response | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Add timeout to each request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      // Return successful responses (2xx) or client errors (4xx) immediately
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        return response;
+      }
+
+      // Server error - may be retryable
+      lastResponse = response;
+      lastError = new Error(`HTTP ${response.status}`);
+
+      if (!isRetryableError(lastError, response) || attempt === retries) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (!isRetryableError(error, undefined) || attempt === retries) {
+        throw lastError;
+      }
+    }
+
+    // Exponential backoff: 1s, 2s, 4s
+    const delayMs = BASE_DELAY_MS * Math.pow(2, attempt);
+    await delay(delayMs);
+  }
+
+  // Should not reach here, but satisfy TypeScript
+  if (lastResponse) return lastResponse;
+  throw lastError || new Error('Fetch failed after retries');
+}
 
 // Fetch brief with automatic caching and offline fallback
 export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
@@ -151,9 +233,9 @@ export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
   }
 }
 
-// Fetch story detail
+// Fetch story detail with retry logic
 export async function fetchStoryDetail(storyId: string): Promise<Detail> {
-  const response = await fetch(`${API_BASE_URL}/v1/stories/${storyId}`);
+  const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}`);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
@@ -169,9 +251,9 @@ export async function fetchStoryDetail(storyId: string): Promise<Detail> {
   };
 }
 
-// Fetch transparency (removed phrases)
+// Fetch transparency (removed phrases) with retry logic
 export async function fetchTransparency(storyId: string): Promise<string[]> {
-  const response = await fetch(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
+  const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
