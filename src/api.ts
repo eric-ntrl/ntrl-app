@@ -1,5 +1,6 @@
 import { API_BASE_URL } from './config';
 import type { Brief, Section, Item, Detail } from './types';
+import { getCachedBrief, cacheBrief } from './storage/storageService';
 
 // API Response Types
 type ApiBriefStory = {
@@ -91,6 +92,59 @@ export async function fetchBrief(): Promise<Brief> {
 
   const data: ApiBriefResponse = await response.json();
   return transformBrief(data);
+}
+
+// Result type for cache-aware fetch
+export type BriefFetchResult = {
+  brief: Brief;
+  fromCache: boolean;
+};
+
+const FETCH_TIMEOUT_MS = 10000; // 10 seconds
+
+// Fetch brief with automatic caching and offline fallback
+export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
+  // Get cached data first (for fallback)
+  const cached = await getCachedBrief();
+
+  try {
+    // Attempt fresh fetch with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    const response = await fetch(`${API_BASE_URL}/v1/brief`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+
+    const data: ApiBriefResponse = await response.json();
+    const brief = transformBrief(data);
+
+    // Cache the fresh data (fire-and-forget)
+    cacheBrief(brief).catch(() => {});
+
+    return {
+      brief,
+      fromCache: false,
+    };
+  } catch (error) {
+    // Network failed - fall back to cache if available
+    if (cached) {
+      console.log('[API] Network failed, using cached brief');
+      return {
+        brief: cached.brief,
+        fromCache: true,
+      };
+    }
+
+    // No cache available - rethrow the error
+    throw error;
+  }
 }
 
 // Fetch story detail

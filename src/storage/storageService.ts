@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Item } from '../types';
-import type { SavedArticle, HistoryEntry, UserPreferences, RecentSearch } from './types';
+import type { Item, Brief } from '../types';
+import type { SavedArticle, HistoryEntry, UserPreferences, RecentSearch, CachedBrief } from './types';
 
 // Storage keys
 const KEYS = {
@@ -8,6 +8,7 @@ const KEYS = {
   HISTORY: '@ntrl/history',
   PREFERENCES: '@ntrl/preferences',
   RECENT_SEARCHES: '@ntrl/recent_searches',
+  CACHED_BRIEF: '@ntrl/cached_brief',
 };
 
 // Limits
@@ -196,4 +197,61 @@ export async function clearRecentSearches(): Promise<void> {
   } catch (error) {
     console.warn('[Storage] Failed to clear recent searches:', error);
   }
+}
+
+// ============================================
+// Brief Cache (Offline Support)
+// ============================================
+
+const BRIEF_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+export async function getCachedBrief(): Promise<CachedBrief | null> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.CACHED_BRIEF);
+    if (!json) return null;
+    return JSON.parse(json) as CachedBrief;
+  } catch (error) {
+    console.warn('[Storage] Failed to get cached brief:', error);
+    return null;
+  }
+}
+
+export async function cacheBrief(brief: Brief): Promise<void> {
+  try {
+    const cached: CachedBrief = {
+      brief,
+      cachedAt: new Date().toISOString(),
+      briefDate: brief.generated_at,
+    };
+    await AsyncStorage.setItem(KEYS.CACHED_BRIEF, JSON.stringify(cached));
+  } catch (error) {
+    console.warn('[Storage] Failed to cache brief:', error);
+  }
+}
+
+export async function clearBriefCache(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.CACHED_BRIEF);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear brief cache:', error);
+  }
+}
+
+export function isBriefCacheStale(cached: CachedBrief): boolean {
+  const cachedTime = new Date(cached.cachedAt).getTime();
+  const now = Date.now();
+
+  // Stale if older than 24 hours
+  if (now - cachedTime > BRIEF_CACHE_MAX_AGE_MS) {
+    return true;
+  }
+
+  // Stale if from a different calendar day
+  const cachedDate = new Date(cached.briefDate).toDateString();
+  const todayDate = new Date().toDateString();
+  if (cachedDate !== todayDate) {
+    return true;
+  }
+
+  return false;
 }

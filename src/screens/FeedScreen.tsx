@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fetchBrief } from '../api';
+import { fetchBriefWithCache } from '../api';
 import { colors, typography, spacing, layout } from '../theme';
 import { decodeHtmlEntities } from '../utils/text';
 import type { Item, Section, Brief } from '../types';
@@ -244,8 +244,8 @@ export default function FeedScreen({ navigation }: Props) {
       }
       setError(null);
 
-      const data = await fetchBrief();
-      setBrief(data);
+      const result = await fetchBriefWithCache();
+      setBrief(result.brief);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load brief';
       if (message.includes('No daily brief available')) {
