@@ -25,13 +25,41 @@ const MIN_OUTPUT_LENGTH = 200;
  * Words/phrases to remove or tone down
  */
 const SENSATIONAL_WORDS = [
-  'shocking', 'stunning', 'explosive', 'bombshell', 'devastating',
-  'horrifying', 'terrifying', 'nightmare', 'chaos', 'crisis',
-  'catastrophe', 'disaster', 'slams', 'blasts', 'destroys',
-  'annihilates', 'crushes', 'eviscerates', 'rips', 'outrage',
-  'fury', 'backlash', 'firestorm', 'uproar', 'unprecedented',
-  'massive', 'huge', 'enormous', 'incredible', 'unbelievable',
-  'breaking', 'urgent', 'must', 'dangerously', 'alarming',
+  'shocking',
+  'stunning',
+  'explosive',
+  'bombshell',
+  'devastating',
+  'horrifying',
+  'terrifying',
+  'nightmare',
+  'chaos',
+  'crisis',
+  'catastrophe',
+  'disaster',
+  'slams',
+  'blasts',
+  'destroys',
+  'annihilates',
+  'crushes',
+  'eviscerates',
+  'rips',
+  'outrage',
+  'fury',
+  'backlash',
+  'firestorm',
+  'uproar',
+  'unprecedented',
+  'massive',
+  'huge',
+  'enormous',
+  'incredible',
+  'unbelievable',
+  'breaking',
+  'urgent',
+  'must',
+  'dangerously',
+  'alarming',
 ];
 
 /**
@@ -67,8 +95,8 @@ function splitIntoSentences(text: string): string[] {
   const sentences = preprocessed.split(/(?<=[.!?])\s+/);
 
   return sentences
-    .map(s => s.replace(/\u0000/g, '.').trim()) // Restore abbreviation periods
-    .filter(s => s.length > 25); // Filter out very short fragments
+    .map((s) => s.replace(/\u0000/g, '.').trim()) // Restore abbreviation periods
+    .filter((s) => s.length > 25); // Filter out very short fragments
 }
 
 /**
@@ -88,8 +116,10 @@ function scoreSentence(sentence: string, index: number, totalCount: number): num
   else if (len < 30) score -= 10;
 
   // Position bonuses - prefer early and mid-article sentences
-  if (index === 0) score += 20; // Lead sentence
-  else if (index <= 3) score += 10; // Early context
+  if (index === 0)
+    score += 20; // Lead sentence
+  else if (index <= 3)
+    score += 10; // Early context
   else if (index >= totalCount - 2) score += 5; // Conclusion context
 
   // Contains numbers (often factual)
@@ -182,10 +212,7 @@ function groupIntoParagraphs(sentences: string[]): string[] {
   if (count <= 7) {
     // Two paragraphs
     const midpoint = Math.ceil(count / 2);
-    return [
-      sentences.slice(0, midpoint).join(' '),
-      sentences.slice(midpoint).join(' '),
-    ];
+    return [sentences.slice(0, midpoint).join(' '), sentences.slice(midpoint).join(' ')];
   }
 
   // Three paragraphs for longer content
@@ -194,7 +221,7 @@ function groupIntoParagraphs(sentences: string[]): string[] {
     sentences.slice(0, third).join(' '),
     sentences.slice(third, third * 2).join(' '),
     sentences.slice(third * 2).join(' '),
-  ].filter(p => p.length > 0);
+  ].filter((p) => p.length > 0);
 }
 
 /**
@@ -226,7 +253,7 @@ export function makeCalmDetailSummary(originalText: string): string[] {
   // Select top sentences by score, but cap at MAX_SENTENCES
   // Filter out very low scoring sentences
   const candidates = scored
-    .filter(s => s.score > -5)
+    .filter((s) => s.score > -5)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_SENTENCES);
 
@@ -239,10 +266,10 @@ export function makeCalmDetailSummary(originalText: string): string[] {
   }
 
   // Neutralize each sentence
-  const neutralized = candidates.map(s => neutralizeSentence(s.sentence));
+  const neutralized = candidates.map((s) => neutralizeSentence(s.sentence));
 
   // Filter out any empty results
-  const validSentences = neutralized.filter(s => s.length > 20);
+  const validSentences = neutralized.filter((s) => s.length > 20);
 
   if (validSentences.length < MIN_SENTENCES) {
     return [];
@@ -281,14 +308,14 @@ export function createFallbackSummary(detail: {
 
   if (detail.what_happened) {
     const cleaned = neutralizeSentence(detail.what_happened);
-    if (cleaned.length > 30 && !FILLER_PHRASES.some(f => cleaned.toLowerCase().includes(f))) {
+    if (cleaned.length > 30 && !FILLER_PHRASES.some((f) => cleaned.toLowerCase().includes(f))) {
       parts.push(cleaned);
     }
   }
 
   if (detail.why_it_matters) {
     const cleaned = neutralizeSentence(detail.why_it_matters);
-    if (cleaned.length > 30 && !FILLER_PHRASES.some(f => cleaned.toLowerCase().includes(f))) {
+    if (cleaned.length > 30 && !FILLER_PHRASES.some((f) => cleaned.toLowerCase().includes(f))) {
       parts.push(cleaned);
     }
   }

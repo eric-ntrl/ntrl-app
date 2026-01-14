@@ -2,8 +2,8 @@ import type { Item, Brief } from '../types';
 
 export type CachedBrief = {
   brief: Brief;
-  cachedAt: string;   // ISO timestamp when cached
-  briefDate: string;  // From brief.generated_at
+  cachedAt: string; // ISO timestamp when cached
+  briefDate: string; // From brief.generated_at
 };
 
 export type SavedArticle = {

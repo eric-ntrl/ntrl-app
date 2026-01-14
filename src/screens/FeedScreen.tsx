@@ -112,10 +112,7 @@ function Header({
       </View>
       <View style={styles.headerRight}>
         <Pressable
-          style={({ pressed }) => [
-            styles.headerIcon,
-            pressed && styles.headerIconPressed,
-          ]}
+          style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
           onPress={onSearchPress}
           hitSlop={8}
           accessibilityLabel="Search"
@@ -124,10 +121,7 @@ function Header({
           <Text style={styles.headerIconText}>⌕</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [
-            styles.headerIcon,
-            pressed && styles.headerIconPressed,
-          ]}
+          style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
           onPress={onProfilePress}
           hitSlop={8}
           accessibilityLabel="Profile"
@@ -203,10 +197,7 @@ function EndOfFeed({
       <Text style={styles.endMessage}>You're all caught up</Text>
       <Text style={styles.endDate}>Today · {date}</Text>
       <Pressable
-        style={({ pressed }) => [
-          styles.aboutLink,
-          pressed && styles.aboutLinkPressed,
-        ]}
+        style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
         onPress={onAboutPress}
       >
         <Text style={styles.aboutLinkText}>About NTRL</Text>
@@ -243,10 +234,7 @@ function ErrorState({
     <View style={styles.emptyState}>
       <Text style={styles.emptyMessage}>{message}</Text>
       <Pressable
-        style={({ pressed }) => [
-          styles.retryButton,
-          pressed && styles.retryButtonPressed,
-        ]}
+        style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
         onPress={onRetry}
       >
         <Text style={styles.retryButtonText}>Try Again</Text>
@@ -339,7 +327,10 @@ export default function FeedScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header
         date={headerDate}
         onSearchPress={() => navigation.navigate('Search')}
@@ -356,10 +347,7 @@ export default function FeedScreen({ navigation }: Props) {
         <View style={styles.emptyState}>
           <Text style={styles.emptyMessage}>No new updates right now.</Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.aboutLink,
-              pressed && styles.aboutLinkPressed,
-            ]}
+            style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
             onPress={() => navigation.navigate('About')}
           >
             <Text style={styles.aboutLinkText}>About NTRL</Text>
@@ -372,8 +360,8 @@ export default function FeedScreen({ navigation }: Props) {
             r.type === 'section'
               ? `section-${r.section.key}`
               : r.type === 'endOfFeed'
-              ? 'end-of-feed'
-              : `item-${r.item.id}`
+                ? 'end-of-feed'
+                : `item-${r.item.id}`
           }
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}

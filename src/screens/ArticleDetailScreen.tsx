@@ -92,9 +92,7 @@ const FILLER_PHRASES = [
  * Check if text contains filler language
  */
 function containsFiller(text: string): boolean {
-  return FILLER_PHRASES.some(phrase =>
-    text.toLowerCase().includes(phrase.toLowerCase())
-  );
+  return FILLER_PHRASES.some((phrase) => text.toLowerCase().includes(phrase.toLowerCase()));
 }
 
 /**
@@ -159,13 +157,14 @@ function composeBodyText(detail: Item['detail']): string[] {
     detail.uncertain &&
     detail.uncertain.length > 0
   ) {
-    const validUncertainties = detail.uncertain.filter(
-      u => u && !containsFiller(u)
-    );
+    const validUncertainties = detail.uncertain.filter((u) => u && !containsFiller(u));
 
     if (validUncertainties.length > 0) {
       const uncertaintyText = validUncertainties
-        .map(u => `It remains unclear ${u.toLowerCase().replace(/^(whether|if|when|how|why)\s*/i, '$1 ')}.`)
+        .map(
+          (u) =>
+            `It remains unclear ${u.toLowerCase().replace(/^(whether|if|when|how|why)\s*/i, '$1 ')}.`
+        )
         .join(' ');
 
       const sentences = countSentences(uncertaintyText);
@@ -175,7 +174,7 @@ function composeBodyText(detail: Item['detail']): string[] {
     }
   }
 
-  return paragraphs.filter(p => p.trim().length > 0);
+  return paragraphs.filter((p) => p.trim().length > 0);
 }
 
 function BackButton({
@@ -188,10 +187,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
     >
       <Text style={styles.backArrow}>‹</Text>
@@ -233,12 +229,7 @@ function SourceUnavailableModal({
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Source unavailable</Text>
@@ -246,10 +237,7 @@ function SourceUnavailableModal({
             This link couldn't be opened. You can try again later.
           </Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.modalButton,
-              pressed && styles.modalButtonPressed,
-            ]}
+            style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
             onPress={onClose}
           >
             <Text style={styles.modalButtonText}>Go back</Text>
@@ -338,8 +326,8 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     loadFullArticle();
   }, [item.url]);
 
-  const hasRemovedContent = redlines.length > 0 ||
-    (item.detail.removed && item.detail.removed.length > 0);
+  const hasRemovedContent =
+    redlines.length > 0 || (item.detail.removed && item.detail.removed.length > 0);
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -416,7 +404,10 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} date={headerDate} styles={styles} />
 
       <ScrollView
@@ -432,10 +423,12 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           {/* Left: Source + Timestamp */}
           <View style={styles.metadataLeft}>
             <Pressable
-              onPress={() => navigation.navigate('SourceTransparency', {
-                sourceName: item.source,
-                sourceUrl: item.url,
-              })}
+              onPress={() =>
+                navigation.navigate('SourceTransparency', {
+                  sourceName: item.source,
+                  sourceUrl: item.url,
+                })
+              }
               style={({ pressed }) => pressed && styles.metadataPressed}
               accessibilityRole="link"
               accessibilityLabel={`Source: ${item.source}. Tap for source info.`}
@@ -458,12 +451,14 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
 
           {/* Right: ntrl view */}
           <Pressable
-            onPress={() => navigation.navigate('NtrlView', {
-              item,
-              fullOriginalText: extractedText,
-              // transformations will come from backend in future
-              transformations: [],
-            })}
+            onPress={() =>
+              navigation.navigate('NtrlView', {
+                item,
+                fullOriginalText: extractedText,
+                // transformations will come from backend in future
+                transformations: [],
+              })
+            }
             style={({ pressed }) => pressed && styles.metadataPressed}
             accessibilityRole="link"
             accessibilityLabel="View ntrl transparency"
@@ -487,32 +482,28 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           {viewMode === 'brief' ? (
             // Brief mode: show immediately from RSS detail
             <ArticleBrief text={summaryParagraphs.join('\n\n')} />
+          ) : // Full mode: show extracted text, loading state, or fallback
+          fullArticleLoading ? (
+            <View style={styles.loadingSection}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+              <Text style={styles.loadingText}>Loading full article...</Text>
+            </View>
+          ) : extractedText ? (
+            <Text style={styles.bodyText}>{extractedText}</Text>
           ) : (
-            // Full mode: show extracted text, loading state, or fallback
-            fullArticleLoading ? (
-              <View style={styles.loadingSection}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
-                <Text style={styles.loadingText}>Loading full article...</Text>
-              </View>
-            ) : extractedText ? (
-              <Text style={styles.bodyText}>{extractedText}</Text>
-            ) : (
-              <>
-                <ArticleBrief text={summaryParagraphs.join('\n\n')} />
-                {showThinContentNotice && (
-                  <Text style={styles.thinContentNotice}>
-                    Full text not available from this source.
-                  </Text>
-                )}
-              </>
-            )
+            <>
+              <ArticleBrief text={summaryParagraphs.join('\n\n')} />
+              {showThinContentNotice && (
+                <Text style={styles.thinContentNotice}>
+                  Full text not available from this source.
+                </Text>
+              )}
+            </>
           )}
         </View>
 
         {/* Disclosure */}
-        {hasRemovedContent && (
-          <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
-        )}
+        {hasRemovedContent && <Text style={styles.disclosure}>Language adjusted for clarity.</Text>}
 
         {/* Breathing space before footer actions */}
         <View style={styles.footerSpacer} />
@@ -565,36 +556,32 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         onRequestClose={() => setShowShareMenu(false)}
       >
         <View style={styles.shareMenuOverlay}>
-          <Pressable
-            style={styles.shareMenuBackdrop}
-            onPress={() => setShowShareMenu(false)}
-          />
+          <Pressable style={styles.shareMenuBackdrop} onPress={() => setShowShareMenu(false)} />
           <View style={styles.shareMenuContent}>
             <View style={styles.shareMenuHandle} />
             <Text style={styles.shareMenuTitle}>Share article</Text>
 
             {/* All share options as consistent list */}
             <View style={styles.shareOptionsList}>
-              {shareTargets.filter(t => t.available).map((target) => (
-                <Pressable
-                  key={target.key}
-                  style={({ pressed }) => [
-                    styles.shareOption,
-                    pressed && styles.shareOptionPressed,
-                  ]}
-                  onPress={() => handleShareToTarget(target.key)}
-                >
-                  <Text style={styles.shareOptionLabel}>{target.label}</Text>
-                  <Text style={styles.shareOptionChevron}>›</Text>
-                </Pressable>
-              ))}
+              {shareTargets
+                .filter((t) => t.available)
+                .map((target) => (
+                  <Pressable
+                    key={target.key}
+                    style={({ pressed }) => [
+                      styles.shareOption,
+                      pressed && styles.shareOptionPressed,
+                    ]}
+                    onPress={() => handleShareToTarget(target.key)}
+                  >
+                    <Text style={styles.shareOptionLabel}>{target.label}</Text>
+                    <Text style={styles.shareOptionChevron}>›</Text>
+                  </Pressable>
+                ))}
 
               {/* Copy link option */}
               <Pressable
-                style={({ pressed }) => [
-                  styles.shareOption,
-                  pressed && styles.shareOptionPressed,
-                ]}
+                style={({ pressed }) => [styles.shareOption, pressed && styles.shareOptionPressed]}
                 onPress={handleCopyLink}
               >
                 <Text style={styles.shareOptionLabel}>Copy link</Text>
@@ -678,8 +665,8 @@ function createStyles(theme: Theme) {
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: spacing.xxl,   // Book-page margins (24px)
-      paddingTop: spacing.xxxl,         // Generous breathing room (32px)
+      paddingHorizontal: spacing.xxl, // Book-page margins (24px)
+      paddingTop: spacing.xxxl, // Generous breathing room (32px)
       paddingBottom: spacing.xxxl,
     },
 
@@ -690,7 +677,7 @@ function createStyles(theme: Theme) {
       lineHeight: typography.detailHeadline.lineHeight,
       letterSpacing: typography.detailHeadline.letterSpacing,
       color: typography.detailHeadline.color,
-      marginBottom: spacing.xl,         // Chapter title breathing room (20px)
+      marginBottom: spacing.xl, // Chapter title breathing room (20px)
     },
 
     // Metadata band - single line with source/time, mode toggle, ntrl view
@@ -698,7 +685,7 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 28,                 // Clear zone separation
+      marginBottom: 28, // Clear zone separation
       paddingTop: spacing.xs,
     },
     metadataLeft: {
@@ -732,7 +719,7 @@ function createStyles(theme: Theme) {
     // Body section: constrain measure for optimal reading
     bodySection: {
       marginBottom: spacing.lg,
-      maxWidth: 600,                 // ~65-75 chars at 16px, optimal reading measure
+      maxWidth: 600, // ~65-75 chars at 16px, optimal reading measure
     },
     // Body text: book-like reading experience
     bodyText: {
@@ -746,15 +733,15 @@ function createStyles(theme: Theme) {
     meta: {
       fontSize: typography.meta.fontSize,
       fontWeight: typography.meta.fontWeight,
-      lineHeight: 18,                // Explicit line-height for consistency
+      lineHeight: 18, // Explicit line-height for consistency
       color: typography.meta.color,
-      marginBottom: spacing.sm,      // Was md (12) → sm (8), tighter grouping
+      marginBottom: spacing.sm, // Was md (12) → sm (8), tighter grouping
     },
     disclosure: {
       fontSize: typography.disclosure.fontSize,
       fontWeight: typography.disclosure.fontWeight,
       fontStyle: typography.disclosure.fontStyle,
-      lineHeight: 18,                // Match meta line-height
+      lineHeight: 18, // Match meta line-height
       color: typography.disclosure.color,
       marginBottom: spacing.sm,
     },

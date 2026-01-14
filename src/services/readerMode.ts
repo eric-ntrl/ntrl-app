@@ -4,6 +4,8 @@
  * with in-memory caching (TTL: 6 hours)
  */
 
+import { validateUrl, isAllowedNewsDomain } from '../utils/urlValidator';
+
 export type ArticleQuality = {
   charCount: number;
   sentenceCount: number;
@@ -43,14 +45,40 @@ const FETCH_TIMEOUT_MS = 12000;
  * CTA / boilerplate tokens to filter and penalize
  */
 const BOILERPLATE_TOKENS = [
-  'share', 'save', 'subscribe', 'watch', 'listen', 'sign up',
-  'newsletter', 'sponsored', 'advertisement', 'related',
-  'continue reading', 'read more', 'see also', 'follow us',
-  'join now', 'get started', 'download', 'install',
-  'comments', 'reply', 'like', 'tweet', 'post',
-  'privacy policy', 'terms of service', 'cookie',
-  'skip to content', 'skip to main', 'menu', 'navigation',
-  'log in', 'sign in', 'register', 'create account',
+  'share',
+  'save',
+  'subscribe',
+  'watch',
+  'listen',
+  'sign up',
+  'newsletter',
+  'sponsored',
+  'advertisement',
+  'related',
+  'continue reading',
+  'read more',
+  'see also',
+  'follow us',
+  'join now',
+  'get started',
+  'download',
+  'install',
+  'comments',
+  'reply',
+  'like',
+  'tweet',
+  'post',
+  'privacy policy',
+  'terms of service',
+  'cookie',
+  'skip to content',
+  'skip to main',
+  'menu',
+  'navigation',
+  'log in',
+  'sign in',
+  'register',
+  'create account',
 ];
 
 /**
@@ -80,9 +108,22 @@ function setCache(url: string, data: ReadableArticle): void {
 }
 
 /**
- * Fetch with timeout
+ * Fetch with timeout and basic URL validation.
+ * Validates URL structure but allows any HTTPS domain for article fetching.
  */
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<string> {
+  // Basic URL validation (structure and protocol only, skip domain whitelist)
+  const validation = validateUrl(url, { allowLocalhost: false, skipDomainCheck: true });
+  if (!validation.valid) {
+    console.warn('[ReaderMode] Invalid URL structure:', url, validation.reason);
+    throw new Error(`Invalid URL: ${validation.reason}`);
+  }
+
+  // Log if domain is not in our known list (for monitoring only)
+  if (!isAllowedNewsDomain(url)) {
+    console.log('[ReaderMode] Fetching from non-whitelisted domain:', url);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -91,7 +132,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<string>
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; NTRL/1.0; +https://ntrl.app)',
-        'Accept': 'text/html,application/xhtml+xml',
+        Accept: 'text/html,application/xhtml+xml',
       },
     });
 
@@ -112,13 +153,13 @@ function decodeNumericEntities(text: string): string {
   // Decode decimal entities: &#39; &#8217; etc.
   let result = text.replace(/&#(\d+);/g, (_, code) => {
     const num = parseInt(code, 10);
-    return num > 0 && num < 0x10FFFF ? String.fromCodePoint(num) : '';
+    return num > 0 && num < 0x10ffff ? String.fromCodePoint(num) : '';
   });
 
   // Decode hex entities: &#x27; &#x2019; etc.
   result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => {
     const num = parseInt(code, 16);
-    return num > 0 && num < 0x10FFFF ? String.fromCodePoint(num) : '';
+    return num > 0 && num < 0x10ffff ? String.fromCodePoint(num) : '';
   });
 
   return result;
@@ -164,7 +205,7 @@ function stripHtml(html: string): string {
 function removeBoilerplate(text: string): string {
   const lines = text.split(/\n+/);
 
-  const filteredLines = lines.filter(line => {
+  const filteredLines = lines.filter((line) => {
     const trimmed = line.trim();
     const lower = trimmed.toLowerCase();
 
@@ -181,8 +222,8 @@ function removeBoilerplate(text: string): string {
     // Skip lines that are primarily CTA content
     const words = lower.split(/\s+/);
     if (words.length <= 5) {
-      const boilerplateCount = words.filter(w =>
-        BOILERPLATE_TOKENS.some(t => t.includes(w) || w.includes(t))
+      const boilerplateCount = words.filter((w) =>
+        BOILERPLATE_TOKENS.some((t) => t.includes(w) || w.includes(t))
       ).length;
       if (boilerplateCount >= words.length * 0.5) {
         return false;
@@ -270,13 +311,23 @@ function scoreTextBlock(text: string): number {
   // Penalize high CTA density
   const ctaDensity = ctaCount / Math.max(wordCount, 1);
   if (ctaDensity > 0.05) score -= 20; // >5% CTA words
-  if (ctaDensity > 0.10) score -= 30; // >10% CTA words
+  if (ctaDensity > 0.1) score -= 30; // >10% CTA words
 
   // Penalize repeated phrases (spam indicator)
   if (hasRepeatedPhrases(text)) score -= 25;
 
   // Penalize navigation-like content
-  const navWords = ['menu', 'navigation', 'subscribe', 'sign up', 'log in', 'cookie', 'footer', 'header', 'sidebar'];
+  const navWords = [
+    'menu',
+    'navigation',
+    'subscribe',
+    'sign up',
+    'log in',
+    'cookie',
+    'footer',
+    'header',
+    'sidebar',
+  ];
   for (const word of navWords) {
     if (text.toLowerCase().includes(word)) score -= 3;
   }
@@ -337,12 +388,16 @@ function extractMainText(html: string): string {
   const paragraphs = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
   if (paragraphs.length > 0) {
     let combinedText = paragraphs
-      .map(p => stripHtml(p))
-      .filter(p => p.length > 50) // Filter out short navigation-like paragraphs
+      .map((p) => stripHtml(p))
+      .filter((p) => p.length > 50) // Filter out short navigation-like paragraphs
       .join('\n\n');
     combinedText = removeBoilerplate(combinedText);
     if (combinedText.length > 300) {
-      candidates.push({ text: combinedText, score: scoreTextBlock(combinedText), source: 'paragraphs' });
+      candidates.push({
+        text: combinedText,
+        score: scoreTextBlock(combinedText),
+        source: 'paragraphs',
+      });
     }
   }
 
@@ -424,7 +479,14 @@ export async function getReadableArticle(
     if (text.length >= MIN_EXTRACTED_LENGTH) {
       const result: ReadableArticle = { text, title, quality };
       setCache(url, result);
-      console.log('[ReaderMode] Extracted:', quality.charCount, 'chars,', quality.sentenceCount, 'sentences, okForSummary:', quality.okForSummary);
+      console.log(
+        '[ReaderMode] Extracted:',
+        quality.charCount,
+        'chars,',
+        quality.sentenceCount,
+        'sentences, okForSummary:',
+        quality.okForSummary
+      );
       return result;
     }
 
@@ -434,7 +496,11 @@ export async function getReadableArticle(
     // Use fallback if provided and substantial
     if (fallbackText && fallbackText.length >= 100) {
       const fallbackQuality = calculateQuality(fallbackText);
-      const fallbackResult: ReadableArticle = { text: fallbackText, title, quality: fallbackQuality };
+      const fallbackResult: ReadableArticle = {
+        text: fallbackText,
+        title,
+        quality: fallbackQuality,
+      };
       setCache(url, fallbackResult);
       return fallbackResult;
     }

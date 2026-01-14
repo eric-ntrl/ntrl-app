@@ -36,21 +36,13 @@ export default function SegmentedControl<T extends string>({
         return (
           <View key={segment.key} style={styles.segmentWrapper}>
             <Pressable
-              style={({ pressed }) => [
-                styles.segment,
-                pressed && styles.segmentPressed,
-              ]}
+              style={({ pressed }) => [styles.segment, pressed && styles.segmentPressed]}
               onPress={() => onSelect(segment.key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
               accessibilityLabel={segment.label}
             >
-              <Text
-                style={[
-                  styles.segmentText,
-                  isSelected && styles.segmentTextSelected,
-                ]}
-              >
+              <Text style={[styles.segmentText, isSelected && styles.segmentTextSelected]}>
                 {segment.label}
               </Text>
             </Pressable>

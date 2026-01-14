@@ -1,14 +1,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Item, Brief } from '../types';
-import type { SavedArticle, HistoryEntry, UserPreferences, RecentSearch, CachedBrief } from './types';
+import type {
+  SavedArticle,
+  HistoryEntry,
+  UserPreferences,
+  RecentSearch,
+  CachedBrief,
+} from './types';
+import { getSecureJSON, setSecureJSON, getSecureItem } from './secureStorage';
 
-// Storage keys
+// Storage keys - AsyncStorage (non-sensitive, larger data)
 const KEYS = {
   SAVED_ARTICLES: '@ntrl/saved_articles',
   HISTORY: '@ntrl/history',
-  PREFERENCES: '@ntrl/preferences',
+  PREFERENCES: '@ntrl/preferences', // Legacy key for migration
   RECENT_SEARCHES: '@ntrl/recent_searches',
   CACHED_BRIEF: '@ntrl/cached_brief',
+};
+
+// Secure storage keys (sensitive data)
+const SECURE_KEYS = {
+  PREFERENCES: 'ntrl_preferences',
+  MIGRATED: 'ntrl_preferences_migrated',
 };
 
 // Limits
@@ -114,7 +127,7 @@ export async function clearHistory(): Promise<void> {
 }
 
 // ============================================
-// User Preferences
+// User Preferences (Stored in SecureStore)
 // ============================================
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -123,11 +136,42 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   colorMode: 'system', // Follow device appearance by default
 };
 
+/**
+ * Migrates preferences from AsyncStorage to SecureStore (one-time migration).
+ * This ensures existing users' preferences are preserved when upgrading.
+ */
+async function migratePreferencesToSecureStore(): Promise<void> {
+  try {
+    // Check if already migrated
+    const migrated = await getSecureItem(SECURE_KEYS.MIGRATED);
+    if (migrated === 'true') return;
+
+    // Check for existing AsyncStorage preferences
+    const legacyJson = await AsyncStorage.getItem(KEYS.PREFERENCES);
+    if (legacyJson) {
+      const legacyPrefs = JSON.parse(legacyJson) as UserPreferences;
+      await setSecureJSON(SECURE_KEYS.PREFERENCES, legacyPrefs);
+      // Clean up legacy storage after successful migration
+      await AsyncStorage.removeItem(KEYS.PREFERENCES);
+    }
+
+    // Mark as migrated (use setSecureItem directly to avoid circular import)
+    const { setSecureItem } = await import('./secureStorage');
+    await setSecureItem(SECURE_KEYS.MIGRATED, 'true');
+  } catch (error) {
+    console.warn('[Storage] Migration failed, will retry on next launch:', error);
+  }
+}
+
 export async function getPreferences(): Promise<UserPreferences> {
   try {
-    const json = await AsyncStorage.getItem(KEYS.PREFERENCES);
-    if (!json) return DEFAULT_PREFERENCES;
-    return JSON.parse(json) as UserPreferences;
+    // Ensure migration has happened
+    await migratePreferencesToSecureStore();
+
+    // Get from SecureStore
+    const prefs = await getSecureJSON<UserPreferences>(SECURE_KEYS.PREFERENCES);
+    if (!prefs) return DEFAULT_PREFERENCES;
+    return prefs;
   } catch (error) {
     console.warn('[Storage] Failed to get preferences:', error);
     return DEFAULT_PREFERENCES;
@@ -138,7 +182,7 @@ export async function updatePreferences(prefs: Partial<UserPreferences>): Promis
   try {
     const current = await getPreferences();
     const updated = { ...current, ...prefs };
-    await AsyncStorage.setItem(KEYS.PREFERENCES, JSON.stringify(updated));
+    await setSecureJSON(SECURE_KEYS.PREFERENCES, updated);
   } catch (error) {
     console.warn('[Storage] Failed to update preferences:', error);
   }

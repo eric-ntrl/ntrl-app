@@ -1,13 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
@@ -31,11 +23,13 @@ type Props = {
  * Ensures spans computed on this text match exactly what's rendered
  */
 function normalizeDisplayText(text: string): string {
-  return text
-    // Normalize whitespace (collapse multiple spaces/newlines)
-    .replace(/\s+/g, ' ')
-    // Trim
-    .trim();
+  return (
+    text
+      // Normalize whitespace (collapse multiple spaces/newlines)
+      .replace(/\s+/g, ' ')
+      // Trim
+      .trim()
+  );
 }
 
 /**
@@ -62,10 +56,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -174,12 +165,7 @@ function SourceUnavailableModal({
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Source unavailable</Text>
@@ -187,10 +173,7 @@ function SourceUnavailableModal({
             This link couldn't be opened. You can try again later.
           </Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.modalButton,
-              pressed && styles.modalButtonPressed,
-            ]}
+            style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
             onPress={onClose}
           >
             <Text style={styles.modalButtonText}>Go back</Text>
@@ -237,7 +220,10 @@ export default function RedlineScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
@@ -262,11 +248,7 @@ export default function RedlineScreen({ route, navigation }: Props) {
         {/* Original text with highlights */}
         {hasOriginalText ? (
           <View style={styles.originalSection}>
-            <HighlightedText
-              text={displayText!}
-              redlines={redlines}
-              styles={styles}
-            />
+            <HighlightedText text={displayText!} redlines={redlines} styles={styles} />
           </View>
         ) : (
           <View style={styles.unavailableSection}>
@@ -279,15 +261,10 @@ export default function RedlineScreen({ route, navigation }: Props) {
         {/* Footer */}
         <View style={styles.footer}>
           <Pressable
-            style={({ pressed }) => [
-              styles.footerLink,
-              pressed && styles.footerLinkPressed,
-            ]}
+            style={({ pressed }) => [styles.footerLink, pressed && styles.footerLinkPressed]}
             onPress={handleViewSource}
           >
-            <Text style={styles.footerLinkText}>
-              View original on {item.source}
-            </Text>
+            <Text style={styles.footerLinkText}>View original on {item.source}</Text>
           </Pressable>
 
           <Text style={styles.footerMeta}>Updated: {updatedTime}</Text>

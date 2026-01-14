@@ -72,7 +72,7 @@ const MANIPULATIVE_PHRASES = [
   'must see',
   'must read',
   'you need to know',
-  'you won\'t believe',
+  "you won't believe",
   'what you need to know',
   'this changes everything',
 
@@ -112,7 +112,7 @@ const MANIPULATIVE_PHRASES = [
   'gut-wrenching',
 
   // Clickbait patterns
-  'you won\'t believe',
+  "you won't believe",
   'the reason why',
   'what happens next',
   'the truth about',
@@ -155,7 +155,10 @@ const MANIPULATIVE_PHRASES = [
 /**
  * Find all matches of a phrase in text (case-insensitive)
  */
-function findPhraseMatches(text: string, phrase: string): Array<{ start: number; end: number; text: string }> {
+function findPhraseMatches(
+  text: string,
+  phrase: string
+): Array<{ start: number; end: number; text: string }> {
   const matches: Array<{ start: number; end: number; text: string }> = [];
   const lowerText = text.toLowerCase();
   const lowerPhrase = phrase.toLowerCase();
@@ -191,7 +194,36 @@ function findAllCapsWords(text: string): Array<{ start: number; end: number; tex
   const pattern = /\b[A-Z]{4,}\b/g;
 
   // Common acronyms to ignore
-  const acronyms = new Set(['NASA', 'NATO', 'AIDS', 'COVID', 'ASAP', 'RSVP', 'HTML', 'HTTP', 'HTTPS', 'USA', 'UK', 'EU', 'UN', 'FBI', 'CIA', 'NSA', 'POTUS', 'GDP', 'CEO', 'CFO', 'COO', 'NASA', 'NOAA', 'NCAA', 'NFL', 'NBA', 'MLB', 'NHL']);
+  const acronyms = new Set([
+    'NASA',
+    'NATO',
+    'AIDS',
+    'COVID',
+    'ASAP',
+    'RSVP',
+    'HTML',
+    'HTTP',
+    'HTTPS',
+    'USA',
+    'UK',
+    'EU',
+    'UN',
+    'FBI',
+    'CIA',
+    'NSA',
+    'POTUS',
+    'GDP',
+    'CEO',
+    'CFO',
+    'COO',
+    'NASA',
+    'NOAA',
+    'NCAA',
+    'NFL',
+    'NBA',
+    'MLB',
+    'NHL',
+  ]);
 
   let match;
   while ((match = pattern.exec(text)) !== null) {
@@ -210,7 +242,9 @@ function findAllCapsWords(text: string): Array<{ start: number; end: number; tex
 /**
  * Find excessive punctuation (!!, ?!, etc.)
  */
-function findExcessivePunctuation(text: string): Array<{ start: number; end: number; text: string }> {
+function findExcessivePunctuation(
+  text: string
+): Array<{ start: number; end: number; text: string }> {
   const matches: Array<{ start: number; end: number; text: string }> = [];
   const pattern = /[!?]{2,}/g;
 
@@ -244,7 +278,9 @@ function mergeOverlappingSpans(spans: RedlineSpan[]): RedlineSpan[] {
       // Overlapping - merge
       last.end = Math.max(last.end, current.end);
       last.text = last.text.length > current.text.length ? last.text : current.text;
-      last.reason = last.reason.includes(current.reason) ? last.reason : `${last.reason}, ${current.reason}`;
+      last.reason = last.reason.includes(current.reason)
+        ? last.reason
+        : `${last.reason}, ${current.reason}`;
     } else {
       merged.push(current);
     }
@@ -312,7 +348,7 @@ export function findRedlines(text: string): RedlineSpan[] {
  */
 export function getRedlinedPhrases(text: string): string[] {
   const spans = findRedlines(text);
-  return [...new Set(spans.map(s => s.text.toLowerCase()))];
+  return [...new Set(spans.map((s) => s.text.toLowerCase()))];
 }
 
 /**

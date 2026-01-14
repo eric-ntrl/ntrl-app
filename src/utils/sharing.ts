@@ -40,11 +40,7 @@ export interface ShareTargetConfig {
 /**
  * Build share URL for a specific target
  */
-function buildShareUrl(
-  target: ShareTarget,
-  headline: string,
-  url: string
-): string {
+function buildShareUrl(target: ShareTarget, headline: string, url: string): string {
   const text = encodeURIComponent(`${headline}\n\n${url}`);
   const encodedUrl = encodeURIComponent(url);
   const encodedHeadline = encodeURIComponent(headline);

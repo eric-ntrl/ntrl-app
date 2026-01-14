@@ -1,13 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  Switch,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
@@ -90,10 +82,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -240,7 +229,10 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
@@ -254,9 +246,7 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
         </Text>
 
         {/* Article headline for context */}
-        <Text style={styles.articleHeadline}>
-          {decodeHtmlEntities(item.headline)}
-        </Text>
+        <Text style={styles.articleHeadline}>{decodeHtmlEntities(item.headline)}</Text>
 
         {hasContent ? (
           <>
@@ -290,9 +280,7 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
             {/* No changes notice */}
             {!hasChanges && (
               <View style={styles.noChangesNotice}>
-                <Text style={styles.noChangesText}>
-                  No changes were needed for this article.
-                </Text>
+                <Text style={styles.noChangesText}>No changes were needed for this article.</Text>
               </View>
             )}
           </>

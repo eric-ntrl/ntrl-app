@@ -30,8 +30,8 @@ export default function ArticleBrief({ text }: Props) {
   // Also handle \r\n for cross-platform compatibility
   const paragraphs = text
     .split(/\n\n+|\r\n\r\n+/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 
   // If no paragraph breaks, treat single newlines as soft breaks within prose
   // but render as single block

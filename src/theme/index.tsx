@@ -64,7 +64,8 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [textSize, setTextSizeState] = useState<TextSizePreference>('medium');
-  const [colorModePreference, setColorModePreferenceState] = useState<ColorModePreference>('system');
+  const [colorModePreference, setColorModePreferenceState] =
+    useState<ColorModePreference>('system');
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Get system color scheme
@@ -132,9 +133,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
 
     // Create typography with colors (for color-dependent styles)
-    const typography = ACTIVE_THEME_VERSION === 'v2'
-      ? createTypographyV2(colors, textSize)
-      : createTypographyV1(colors);
+    const typography =
+      ACTIVE_THEME_VERSION === 'v2'
+        ? createTypographyV2(colors, textSize)
+        : createTypographyV1(colors);
 
     return {
       colors,
@@ -144,26 +146,25 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
   }, [textSize, colorMode]);
 
-  const contextValue = useMemo<ThemeContextValue>(() => ({
-    theme,
-    textSize,
-    setTextSize,
-    colorMode,
-    colorModePreference,
-    setColorMode,
-    themeVersion: ACTIVE_THEME_VERSION,
-  }), [theme, textSize, colorMode, colorModePreference]);
+  const contextValue = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      textSize,
+      setTextSize,
+      colorMode,
+      colorModePreference,
+      setColorMode,
+      themeVersion: ACTIVE_THEME_VERSION,
+    }),
+    [theme, textSize, colorMode, colorModePreference]
+  );
 
   // Don't render until preferences are loaded to avoid flash
   if (!isLoaded) {
     return null;
   }
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
 
 // ============================================

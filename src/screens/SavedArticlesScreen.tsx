@@ -50,10 +50,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -184,7 +181,10 @@ export default function SavedArticlesScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       {savedArticles.length === 0 ? (

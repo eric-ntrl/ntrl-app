@@ -10,6 +10,7 @@
 import type { Item } from '../types';
 import { fetchRSS, type RSSItem } from './rssParser';
 import { getFallbackArticles } from './fallbackArticles';
+import { ENABLE_DEV_MODE } from '../config';
 
 /**
  * RSS feed sources (no API key required)
@@ -42,9 +43,7 @@ const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
  * Generate a unique ID for an article
  */
 function generateId(source: string, guid: string): string {
-  const hash = guid
-    .split('')
-    .reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
+  const hash = guid.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0);
   return `dev-${source.toLowerCase().replace(/\s+/g, '-')}-${Math.abs(hash).toString(36)}`;
 }
 
@@ -147,9 +146,8 @@ function createPlaceholderDetail(
     .trim();
 
   // Use full description for detail (up to ~400 chars for 2-3 short paragraphs)
-  const detailText = cleanDescription.length > 400
-    ? cleanDescription.substring(0, 397) + '...'
-    : cleanDescription;
+  const detailText =
+    cleanDescription.length > 400 ? cleanDescription.substring(0, 397) + '...' : cleanDescription;
 
   // Only use fallback if truly no content
   const hasSubstance = detailText.length >= DETAIL_MIN_CHARS;
@@ -240,13 +238,10 @@ export async function getDevArticles(): Promise<Item[]> {
 
   // Sort by published date (newest first)
   uniqueArticles.sort(
-    (a, b) =>
-      new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
   );
 
-  console.log(
-    `[DevArticleProvider] Fetched ${uniqueArticles.length} articles from RSS`
-  );
+  console.log(`[DevArticleProvider] Fetched ${uniqueArticles.length} articles from RSS`);
 
   // If we got articles, return them
   if (uniqueArticles.length > 0) {
@@ -259,6 +254,7 @@ export async function getDevArticles(): Promise<Item[]> {
 }
 
 /**
- * DEV_MODE flag - set to true to use dev article provider
+ * DEV_MODE flag - controlled by environment configuration.
+ * Only true in development environment.
  */
-export const DEV_MODE = true;
+export const DEV_MODE = ENABLE_DEV_MODE;

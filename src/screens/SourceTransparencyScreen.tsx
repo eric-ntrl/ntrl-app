@@ -1,13 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
@@ -33,10 +25,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -72,12 +61,7 @@ function SourceUnavailableModal({
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Source unavailable</Text>
@@ -85,10 +69,7 @@ function SourceUnavailableModal({
             This link couldn't be opened. You can try again later.
           </Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.modalButton,
-              pressed && styles.modalButtonPressed,
-            ]}
+            style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
             onPress={onClose}
           >
             <Text style={styles.modalButtonText}>Go back</Text>
@@ -119,7 +100,10 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
@@ -134,10 +118,9 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What NTRL does</Text>
           <Text style={styles.sectionBody}>
-            NTRL extracts the factual content from this source's articles and
-            presents it in a straightforward format. We remove language designed
-            to trigger emotional reactions, create urgency, or sensationalize
-            the story.
+            NTRL extracts the factual content from this source's articles and presents it in a
+            straightforward format. We remove language designed to trigger emotional reactions,
+            create urgency, or sensationalize the story.
           </Text>
         </View>
 
@@ -145,10 +128,9 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What NTRL doesn't do</Text>
           <Text style={styles.sectionBody}>
-            NTRL does not fact-check claims, verify accuracy, or determine
-            whether information is true or false. We don't rate sources or
-            assign bias scores. The original reporting comes from the source
-            — we simply adjust how it's presented.
+            NTRL does not fact-check claims, verify accuracy, or determine whether information is
+            true or false. We don't rate sources or assign bias scores. The original reporting comes
+            from the source — we simply adjust how it's presented.
           </Text>
         </View>
 
@@ -156,10 +138,9 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How NTRL processes this source</Text>
           <Text style={styles.sectionBody}>
-            Articles from {sourceName} go through the same processing as all
-            sources in NTRL. We identify and adjust urgency cues, emotional
-            triggers, and sensational phrasing while preserving the factual
-            content of the story.
+            Articles from {sourceName} go through the same processing as all sources in NTRL. We
+            identify and adjust urgency cues, emotional triggers, and sensational phrasing while
+            preserving the factual content of the story.
           </Text>
         </View>
 
@@ -168,20 +149,13 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
           <View style={styles.linkSection}>
             <Pressable
               onPress={handleOpenSource}
-              style={({ pressed }) => [
-                styles.sourceLink,
-                pressed && styles.sourceLinkPressed,
-              ]}
+              style={({ pressed }) => [styles.sourceLink, pressed && styles.sourceLinkPressed]}
               accessibilityRole="link"
               accessibilityLabel={`Open ${sourceName} website`}
             >
-              <Text style={styles.sourceLinkText}>
-                Visit {sourceName} →
-              </Text>
+              <Text style={styles.sourceLinkText}>Visit {sourceName} →</Text>
             </Pressable>
-            <Text style={styles.linkHint}>
-              Opens in your browser
-            </Text>
+            <Text style={styles.linkHint}>Opens in your browser</Text>
           </View>
         )}
       </ScrollView>

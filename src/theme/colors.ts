@@ -10,33 +10,33 @@ import type { ThemeColors } from './types';
 // Shared base colors (unchanged between versions)
 const baseColors = {
   // Backgrounds
-  background: '#FAF9F6',        // Warm off-white / paper tone
-  surface: '#FFFFFF',           // Card surfaces (subtle contrast)
+  background: '#FAF9F6', // Warm off-white / paper tone
+  surface: '#FFFFFF', // Card surfaces (subtle contrast)
 
   // Text hierarchy
-  textPrimary: '#2D2D2D',       // Dark gray for headlines and body
-  textSecondary: '#5C5C5C',     // Medium gray for summaries
-  textMuted: '#8A8A8A',         // Light gray for metadata (source, time)
-  textSubtle: '#A3A3A3',        // Even lighter for section headers
+  textPrimary: '#2D2D2D', // Dark gray for headlines and body
+  textSecondary: '#5C5C5C', // Medium gray for summaries
+  textMuted: '#8A8A8A', // Light gray for metadata (source, time)
+  textSubtle: '#A3A3A3', // Even lighter for section headers
 
   // Dividers
-  divider: '#E8E6E1',           // Warm gray divider
-  dividerSubtle: '#F0EEEA',     // Very subtle divider
+  divider: '#E8E6E1', // Warm gray divider
+  dividerSubtle: '#F0EEEA', // Very subtle divider
 
   // Transparency highlights (soft, low-opacity, never alert red)
-  highlight: 'rgba(212, 175, 55, 0.20)',      // Soft gold/amber at 20%
+  highlight: 'rgba(212, 175, 55, 0.20)', // Soft gold/amber at 20%
   highlightBorder: 'rgba(212, 175, 55, 0.40)', // Slightly stronger for underline
 
   // Interactive
-  link: '#5C7A8A',              // Muted teal-gray for links
-  linkPressed: '#4A6270',       // Darker on press
+  link: '#5C7A8A', // Muted teal-gray for links
+  linkPressed: '#4A6270', // Darker on press
 };
 
 // V1 Colors - Original (single accent)
 export const colorsV1: ThemeColors = {
   ...baseColors,
-  accent: '#7A8B99',                          // Muted blue-gray / slate
-  accentSecondary: '#7A8B99',                 // Same as primary in v1
+  accent: '#7A8B99', // Muted blue-gray / slate
+  accentSecondary: '#7A8B99', // Same as primary in v1
   accentSecondaryMuted: '#7A8B99',
   accentSecondarySubtle: 'rgba(122, 139, 153, 0.1)',
 };
@@ -44,9 +44,9 @@ export const colorsV1: ThemeColors = {
 // V2 Colors - Refresh (adds sage accent)
 export const colorsV2: ThemeColors = {
   ...baseColors,
-  accent: '#7A8B99',                          // Blue-gray unchanged - dividers, chrome
-  accentSecondary: '#8B9A7A',                 // NEW: Sage - positive states (Saved)
-  accentSecondaryMuted: '#A3B094',            // Light sage - hover states
+  accent: '#7A8B99', // Blue-gray unchanged - dividers, chrome
+  accentSecondary: '#8B9A7A', // NEW: Sage - positive states (Saved)
+  accentSecondaryMuted: '#A3B094', // Light sage - hover states
   accentSecondarySubtle: 'rgba(139, 154, 122, 0.15)', // Chip selected backgrounds
 };
 
@@ -73,8 +73,8 @@ export const colorsV1Dark: ThemeColors = {
   textSubtle: '#706B63',
 
   // Accents (lightened for dark backgrounds)
-  accent: '#8FA0AD',                          // Blue-gray lightened
-  accentSecondary: '#8FA0AD',                 // Same as primary in v1
+  accent: '#8FA0AD', // Blue-gray lightened
+  accentSecondary: '#8FA0AD', // Same as primary in v1
   accentSecondaryMuted: '#8FA0AD',
   accentSecondarySubtle: 'rgba(143, 160, 173, 0.15)',
 
@@ -104,9 +104,9 @@ export const colorsV2Dark: ThemeColors = {
   textSubtle: '#706B63',
 
   // Accents (lightened for dark backgrounds)
-  accent: '#8FA0AD',                          // Blue-gray lightened
-  accentSecondary: '#9AAE8A',                 // Sage lightened for dark
-  accentSecondaryMuted: '#B3C4A5',            // Light sage
+  accent: '#8FA0AD', // Blue-gray lightened
+  accentSecondary: '#9AAE8A', // Sage lightened for dark
+  accentSecondaryMuted: '#B3C4A5', // Light sage
   accentSecondarySubtle: 'rgba(154, 174, 138, 0.2)', // Sage chip backgrounds
 
   // Warm dividers

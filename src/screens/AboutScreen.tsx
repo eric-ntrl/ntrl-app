@@ -1,12 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StatusBar,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
@@ -25,10 +18,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -79,7 +69,10 @@ export default function AboutScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
@@ -88,24 +81,22 @@ export default function AboutScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.intro}>
-          NTRL removes manipulative language from information so you can
-          understand what matters without being sold to, provoked, or worked up
-          for someone else's agenda.
+          NTRL removes manipulative language from information so you can understand what matters
+          without being sold to, provoked, or worked up for someone else's agenda.
         </Text>
 
         <Section title="What this is" styles={styles}>
           <Text style={styles.body}>
-            A reading layer that shortens, de-triggers, and structures
-            information into neutral summaries. Every article shows what
-            happened, why it matters, what is known, and what remains uncertain.
+            A reading layer that shortens, de-triggers, and structures information into neutral
+            summaries. Every article shows what happened, why it matters, what is known, and what
+            remains uncertain.
           </Text>
         </Section>
 
         <Section title="What this is not" styles={styles}>
           <Text style={styles.body}>
-            A truth engine. NTRL removes tone and manipulation, not factual
-            claims. It can be wrong. When information is uncertain, we say so
-            explicitly instead of guessing.
+            A truth engine. NTRL removes tone and manipulation, not factual claims. It can be wrong.
+            When information is uncertain, we say so explicitly instead of guessing.
           </Text>
         </Section>
 
@@ -122,23 +113,20 @@ export default function AboutScreen({ navigation }: Props) {
 
         <Section title="What we preserve" styles={styles}>
           <Text style={styles.body}>
-            Facts, quotes, context, and nuance. We strip the manipulation, not
-            the information.
+            Facts, quotes, context, and nuance. We strip the manipulation, not the information.
           </Text>
         </Section>
 
         <Section title="How it works" styles={styles}>
           <Text style={styles.body}>
-            Sources are ingested, content is extracted, manipulative language is
-            identified and removed, and summaries are generated. You can view
-            transparency and redlines from any article.
+            Sources are ingested, content is extracted, manipulative language is identified and
+            removed, and summaries are generated. You can view transparency and redlines from any
+            article.
           </Text>
         </Section>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Filtered for clarity. Signal preserved.
-          </Text>
+          <Text style={styles.footerText}>Filtered for clarity. Signal preserved.</Text>
         </View>
       </ScrollView>
     </View>

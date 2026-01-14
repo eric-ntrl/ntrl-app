@@ -1,25 +1,44 @@
-import { Linking, Alert } from 'react-native';
+import { Linking } from 'react-native';
+import { validateUrl, isAllowedNewsDomain } from './urlValidator';
 
 /**
  * Safely open an external URL with fallback handling.
  * Returns true if opened successfully, false otherwise.
+ *
+ * @param url - The URL to open
+ * @param fallbackUrl - Optional fallback URL if primary fails
+ * @param options - Options for URL validation
  */
 export async function openExternalUrl(
   url: string | undefined,
-  fallbackUrl?: string
+  fallbackUrl?: string,
+  options: { requireWhitelist?: boolean } = {}
 ): Promise<boolean> {
+  const { requireWhitelist = false } = options;
+
   // Validate URL exists
   if (!url || url.trim() === '') {
     if (fallbackUrl) {
-      return openExternalUrl(fallbackUrl);
+      return openExternalUrl(fallbackUrl, undefined, options);
     }
     return false;
   }
 
-  // Basic URL validation
-  if (!isValidUrl(url)) {
+  // Validate URL structure and optionally domain whitelist
+  const validation = validateUrl(url, { allowLocalhost: true });
+  if (!validation.valid) {
+    console.warn('[Links] Invalid URL:', url, 'Reason:', validation.reason);
     if (fallbackUrl) {
-      return openExternalUrl(fallbackUrl);
+      return openExternalUrl(fallbackUrl, undefined, options);
+    }
+    return false;
+  }
+
+  // Optional domain whitelist check
+  if (requireWhitelist && !isAllowedNewsDomain(url)) {
+    console.warn('[Links] URL domain not in whitelist:', url);
+    if (fallbackUrl) {
+      return openExternalUrl(fallbackUrl, undefined, options);
     }
     return false;
   }
@@ -30,26 +49,14 @@ export async function openExternalUrl(
       await Linking.openURL(url);
       return true;
     } else if (fallbackUrl) {
-      return openExternalUrl(fallbackUrl);
+      return openExternalUrl(fallbackUrl, undefined, options);
     }
     return false;
   } catch (error) {
-    console.warn('Failed to open URL:', url, error);
+    console.warn('[Links] Failed to open URL:', url, error);
     if (fallbackUrl) {
-      return openExternalUrl(fallbackUrl);
+      return openExternalUrl(fallbackUrl, undefined, options);
     }
-    return false;
-  }
-}
-
-/**
- * Basic URL validation
- */
-function isValidUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
     return false;
   }
 }

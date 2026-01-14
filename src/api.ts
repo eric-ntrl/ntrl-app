@@ -58,26 +58,30 @@ type ApiTransparencyResponse = {
 function transformBrief(api: ApiBriefResponse): Brief {
   return {
     generated_at: api.assembled_at,
-    sections: api.sections.map((section): Section => ({
-      key: section.name,
-      title: section.display_name,
-      items: section.stories.map((story): Item => ({
-        id: story.id,
-        source: story.source_name,
-        source_url: story.source_url,
-        published_at: story.published_at,
-        headline: story.neutral_headline,
-        summary: story.neutral_summary,
-        url: story.source_url,
-        detail: {
-          what_happened: '',
-          why_it_matters: '',
-          known: [],
-          uncertain: [],
-          removed: [],
-        },
-      })),
-    })),
+    sections: api.sections.map(
+      (section): Section => ({
+        key: section.name,
+        title: section.display_name,
+        items: section.stories.map(
+          (story): Item => ({
+            id: story.id,
+            source: story.source_name,
+            source_url: story.source_url,
+            published_at: story.published_at,
+            headline: story.neutral_headline,
+            summary: story.neutral_summary,
+            url: story.source_url,
+            detail: {
+              what_happened: '',
+              why_it_matters: '',
+              known: [],
+              uncertain: [],
+              removed: [],
+            },
+          })
+        ),
+      })
+    ),
   };
 }
 

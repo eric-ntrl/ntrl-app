@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  Share,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -51,10 +43,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -109,10 +98,7 @@ function NavigationRow({
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.navRow,
-        pressed && styles.navRowPressed,
-      ]}
+      style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}
       onPress={onPress}
       accessibilityLabel={label}
       accessibilityRole="button"
@@ -147,9 +133,7 @@ function TopicChip({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
     >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-        {label}
-      </Text>
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
     </Pressable>
   );
 }
@@ -177,9 +161,7 @@ function TextSizeOption({
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
     >
-      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>
-        {label}
-      </Text>
+      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>{label}</Text>
     </Pressable>
   );
 }
@@ -207,9 +189,7 @@ function ColorModeOption({
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
     >
-      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>
-        {label}
-      </Text>
+      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>{label}</Text>
     </Pressable>
   );
 }
@@ -265,7 +245,10 @@ export default function ProfileScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
@@ -276,14 +259,9 @@ export default function ProfileScreen({ navigation }: Props) {
         {/* Account Section */}
         <SectionHeader title="Account" styles={styles} />
         <View style={styles.card}>
-          <Text style={styles.cardText}>
-            Sign in to sync your preferences across devices
-          </Text>
+          <Text style={styles.cardText}>Sign in to sync your preferences across devices</Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.signInButton,
-              pressed && styles.signInButtonPressed,
-            ]}
+            style={({ pressed }) => [styles.signInButton, pressed && styles.signInButtonPressed]}
             accessibilityLabel="Sign in"
             accessibilityRole="button"
           >
@@ -324,9 +302,7 @@ export default function ProfileScreen({ navigation }: Props) {
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>
-            Adjusts text in articles and headlines
-          </Text>
+          <Text style={styles.cardHint}>Adjusts text in articles and headlines</Text>
         </View>
 
         {/* Appearance Section - Color Mode */}
@@ -344,9 +320,7 @@ export default function ProfileScreen({ navigation }: Props) {
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>
-            System follows your device settings
-          </Text>
+          <Text style={styles.cardHint}>System follows your device settings</Text>
         </View>
 
         {/* Preferences Section */}
@@ -364,9 +338,7 @@ export default function ProfileScreen({ navigation }: Props) {
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>
-            Topic filtering coming in a future update
-          </Text>
+          <Text style={styles.cardHint}>Topic filtering coming in a future update</Text>
         </View>
 
         {/* Share NTRL Section */}
@@ -382,10 +354,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* About Link */}
         <Pressable
-          style={({ pressed }) => [
-            styles.aboutLink,
-            pressed && styles.aboutLinkPressed,
-          ]}
+          style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
           onPress={() => navigation.navigate('About')}
           accessibilityLabel="About NTRL"
           accessibilityRole="link"

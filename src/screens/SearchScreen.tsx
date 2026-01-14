@@ -15,11 +15,7 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { fetchBrief } from '../api';
 import { decodeHtmlEntities } from '../utils/text';
-import {
-  getRecentSearches,
-  addRecentSearch,
-  removeRecentSearch,
-} from '../storage/storageService';
+import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../storage/storageService';
 import type { RecentSearch } from '../storage/types';
 import type { Item, Brief } from '../types';
 
@@ -54,10 +50,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -139,10 +132,7 @@ function RecentSearchItem({
   return (
     <View style={styles.recentItem}>
       <Pressable
-        style={({ pressed }) => [
-          styles.recentItemContent,
-          pressed && styles.recentItemPressed,
-        ]}
+        style={({ pressed }) => [styles.recentItemContent, pressed && styles.recentItemPressed]}
         onPress={onPress}
         accessibilityLabel={`Search for ${query}`}
       >
@@ -204,12 +194,8 @@ function EmptyResults({
 }) {
   return (
     <View style={styles.emptyResults}>
-      <Text style={styles.emptyResultsMessage}>
-        No results for "{query}"
-      </Text>
-      <Text style={styles.emptyResultsHint}>
-        Try a different search term
-      </Text>
+      <Text style={styles.emptyResultsMessage}>No results for "{query}"</Text>
+      <Text style={styles.emptyResultsHint}>Try a different search term</Text>
     </View>
   );
 }
@@ -303,7 +289,10 @@ export default function SearchScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <View style={styles.content}>

@@ -50,10 +50,7 @@ function BackButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.backButton,
-        pressed && styles.backButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Go back"
       accessibilityRole="button"
@@ -73,10 +70,7 @@ function ClearButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.clearButton,
-        pressed && styles.clearButtonPressed,
-      ]}
+      style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
       hitSlop={12}
       accessibilityLabel="Clear history"
       accessibilityRole="button"
@@ -152,9 +146,7 @@ function EmptyState({ styles }: { styles: ReturnType<typeof createStyles> }) {
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>◷</Text>
       <Text style={styles.emptyMessage}>No reading history yet</Text>
-      <Text style={styles.emptyHint}>
-        Articles you read will appear here.
-      </Text>
+      <Text style={styles.emptyHint}>Articles you read will appear here.</Text>
     </View>
   );
 }
@@ -211,7 +203,10 @@ export default function HistoryScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar
+        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <Header
         onBack={() => navigation.goBack()}
         onClear={handleClear}
