@@ -16,8 +16,12 @@ import { getCachedBrief, cacheBrief } from './storage/storageService';
 // ============================================================================
 type ApiBriefStory = {
   id: string;
-  neutral_headline: string;
-  neutral_summary: string;
+  // New field names (current API)
+  feed_title?: string;
+  feed_summary?: string;
+  // Legacy field names (backwards compatibility)
+  neutral_headline?: string;
+  neutral_summary?: string;
   source_name: string;
   source_url: string;
   published_at: string;
@@ -42,8 +46,12 @@ type ApiBriefResponse = {
 
 type ApiStoryDetail = {
   id: string;
-  neutral_headline: string;
-  neutral_summary: string;
+  // New field names (current API)
+  feed_title?: string;
+  feed_summary?: string;
+  // Legacy field names (backwards compatibility)
+  neutral_headline?: string;
+  neutral_summary?: string;
   what_happened: string | null;
   why_it_matters: string | null;
   what_is_known: string[] | null;
@@ -58,8 +66,12 @@ type ApiStoryDetail = {
 
 type ApiTransparencyResponse = {
   id: string;
-  neutral_headline: string;
-  neutral_summary: string;
+  // New field names (current API)
+  feed_title?: string;
+  feed_summary?: string;
+  // Legacy field names (backwards compatibility)
+  neutral_headline?: string;
+  neutral_summary?: string;
   removed_phrases: string[];
   source_name: string;
   source_url: string;
@@ -79,8 +91,9 @@ function transformBrief(api: ApiBriefResponse): Brief {
             source: story.source_name,
             source_url: story.source_url,
             published_at: story.published_at,
-            headline: story.neutral_headline,
-            summary: story.neutral_summary,
+            // Support both new (feed_*) and legacy (neutral_*) field names
+            headline: story.feed_title || story.neutral_headline || '',
+            summary: story.feed_summary || story.neutral_summary || '',
             url: story.source_url,
             detail: {
               what_happened: '',

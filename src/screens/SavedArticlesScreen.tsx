@@ -145,7 +145,7 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [allArticles, setAllArticles] = useState<SavedArticle[]>([]);
-  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
+  const [displayedCount, setDisplayedCount] = useState<number>(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 

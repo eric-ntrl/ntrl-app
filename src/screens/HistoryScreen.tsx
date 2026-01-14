@@ -168,7 +168,7 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [allHistory, setAllHistory] = useState<HistoryEntry[]>([]);
-  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
+  const [displayedCount, setDisplayedCount] = useState<number>(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
