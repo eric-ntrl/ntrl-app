@@ -76,3 +76,34 @@ export const isProduction = ENV === 'production';
  * Check if running in development environment.
  */
 export const isDevelopment = ENV === 'development';
+
+/**
+ * Feature flags for gradual backend migration.
+ *
+ * These flags control whether the app uses deprecated frontend services
+ * or production backend API endpoints. Set to `true` once backend
+ * endpoints are production-ready.
+ *
+ * @see docs/ARCHITECTURE.md for migration status
+ */
+export const FEATURE_FLAGS = {
+  /**
+   * Use backend API for full article text instead of client-side extraction.
+   *
+   * When `false`: Uses deprecated `src/services/readerMode.ts` (client-side URL fetching)
+   * When `true`: Uses backend `/v1/stories/{id}/transparency` or `/v1/stories/{id}/full-text`
+   *
+   * Set to `true` once backend full-text endpoints are production-ready.
+   */
+  USE_BACKEND_FULL_TEXT: false,
+
+  /**
+   * Use backend API for redline/transparency spans instead of client-side detection.
+   *
+   * When `false`: Uses deprecated `src/services/redline.ts` (client-side pattern matching)
+   * When `true`: Uses backend `/v1/stories/{id}/transparency` or `/v1/stories/{id}/redlines`
+   *
+   * Set to `true` once backend TransparencySpan generation is complete for LLM providers.
+   */
+  USE_BACKEND_REDLINES: false,
+} as const;

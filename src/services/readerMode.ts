@@ -1,9 +1,20 @@
 /**
  * Reader Mode Service
  *
- * Fetches web pages and extracts clean, readable article text using multiple
- * extraction strategies. Removes HTML, boilerplate, navigation, CTAs, and
- * other non-article content. Results are cached in-memory for 6 hours.
+ * @deprecated PLACEHOLDER/DEV-ONLY
+ *
+ * This service is a demo placeholder for article extraction.
+ * Production implementation should use backend API:
+ *   - GET /v1/stories/{id}/transparency (returns original_body)
+ *   - GET /v1/stories/{id}/full-text (when available)
+ *
+ * This client-side extraction will be removed once backend
+ * full-text endpoints are fully tested.
+ *
+ * **Current behavior:** Fetches web pages and extracts clean, readable article
+ * text using multiple extraction strategies. Removes HTML, boilerplate,
+ * navigation, CTAs, and other non-article content. Results are cached
+ * in-memory for 6 hours.
  *
  * Extraction strategies (in priority order):
  * 1. `<article>` tag content
@@ -13,6 +24,9 @@
  *
  * Each candidate is scored based on length, sentence structure, and CTA density.
  * The highest-scoring candidate is returned.
+ *
+ * TODO: Remove after backend migration complete
+ * @see FEATURE_FLAGS.USE_BACKEND_FULL_TEXT in src/config/index.ts
  *
  * @module services/readerMode
  */

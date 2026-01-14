@@ -1,16 +1,33 @@
 /**
  * Redline Detection Service
  *
- * Analyzes text to identify and locate manipulative, sensational, clickbait,
- * and call-to-action language. Used by NTRL to highlight problematic language
- * in the Transparency view, helping users understand how news language
- * can be designed to manipulate emotions and drive engagement.
+ * @deprecated PLACEHOLDER/DEV-ONLY
+ *
+ * This service is a demo placeholder for manipulative language detection.
+ * Production implementation should use backend API:
+ *   - GET /v1/stories/{id}/transparency (returns spans)
+ *   - GET /v1/stories/{id}/redlines (when available)
+ *
+ * Client-side detection exists for:
+ *   1. Offline fallback
+ *   2. Dev/demo when backend unavailable
+ *
+ * Detection rules should match backend neutralizer.py patterns.
+ *
+ * **Current behavior:** Analyzes text to identify and locate manipulative,
+ * sensational, clickbait, and call-to-action language. Used by NTRL to
+ * highlight problematic language in the Transparency view, helping users
+ * understand how news language can be designed to manipulate emotions
+ * and drive engagement.
  *
  * Detection categories:
  * - **Manipulative language**: Urgency terms, sensationalism, conflict amplification
  * - **Promotional content**: CTAs, newsletter prompts, engagement bait
  * - **Emphatic capitalization**: ALL CAPS words (excluding common acronyms)
  * - **Excessive punctuation**: Multiple exclamation/question marks
+ *
+ * TODO: Remove/reduce after backend migration complete
+ * @see FEATURE_FLAGS.USE_BACKEND_REDLINES in src/config/index.ts
  *
  * @module services/redline
  */

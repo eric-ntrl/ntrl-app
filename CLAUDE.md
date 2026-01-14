@@ -83,6 +83,41 @@ Backend: `ntrl-api` (FastAPI/Python)
 4. **Transparency** - Always show what was changed/removed
 5. **Determinism** - Same content for all users
 
+## Architecture Notes
+
+### Backend vs Frontend Responsibilities
+
+**IMPORTANT:** This app follows strict separation of concerns:
+
+- **Backend (ntrl-api)** handles:
+  - Article ingestion from RSS sources
+  - Content extraction and storage (S3)
+  - Neutralization via LLM (4 providers + mock fallback)
+  - Transparency span generation
+  - Brief assembly
+
+- **Frontend (ntrl-app)** handles:
+  - UI presentation only
+  - API data consumption
+  - Theme/styling
+  - Navigation
+
+### Deprecated Services (Do NOT Extend)
+
+The following services are **deprecated placeholder code**:
+
+| Service | Status | Use Instead |
+|---------|--------|-------------|
+| `src/services/readerMode.ts` | ⚠️ Deprecated | Backend `/v1/stories/{id}/transparency` |
+| `src/services/redline.ts` | ⚠️ Deprecated | Backend TransparencySpan data |
+
+These exist for dev/demo purposes only when backend is unavailable.
+
+**Do NOT add features to these services.** All new functionality should use backend APIs.
+
+See `FEATURE_FLAGS` in `src/config/index.ts` for migration toggles.
+See `docs/ARCHITECTURE.md` for full migration status.
+
 ## Commands
 ```bash
 npm start          # Start Expo dev server

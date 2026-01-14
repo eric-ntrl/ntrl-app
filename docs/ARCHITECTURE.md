@@ -236,3 +236,75 @@ Auto-fix: `npm run lint:fix`
 2. **Secure Storage**: Sensitive data encrypted via expo-secure-store
 3. **No secrets in code**: API URLs environment-configured
 4. **Console logging disabled in production**: Via logger utility
+
+## Backend/Frontend Separation
+
+### Principle
+
+NTRL follows a strict separation of concerns:
+
+- **Backend (ntrl-api):** ALL ingestion, neutralization, and data processing
+- **Frontend (ntrl-app):** Pure UI/presentation, consuming API data only
+
+### Current Migration Status
+
+| Feature | Backend Service | Frontend Service | Status |
+|---------|----------------|------------------|--------|
+| Article ingestion | `ingestion.py` → S3 | N/A | ✅ Backend only |
+| Neutralization | `neutralizer.py` (4 LLM providers) | N/A | ✅ Backend only |
+| Brief assembly | `brief_assembly.py` | N/A | ✅ Backend only |
+| Full article text | `/v1/stories/{id}/transparency` | `readerMode.ts` (deprecated) | ⚠️ Backend preferred |
+| Redline detection | `TransparencySpan` model | `redline.ts` (deprecated) | ⚠️ Backend preferred |
+
+### Feature Flags
+
+The app uses feature flags to control backend vs frontend service usage during the migration:
+
+```typescript
+// src/config/index.ts
+export const FEATURE_FLAGS = {
+  USE_BACKEND_FULL_TEXT: false,  // When true: uses backend API
+  USE_BACKEND_REDLINES: false,   // When true: uses backend TransparencySpans
+};
+```
+
+Set these flags to `true` once corresponding backend endpoints are production-ready.
+
+### Deprecated Frontend Services
+
+The following services are **placeholder/demo code** that will be replaced:
+
+| Service | Purpose | Backend Replacement |
+|---------|---------|---------------------|
+| `src/services/readerMode.ts` | Client-side article extraction | `/v1/stories/{id}/transparency` or `/full-text` |
+| `src/services/redline.ts` | Client-side manipulation detection | `/v1/stories/{id}/transparency` (TransparencySpan) |
+
+**These services exist only for:**
+1. Development/demo when backend is unavailable
+2. Offline fallback (future consideration)
+3. Gradual migration testing
+
+**Do NOT extend these services.** All new features should use backend APIs.
+
+### Backend Services (ntrl-api)
+
+The backend provides robust infrastructure for content processing:
+
+| Service | Purpose | Status |
+|---------|---------|--------|
+| `ingestion.py` | RSS feed → S3 + DB pipeline | ✅ Complete |
+| `neutralizer.py` | LLM-based neutralization (4 providers + mock) | ✅ Complete |
+| `auditor.py` | Output validation with retry | ✅ Complete |
+| `classifier.py` | Section classification | ✅ Complete |
+| `deduper.py` | Duplicate detection | ✅ Complete |
+| `brief_assembly.py` | Deterministic brief assembly | ✅ Complete |
+| `TransparencySpan` | Position-based removed phrase tracking | ⚠️ Partial (mock works, LLM parsing in progress) |
+
+### Migration Plan
+
+When backend endpoints are production-ready:
+
+1. **Enable feature flags** in production config
+2. **Monitor** for regressions
+3. **Remove deprecated services** after 2-4 weeks of stable operation
+4. **Simplify screens** to only use API data
