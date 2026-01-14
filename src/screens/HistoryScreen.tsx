@@ -7,6 +7,7 @@ import {
   Pressable,
   StatusBar,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,9 +15,12 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { getHistory, clearHistory } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
+import { LIMITS } from '../constants';
 import type { HistoryEntry } from '../storage/types';
 import type { Item } from '../types';
 import type { HistoryScreenProps } from '../navigation/types';
+
+const PAGE_SIZE = LIMITS.PAGE_SIZE;
 
 /**
  * Format relative time for history entries
@@ -163,30 +167,53 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [allHistory, setAllHistory] = useState<HistoryEntry[]>([]);
+  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Displayed history (paginated)
+  const displayedHistory = useMemo(
+    () => allHistory.slice(0, displayedCount),
+    [allHistory, displayedCount]
+  );
+  const hasMore = displayedCount < allHistory.length;
 
   const loadHistory = useCallback(async () => {
     const entries = await getHistory();
-    setHistory(entries);
+    setAllHistory(entries);
   }, []);
 
   // Load history when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadHistory();
+      setDisplayedCount(PAGE_SIZE); // Reset pagination on focus
     }, [loadHistory])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadHistory();
+    setDisplayedCount(PAGE_SIZE); // Reset pagination on refresh
     setRefreshing(false);
   }, [loadHistory]);
 
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    // Small delay to show loading indicator
+    setTimeout(() => {
+      setDisplayedCount((prev) => Math.min(prev + PAGE_SIZE, allHistory.length));
+      setLoadingMore(false);
+    }, 300);
+  }, [loadingMore, hasMore, allHistory.length]);
+
   const handleClear = useCallback(async () => {
     await clearHistory();
-    setHistory([]);
+    setAllHistory([]);
+    setDisplayedCount(PAGE_SIZE);
   }, []);
 
   const renderItem = ({ item }: { item: HistoryEntry }) => (
@@ -198,6 +225,20 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
     />
   );
 
+  const ListFooter = () => {
+    if (loadingMore) {
+      return (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+        </View>
+      );
+    }
+    if (!hasMore && displayedHistory.length > 0) {
+      return <EndOfList styles={styles} />;
+    }
+    return null;
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar
@@ -207,15 +248,15 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
       <Header
         onBack={() => navigation.goBack()}
         onClear={handleClear}
-        showClear={history.length > 0}
+        showClear={allHistory.length > 0}
         styles={styles}
       />
 
-      {history.length === 0 ? (
+      {allHistory.length === 0 ? (
         <EmptyState styles={styles} />
       ) : (
         <FlatList
-          data={history}
+          data={displayedHistory}
           keyExtractor={(item, index) => `${item.item.id}-${index}`}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
@@ -227,7 +268,9 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
               tintColor={colors.textMuted}
             />
           }
-          ListFooterComponent={<EndOfList styles={styles} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={ListFooter}
         />
       )}
     </View>
@@ -371,6 +414,12 @@ function createStyles(theme: Theme) {
       fontSize: 13,
       fontWeight: '400',
       color: colors.textSubtle,
+    },
+
+    // Loading more
+    loadingMore: {
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
     },
   });
 }

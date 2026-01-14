@@ -1,8 +1,19 @@
+/**
+ * NTRL API Client
+ *
+ * Provides functions for fetching data from the NTRL backend API.
+ * Includes automatic retry logic, caching, and offline fallback support.
+ *
+ * @module api
+ */
+
 import { API_BASE_URL } from './config';
 import type { Brief, Section, Item, Detail } from './types';
 import { getCachedBrief, cacheBrief } from './storage/storageService';
 
-// API Response Types
+// ============================================================================
+// API Response Types (internal)
+// ============================================================================
 type ApiBriefStory = {
   id: string;
   neutral_headline: string;
@@ -85,7 +96,25 @@ function transformBrief(api: ApiBriefResponse): Brief {
   };
 }
 
-// Fetch brief from API
+// ============================================================================
+// Public API Functions
+// ============================================================================
+
+/**
+ * Fetch the daily brief from the API.
+ *
+ * Returns the current day's news brief with all sections and stories.
+ * Does not use caching - for cached version use {@link fetchBriefWithCache}.
+ *
+ * @returns Promise resolving to the Brief data
+ * @throws Error if the request fails or returns non-OK status
+ *
+ * @example
+ * ```typescript
+ * const brief = await fetchBrief();
+ * console.log(brief.sections.length); // Number of news sections
+ * ```
+ */
 export async function fetchBrief(): Promise<Brief> {
   const response = await fetch(`${API_BASE_URL}/v1/brief`);
 
@@ -98,9 +127,14 @@ export async function fetchBrief(): Promise<Brief> {
   return transformBrief(data);
 }
 
-// Result type for cache-aware fetch
+/**
+ * Result from a cache-aware brief fetch.
+ * Indicates whether data came from network or local cache.
+ */
 export type BriefFetchResult = {
+  /** The fetched brief data */
   brief: Brief;
+  /** True if data was served from cache due to network failure */
   fromCache: boolean;
 };
 
@@ -188,7 +222,25 @@ async function fetchWithRetry(
   throw lastError || new Error('Fetch failed after retries');
 }
 
-// Fetch brief with automatic caching and offline fallback
+/**
+ * Fetch the daily brief with automatic caching and offline fallback.
+ *
+ * This is the primary method for fetching briefs in the app. It:
+ * 1. Attempts to fetch fresh data from the API
+ * 2. Caches successful responses for offline use
+ * 3. Falls back to cached data if network request fails
+ *
+ * @returns Promise resolving to BriefFetchResult with brief and cache status
+ * @throws Error only if both network request and cache retrieval fail
+ *
+ * @example
+ * ```typescript
+ * const { brief, fromCache } = await fetchBriefWithCache();
+ * if (fromCache) {
+ *   console.log('Using cached data - you may be offline');
+ * }
+ * ```
+ */
 export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
   // Get cached data first (for fallback)
   const cached = await getCachedBrief();
@@ -233,7 +285,22 @@ export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
   }
 }
 
-// Fetch story detail with retry logic
+/**
+ * Fetch detailed information for a specific story.
+ *
+ * Returns structured detail including what happened, why it matters,
+ * known facts, and uncertainties. Uses retry logic for resilience.
+ *
+ * @param storyId - The unique identifier of the story
+ * @returns Promise resolving to the Detail data
+ * @throws Error if request fails after all retries
+ *
+ * @example
+ * ```typescript
+ * const detail = await fetchStoryDetail('story-123');
+ * console.log(detail.what_happened);
+ * ```
+ */
 export async function fetchStoryDetail(storyId: string): Promise<Detail> {
   const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}`);
 
@@ -251,7 +318,22 @@ export async function fetchStoryDetail(storyId: string): Promise<Detail> {
   };
 }
 
-// Fetch transparency (removed phrases) with retry logic
+/**
+ * Fetch transparency data showing what was removed from a story.
+ *
+ * Returns a list of phrases that were identified as manipulative
+ * and removed during the neutralization process.
+ *
+ * @param storyId - The unique identifier of the story
+ * @returns Promise resolving to array of removed phrases
+ * @throws Error if request fails after all retries
+ *
+ * @example
+ * ```typescript
+ * const removed = await fetchTransparency('story-123');
+ * console.log(`${removed.length} phrases were neutralized`);
+ * ```
+ */
 export async function fetchTransparency(storyId: string): Promise<string[]> {
   const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
 

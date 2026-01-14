@@ -1,12 +1,32 @@
 /**
  * Redline Detection Service
- * Identifies manipulative, sensational, clickbait, and CTA language in text
+ *
+ * Analyzes text to identify and locate manipulative, sensational, clickbait,
+ * and call-to-action language. Used by NTRL to highlight problematic language
+ * in the Transparency view, helping users understand how news language
+ * can be designed to manipulate emotions and drive engagement.
+ *
+ * Detection categories:
+ * - **Manipulative language**: Urgency terms, sensationalism, conflict amplification
+ * - **Promotional content**: CTAs, newsletter prompts, engagement bait
+ * - **Emphatic capitalization**: ALL CAPS words (excluding common acronyms)
+ * - **Excessive punctuation**: Multiple exclamation/question marks
+ *
+ * @module services/redline
  */
 
+/**
+ * Represents a detected problematic phrase in text.
+ * Contains position information for highlighting and the reason for flagging.
+ */
 export type RedlineSpan = {
+  /** Starting character index in the original text */
   start: number;
+  /** Ending character index (exclusive) in the original text */
   end: number;
+  /** The actual matched text (preserves original casing) */
   text: string;
+  /** Category of the issue (e.g., 'manipulative language', 'promotional content') */
   reason: string;
 };
 
@@ -290,7 +310,39 @@ function mergeOverlappingSpans(spans: RedlineSpan[]): RedlineSpan[] {
 }
 
 /**
- * Find all redlines (manipulative language spans) in text
+ * Find all manipulative language spans in text.
+ *
+ * Scans the input text for problematic patterns including:
+ * - Manipulative phrases (urgency, sensationalism, conflict amplification)
+ * - Promotional/CTA phrases (subscribe prompts, engagement bait)
+ * - ALL CAPS words (4+ characters, excluding common acronyms like NASA, FBI)
+ * - Excessive punctuation (!!, ?!, ???)
+ *
+ * Returns spans with exact positions for use in highlighting. Overlapping
+ * matches are automatically merged, with the longer phrase preserved.
+ *
+ * @param text - The text content to analyze
+ * @returns Array of RedlineSpan objects, sorted by position, with no overlaps
+ *
+ * @example
+ * ```typescript
+ * const spans = findRedlines('Breaking news!! Click here to subscribe now');
+ * // Returns: [
+ * //   { start: 0, end: 8, text: 'Breaking', reason: 'manipulative language' },
+ * //   { start: 13, end: 15, text: '!!', reason: 'excessive punctuation' },
+ * //   { start: 16, end: 26, text: 'Click here', reason: 'promotional content' },
+ * //   { start: 30, end: 43, text: 'subscribe now', reason: 'promotional content' }
+ * // ]
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Use spans to highlight text in UI
+ * const spans = findRedlines(articleText);
+ * spans.forEach(span => {
+ *   console.log(`Found "${span.text}" at ${span.start}-${span.end}: ${span.reason}`);
+ * });
+ * ```
  */
 export function findRedlines(text: string): RedlineSpan[] {
   if (!text || text.length === 0) {
@@ -344,7 +396,25 @@ export function findRedlines(text: string): RedlineSpan[] {
 }
 
 /**
- * Get list of detected manipulative phrases (for display)
+ * Get a deduplicated list of detected manipulative phrases.
+ *
+ * Convenience function that extracts just the phrase text from redline detection,
+ * useful for displaying a summary of problematic language found in an article.
+ * All phrases are lowercased and deduplicated.
+ *
+ * @param text - The text content to analyze
+ * @returns Array of unique lowercase phrases that were flagged
+ *
+ * @example
+ * ```typescript
+ * const phrases = getRedlinedPhrases('Breaking news! Breaking update!');
+ * // Returns: ['breaking']  // Deduplicated, lowercased
+ *
+ * // Display in UI
+ * phrases.forEach(phrase => {
+ *   console.log(`Removed: "${phrase}"`);
+ * });
+ * ```
  */
 export function getRedlinedPhrases(text: string): string[] {
   const spans = findRedlines(text);
@@ -352,7 +422,21 @@ export function getRedlinedPhrases(text: string): string[] {
 }
 
 /**
- * Check if text contains manipulative language
+ * Check if text contains any manipulative or promotional language.
+ *
+ * Quick boolean check useful for conditional UI (e.g., showing a
+ * "transparency available" badge). More efficient than checking
+ * `findRedlines(text).length > 0` when you don't need the span details.
+ *
+ * @param text - The text content to analyze
+ * @returns True if any manipulative patterns were detected
+ *
+ * @example
+ * ```typescript
+ * if (hasManipulativeLanguage(headline)) {
+ *   showTransparencyBadge();
+ * }
+ * ```
  */
 export function hasManipulativeLanguage(text: string): boolean {
   return findRedlines(text).length > 0;

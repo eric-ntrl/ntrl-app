@@ -7,6 +7,7 @@ import {
   Pressable,
   StatusBar,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,9 +15,12 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { getSavedArticles, removeSavedArticle } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
+import { LIMITS } from '../constants';
 import type { SavedArticle } from '../storage/types';
 import type { Item } from '../types';
 import type { SavedArticlesScreenProps } from '../navigation/types';
+
+const PAGE_SIZE = LIMITS.PAGE_SIZE;
 
 /**
  * Format relative time for saved articles
@@ -140,30 +144,52 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
+  const [allArticles, setAllArticles] = useState<SavedArticle[]>([]);
+  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Displayed articles (paginated)
+  const displayedArticles = useMemo(
+    () => allArticles.slice(0, displayedCount),
+    [allArticles, displayedCount]
+  );
+  const hasMore = displayedCount < allArticles.length;
 
   const loadSavedArticles = useCallback(async () => {
     const articles = await getSavedArticles();
-    setSavedArticles(articles);
+    setAllArticles(articles);
   }, []);
 
   // Load saved articles when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadSavedArticles();
+      setDisplayedCount(PAGE_SIZE); // Reset pagination on focus
     }, [loadSavedArticles])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadSavedArticles();
+    setDisplayedCount(PAGE_SIZE); // Reset pagination on refresh
     setRefreshing(false);
   }, [loadSavedArticles]);
 
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    // Small delay to show loading indicator
+    setTimeout(() => {
+      setDisplayedCount((prev) => Math.min(prev + PAGE_SIZE, allArticles.length));
+      setLoadingMore(false);
+    }, 300);
+  }, [loadingMore, hasMore, allArticles.length]);
+
   const handleRemove = useCallback(async (itemId: string) => {
     await removeSavedArticle(itemId);
-    setSavedArticles((prev) => prev.filter((s) => s.item.id !== itemId));
+    setAllArticles((prev) => prev.filter((s) => s.item.id !== itemId));
   }, []);
 
   const renderItem = ({ item }: { item: SavedArticle }) => (
@@ -176,6 +202,20 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
     />
   );
 
+  const ListFooter = () => {
+    if (loadingMore) {
+      return (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator size="small" color={colors.textMuted} />
+        </View>
+      );
+    }
+    if (!hasMore && displayedArticles.length > 0) {
+      return <EndOfList styles={styles} />;
+    }
+    return null;
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar
@@ -184,11 +224,11 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
       />
       <Header onBack={() => navigation.goBack()} styles={styles} />
 
-      {savedArticles.length === 0 ? (
+      {allArticles.length === 0 ? (
         <EmptyState styles={styles} />
       ) : (
         <FlatList
-          data={savedArticles}
+          data={displayedArticles}
           keyExtractor={(item) => item.item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
@@ -200,7 +240,9 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
               tintColor={colors.textMuted}
             />
           }
-          ListFooterComponent={<EndOfList styles={styles} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={ListFooter}
         />
       )}
     </View>
@@ -330,6 +372,12 @@ function createStyles(theme: Theme) {
       fontSize: 13,
       fontWeight: '400',
       color: colors.textSubtle,
+    },
+
+    // Loading more
+    loadingMore: {
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
     },
   });
 }

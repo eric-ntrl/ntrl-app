@@ -6,9 +6,10 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
-  ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
+import { FeedSkeleton } from '../components/skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchBriefWithCache } from '../api';
 import { useTheme } from '../theme';
@@ -205,18 +206,11 @@ function EndOfFeed({
   );
 }
 
-function LoadingState({
-  styles,
-  colors,
-}: {
-  styles: ReturnType<typeof createStyles>;
-  colors: Theme['colors'];
-}) {
+function LoadingState({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
-    <View style={styles.loadingState}>
-      <ActivityIndicator size="large" color={colors.textMuted} />
-      <Text style={styles.loadingText}>Loading your brief...</Text>
-    </View>
+    <ScrollView style={styles.loadingContainer} showsVerticalScrollIndicator={false}>
+      <FeedSkeleton sections={2} articlesPerSection={3} />
+    </ScrollView>
   );
 }
 
@@ -339,7 +333,7 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
       />
 
       {loading && !brief ? (
-        <LoadingState styles={styles} colors={colors} />
+        <LoadingState styles={styles} />
       ) : error && !brief ? (
         <ErrorState message={error} onRetry={() => loadBrief()} styles={styles} />
       ) : !hasContent ? (
@@ -533,17 +527,8 @@ function createStyles(theme: Theme) {
     },
 
     // Loading state
-    loadingState: {
+    loadingContainer: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: layout.screenPadding,
-    },
-    loadingText: {
-      fontSize: 15,
-      fontWeight: '400',
-      color: colors.textMuted,
-      marginTop: spacing.lg,
     },
 
     // Empty state

@@ -1,21 +1,49 @@
 /**
  * Reader Mode Service
- * Fetches and extracts readable article text from URLs
- * with in-memory caching (TTL: 6 hours)
+ *
+ * Fetches web pages and extracts clean, readable article text using multiple
+ * extraction strategies. Removes HTML, boilerplate, navigation, CTAs, and
+ * other non-article content. Results are cached in-memory for 6 hours.
+ *
+ * Extraction strategies (in priority order):
+ * 1. `<article>` tag content
+ * 2. `<main>` tag content
+ * 3. Common article body CSS classes (article-body, post-content, etc.)
+ * 4. Combined `<p>` tag text (fallback)
+ *
+ * Each candidate is scored based on length, sentence structure, and CTA density.
+ * The highest-scoring candidate is returned.
+ *
+ * @module services/readerMode
  */
 
 import { validateUrl, isAllowedNewsDomain } from '../utils/urlValidator';
 
+/**
+ * Quality metrics for extracted article text.
+ * Used to determine if the extraction is good enough for display and summarization.
+ */
 export type ArticleQuality = {
+  /** Total character count of extracted text */
   charCount: number;
+  /** Number of sentences detected (based on punctuation) */
   sentenceCount: number;
+  /** True if text meets minimum quality thresholds for AI summarization */
   okForSummary: boolean;
 };
 
+/**
+ * Result of article text extraction.
+ * Contains the extracted text, optional metadata, and quality assessment.
+ */
 export type ReadableArticle = {
+  /** Cleaned article text with HTML removed and whitespace normalized */
   text: string;
+  /** Article title extracted from og:title, <title>, or <h1> */
   title?: string;
+  /** Brief excerpt/description (if available) */
   excerpt?: string;
+  /** Quality metrics for the extracted content */
   quality: ArticleQuality;
 };
 
@@ -453,8 +481,36 @@ function calculateQuality(text: string): ArticleQuality {
 }
 
 /**
- * Get readable article from URL
- * Returns extracted text with quality metrics, with caching and fallback handling
+ * Fetch and extract readable article text from a URL.
+ *
+ * Attempts to fetch the URL and extract clean article text using multiple
+ * strategies. Results are cached in-memory for 6 hours. If extraction fails
+ * or yields insufficient text, falls back to the provided fallback text.
+ *
+ * @param url - The article URL to fetch and extract
+ * @param fallbackText - Optional fallback text to use if extraction fails
+ *                       (typically the API-provided summary)
+ * @returns ReadableArticle with extracted text, or null if extraction failed
+ *          and no valid fallback was provided
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const article = await getReadableArticle('https://example.com/news/story');
+ * if (article) {
+ *   console.log(article.text);
+ *   console.log(`Quality: ${article.quality.charCount} chars`);
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // With fallback text from API
+ * const article = await getReadableArticle(
+ *   item.source_url,
+ *   item.summary  // Falls back to API summary if extraction fails
+ * );
+ * ```
  */
 export async function getReadableArticle(
   url: string,
@@ -522,7 +578,18 @@ export async function getReadableArticle(
 }
 
 /**
- * Clear the cache (useful for testing)
+ * Clear the in-memory article cache.
+ *
+ * Removes all cached article extractions. Primarily used for testing,
+ * but can also be called when the user wants to force fresh fetches.
+ *
+ * @example
+ * ```typescript
+ * // In tests
+ * beforeEach(() => {
+ *   clearCache();
+ * });
+ * ```
  */
 export function clearCache(): void {
   cache.clear();
