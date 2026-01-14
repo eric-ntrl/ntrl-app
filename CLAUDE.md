@@ -29,12 +29,46 @@ src/
 ```
 
 ## Design System
-All UI must use values from `src/theme.ts`:
+All UI must use values from `src/theme/`:
 - **Colors:** Warm off-white background, dark gray text, muted accents
 - **Typography:** Defined scale from 11-22px
 - **Spacing:** xs(4) sm(8) md(12) lg(16) xl(20) xxl(24) xxxl(32)
 
 Visual target: "A calm sunny morning with blue skies and coffee"
+
+### Dark Mode Support (CRITICAL)
+The app supports light/dark mode. All screens MUST use dynamic styles:
+
+```typescript
+// CORRECT - supports dark mode
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
+
+export default function MyScreen() {
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  // ...
+}
+
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
+  return StyleSheet.create({ /* use colors from theme */ });
+}
+```
+
+```typescript
+// WRONG - will NOT respond to dark mode changes
+import { colors, spacing, layout } from '../theme';
+const styles = StyleSheet.create({ /* static colors */ });
+```
+
+**Key rules:**
+1. Never import static `colors`, `spacing`, `layout` from `'../theme'`
+2. Always use `useTheme()` hook to get theme dynamically
+3. Create styles inside a `createStyles(theme: Theme)` function
+4. Use `useMemo(() => createStyles(theme), [theme])` in components
+5. Pass `styles` as props to sub-components
 
 ## API Integration
 Backend: `ntrl-api` (FastAPI/Python)

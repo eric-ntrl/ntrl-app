@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,20 @@ import {
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 
 type Props = {
   navigation: any;
 };
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -23,16 +30,24 @@ function BackButton({ onPress }: { onPress: () => void }) {
         pressed && styles.backButtonPressed,
       ]}
       hitSlop={12}
+      accessibilityLabel="Go back"
+      accessibilityRole="button"
     >
       <Text style={styles.backArrow}>‹</Text>
     </Pressable>
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>About NTRL</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -42,9 +57,11 @@ function Header({ onBack }: { onBack: () => void }) {
 function Section({
   title,
   children,
+  styles,
 }: {
   title: string;
   children: React.ReactNode;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.section}>
@@ -56,11 +73,14 @@ function Section({
 
 export default function AboutScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
         style={styles.scrollView}
@@ -73,7 +93,7 @@ export default function AboutScreen({ navigation }: Props) {
           for someone else's agenda.
         </Text>
 
-        <Section title="What this is">
+        <Section title="What this is" styles={styles}>
           <Text style={styles.body}>
             A reading layer that shortens, de-triggers, and structures
             information into neutral summaries. Every article shows what
@@ -81,7 +101,7 @@ export default function AboutScreen({ navigation }: Props) {
           </Text>
         </Section>
 
-        <Section title="What this is not">
+        <Section title="What this is not" styles={styles}>
           <Text style={styles.body}>
             A truth engine. NTRL removes tone and manipulation, not factual
             claims. It can be wrong. When information is uncertain, we say so
@@ -89,7 +109,7 @@ export default function AboutScreen({ navigation }: Props) {
           </Text>
         </Section>
 
-        <Section title="What we remove">
+        <Section title="What we remove" styles={styles}>
           <View style={styles.list}>
             <Text style={styles.listItem}>• Clickbait and sensationalism</Text>
             <Text style={styles.listItem}>• Urgency inflation</Text>
@@ -100,14 +120,14 @@ export default function AboutScreen({ navigation }: Props) {
           </View>
         </Section>
 
-        <Section title="What we preserve">
+        <Section title="What we preserve" styles={styles}>
           <Text style={styles.body}>
             Facts, quotes, context, and nuance. We strip the manipulation, not
             the information.
           </Text>
         </Section>
 
-        <Section title="How it works">
+        <Section title="How it works" styles={styles}>
           <Text style={styles.body}>
             Sources are ingested, content is extracted, manipulative language is
             identified and removed, and summaries are generated. You can view
@@ -125,105 +145,109 @@ export default function AboutScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  intro: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 24,
-    color: colors.textPrimary,
-    marginBottom: spacing.xxl,
-  },
+    // Content
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Sections
-  section: {
-    marginBottom: spacing.xxl,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1,
-    color: colors.textSubtle,
-    marginBottom: spacing.md,
-  },
-  body: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textSecondary,
-  },
+    intro: {
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 24,
+      color: colors.textPrimary,
+      marginBottom: spacing.xxl,
+    },
 
-  // List
-  list: {
-    gap: spacing.sm,
-  },
-  listItem: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textSecondary,
-  },
+    // Sections
+    section: {
+      marginBottom: spacing.xxl,
+    },
+    sectionTitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1,
+      color: colors.textSubtle,
+      marginBottom: spacing.md,
+    },
+    body: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+    },
 
-  // Footer
-  footer: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 13,
-    fontWeight: '400',
-    fontStyle: 'italic',
-    color: colors.textMuted,
-  },
-});
+    // List
+    list: {
+      gap: spacing.sm,
+    },
+    listItem: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+    },
+
+    // Footer
+    footer: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.xl,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+      alignItems: 'center',
+    },
+    footerText: {
+      fontSize: 13,
+      fontWeight: '400',
+      fontStyle: 'italic',
+      color: colors.textMuted,
+    },
+  });
+}

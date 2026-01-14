@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, spacing } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 
 type Segment<T extends string> = {
   key: T;
@@ -23,6 +24,9 @@ export default function SegmentedControl<T extends string>({
   selected,
   onSelect,
 }: Props<T>) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.container}>
       {segments.map((segment, index) => {
@@ -58,35 +62,39 @@ export default function SegmentedControl<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  segmentWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  segment: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  segmentPressed: {
-    opacity: 0.5,
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-  segmentTextSelected: {
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  separator: {
-    fontSize: 13,
-    fontWeight: '300',
-    color: colors.textSubtle,
-    marginHorizontal: spacing.xs,
-  },
-});
+function createStyles(theme: Theme) {
+  const { colors, spacing } = theme;
+
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    segmentWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    segment: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    segmentPressed: {
+      opacity: 0.5,
+    },
+    segmentText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+    segmentTextSelected: {
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    separator: {
+      fontSize: 13,
+      fontWeight: '300',
+      color: colors.textSubtle,
+      marginHorizontal: spacing.xs,
+    },
+  });
+}

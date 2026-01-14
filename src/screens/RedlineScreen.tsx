@@ -9,7 +9,8 @@ import {
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
 import { findRedlines, type RedlineSpan } from '../services/redline';
 import type { Item } from '../types';
@@ -51,7 +52,13 @@ function formatUpdatedTime(dateString: string): string {
   });
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -60,16 +67,24 @@ function BackButton({ onPress }: { onPress: () => void }) {
         pressed && styles.backButtonPressed,
       ]}
       hitSlop={12}
+      accessibilityLabel="Go back"
+      accessibilityRole="button"
     >
       <Text style={styles.backArrow}>‹</Text>
     </Pressable>
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>Transparency</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -83,9 +98,11 @@ function Header({ onBack }: { onBack: () => void }) {
 function HighlightedText({
   text,
   redlines,
+  styles,
 }: {
   text: string;
   redlines: RedlineSpan[];
+  styles: ReturnType<typeof createStyles>;
 }) {
   if (!text) {
     return null;
@@ -150,9 +167,11 @@ function HighlightedText({
 function SourceUnavailableModal({
   visible,
   onClose,
+  styles,
 }: {
   visible: boolean;
   onClose: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <Modal
@@ -184,6 +203,10 @@ function SourceUnavailableModal({
 
 export default function RedlineScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const { item, extractedText } = route.params;
   const updatedTime = formatUpdatedTime(item.published_at);
 
@@ -214,8 +237,8 @@ export default function RedlineScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
         style={styles.scrollView}
@@ -242,6 +265,7 @@ export default function RedlineScreen({ route, navigation }: Props) {
             <HighlightedText
               text={displayText!}
               redlines={redlines}
+              styles={styles}
             />
           </View>
         ) : (
@@ -274,178 +298,183 @@ export default function RedlineScreen({ route, navigation }: Props) {
       <SourceUnavailableModal
         visible={showSourceError}
         onClose={() => setShowSourceError(false)}
+        styles={styles}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Scroll content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Intro
-  intro: {
-    fontSize: 14,
-    fontWeight: '400',
-    lineHeight: 20,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginBottom: spacing.xl,
-  },
+    // Scroll content
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Original text section
-  originalSection: {
-    marginBottom: spacing.xxl,
-  },
-  originalText: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 26,
-    color: colors.textPrimary,
-  },
-  highlightedSpan: {
-    backgroundColor: colors.highlight,
-    borderRadius: 2,
-  },
+    // Intro
+    intro: {
+      fontSize: 14,
+      fontWeight: '400',
+      lineHeight: 20,
+      color: colors.textMuted,
+      fontStyle: 'italic',
+      marginBottom: spacing.xl,
+    },
 
-  // Unavailable state
-  unavailableSection: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  },
-  unavailableText: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  // No redlines notice - prominent position near top
-  noRedlinesNotice: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  noRedlinesText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
+    // Original text section
+    originalSection: {
+      marginBottom: spacing.xxl,
+    },
+    originalText: {
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 26,
+      color: colors.textPrimary,
+    },
+    highlightedSpan: {
+      backgroundColor: colors.highlight,
+      borderRadius: 2,
+    },
 
-  // Footer
-  footer: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-    alignItems: 'center',
-  },
-  footerLink: {
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  footerLinkPressed: {
-    opacity: 0.5,
-  },
-  footerLinkText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  footerMeta: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
+    // Unavailable state
+    unavailableSection: {
+      paddingVertical: spacing.xxl,
+      alignItems: 'center',
+    },
+    unavailableText: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+      fontStyle: 'italic',
+    },
+    // No redlines notice - prominent position near top
+    noRedlinesNotice: {
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    noRedlinesText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: layout.screenPadding,
-  },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: spacing.xxl,
-    width: '100%',
-    maxWidth: 320,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  modalButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  modalButtonPressed: {
-    opacity: 0.5,
-  },
-  modalButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-});
+    // Footer
+    footer: {
+      marginTop: spacing.xl,
+      paddingTop: spacing.xl,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+      alignItems: 'center',
+    },
+    footerLink: {
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    footerLinkPressed: {
+      opacity: 0.5,
+    },
+    footerLinkText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    footerMeta: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: layout.screenPadding,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 320,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    modalButton: {
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    modalButtonPressed: {
+      opacity: 0.5,
+    },
+    modalButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+  });
+}

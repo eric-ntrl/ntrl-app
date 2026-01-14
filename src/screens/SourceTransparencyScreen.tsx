@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
 
 type Props = {
@@ -22,7 +23,13 @@ type Props = {
   navigation: any;
 };
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -39,10 +46,16 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>Source Info</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -52,9 +65,11 @@ function Header({ onBack }: { onBack: () => void }) {
 function SourceUnavailableModal({
   visible,
   onClose,
+  styles,
 }: {
   visible: boolean;
   onClose: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <Modal
@@ -86,6 +101,10 @@ function SourceUnavailableModal({
 
 export default function SourceTransparencyScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const { sourceName, sourceUrl } = route.params;
 
   const [showSourceError, setShowSourceError] = useState(false);
@@ -100,8 +119,8 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
         style={styles.scrollView}
@@ -170,155 +189,160 @@ export default function SourceTransparencyScreen({ route, navigation }: Props) {
       <SourceUnavailableModal
         visible={showSourceError}
         onClose={() => setShowSourceError(false)}
+        styles={styles}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Scroll content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Source name
-  sourceName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.xxl,
-  },
+    // Scroll content
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Sections
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  sectionBody: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 24,
-    color: colors.textSecondary,
-  },
+    // Source name
+    sourceName: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: spacing.xxl,
+    },
 
-  // Link section
-  linkSection: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-    alignItems: 'center',
-  },
-  sourceLink: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.textPrimary,
-    borderRadius: 8,
-    marginBottom: spacing.sm,
-  },
-  sourceLinkPressed: {
-    opacity: 0.8,
-  },
-  sourceLinkText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.background,
-  },
-  linkHint: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
+    // Sections
+    section: {
+      marginBottom: spacing.xl,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
+    sectionBody: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 24,
+      color: colors.textSecondary,
+    },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: layout.screenPadding,
-  },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: spacing.xxl,
-    width: '100%',
-    maxWidth: 320,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  modalButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  modalButtonPressed: {
-    opacity: 0.5,
-  },
-  modalButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-});
+    // Link section
+    linkSection: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.xl,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+      alignItems: 'center',
+    },
+    sourceLink: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      backgroundColor: colors.textPrimary,
+      borderRadius: 8,
+      marginBottom: spacing.sm,
+    },
+    sourceLinkPressed: {
+      opacity: 0.8,
+    },
+    sourceLinkText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.background,
+    },
+    linkHint: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: layout.screenPadding,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 320,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    modalButton: {
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    modalButtonPressed: {
+      opacity: 0.5,
+    },
+    modalButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+  });
+}

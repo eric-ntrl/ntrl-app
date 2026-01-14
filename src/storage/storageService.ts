@@ -119,6 +119,8 @@ export async function clearHistory(): Promise<void> {
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   topics: ['world', 'us', 'local', 'business', 'tech'], // All enabled by default
+  textSize: 'medium', // Default reading text size
+  colorMode: 'system', // Follow device appearance by default
 };
 
 export async function getPreferences(): Promise<UserPreferences> {

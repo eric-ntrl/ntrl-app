@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
 import { getReadableArticle } from '../services/readerMode';
 import { makeCalmDetailSummary, createFallbackSummary } from '../services/detailSummary';
@@ -177,7 +178,13 @@ function composeBodyText(detail: Item['detail']): string[] {
   return paragraphs.filter(p => p.trim().length > 0);
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -195,13 +202,15 @@ function BackButton({ onPress }: { onPress: () => void }) {
 function Header({
   onBack,
   date,
+  styles,
 }: {
   onBack: () => void;
   date: string;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <View style={styles.headerCenter}>
         <Text style={styles.headerBrand}>NTRL</Text>
         <Text style={styles.headerDate}>{date}</Text>
@@ -217,9 +226,11 @@ function Header({
 function SourceUnavailableModal({
   visible,
   onClose,
+  styles,
 }: {
   visible: boolean;
   onClose: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <Modal
@@ -251,6 +262,10 @@ function SourceUnavailableModal({
 
 export default function ArticleDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const item: Item = route.params.item;
   const headerDate = formatHeaderDate();
   const timeLabel = formatRelativeTime(item.published_at);
@@ -401,8 +416,8 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} date={headerDate} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} date={headerDate} styles={styles} />
 
       <ScrollView
         style={styles.scrollView}
@@ -539,6 +554,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
       <SourceUnavailableModal
         visible={showSourceError}
         onClose={() => setShowSourceError(false)}
+        styles={styles}
       />
 
       {/* Share menu modal */}
@@ -603,334 +619,339 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+// Dynamic styles factory
+function createStyles(theme: Theme) {
+  const { colors, typography, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerBrand: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    color: colors.textPrimary,
-  },
-  headerDate: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Scroll content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xxl,   // Book-page margins (24px)
-    paddingTop: spacing.xxxl,         // Generous breathing room (32px)
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerCenter: {
+      alignItems: 'center',
+    },
+    headerBrand: {
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      color: colors.textPrimary,
+    },
+    headerDate: {
+      fontSize: 11,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Article content
-  // Headline: 1.36x line-height for multi-line headlines
-  headline: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 30,
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-    marginBottom: spacing.xl,         // Chapter title breathing room (20px)
-  },
+    // Scroll content
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.xxl,   // Book-page margins (24px)
+      paddingTop: spacing.xxxl,         // Generous breathing room (32px)
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Metadata band - single line with source/time, mode toggle, ntrl view
-  metadataBand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,                 // Clear zone separation
-    paddingTop: spacing.xs,
-  },
-  metadataLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metadataSource: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-  metadataSeparator: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-    marginHorizontal: spacing.xs,
-  },
-  metadataTime: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-  metadataNtrlView: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-  metadataPressed: {
-    opacity: 0.5,
-  },
-  // Body section: constrain measure for optimal reading
-  bodySection: {
-    marginBottom: spacing.lg,
-    maxWidth: 600,                 // ~65-75 chars at 16px, optimal reading measure
-  },
-  // Body text: book-like reading experience
-  bodyText: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 28,                // 1.75x for book-like reading
-    letterSpacing: 0.3,            // Subtle improvement for reading flow
-    color: colors.textPrimary,
-  },
-  // Meta: tighter to body, slight breathing room above via bodySection margin
-  meta: {
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18,                // Explicit line-height for consistency
-    color: colors.textMuted,
-    marginBottom: spacing.sm,      // Was md (12) → sm (8), tighter grouping
-  },
-  disclosure: {
-    fontSize: 13,
-    fontWeight: '400',
-    fontStyle: 'italic',
-    lineHeight: 18,                // Match meta line-height
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  thinContentNotice: {
-    fontSize: 13,
-    fontWeight: '400',
-    fontStyle: 'italic',
-    lineHeight: 18,
-    color: colors.textSubtle,
-    marginBottom: spacing.lg,
-  },
+    // Article content - uses refined typography
+    headline: {
+      fontSize: typography.detailHeadline.fontSize,
+      fontWeight: typography.detailHeadline.fontWeight,
+      lineHeight: typography.detailHeadline.lineHeight,
+      letterSpacing: typography.detailHeadline.letterSpacing,
+      color: typography.detailHeadline.color,
+      marginBottom: spacing.xl,         // Chapter title breathing room (20px)
+    },
 
-  // Loading state
-  loadingSection: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textMuted,
-  },
+    // Metadata band - single line with source/time, mode toggle, ntrl view
+    metadataBand: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 28,                 // Clear zone separation
+      paddingTop: spacing.xs,
+    },
+    metadataLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    metadataSource: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      color: colors.textSubtle,
+    },
+    metadataSeparator: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      color: colors.textSubtle,
+      marginHorizontal: spacing.xs,
+    },
+    metadataTime: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      color: colors.textSubtle,
+    },
+    metadataNtrlView: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      color: colors.textSubtle,
+    },
+    metadataPressed: {
+      opacity: 0.5,
+    },
+    // Body section: constrain measure for optimal reading
+    bodySection: {
+      marginBottom: spacing.lg,
+      maxWidth: 600,                 // ~65-75 chars at 16px, optimal reading measure
+    },
+    // Body text: book-like reading experience
+    bodyText: {
+      fontSize: typography.body.fontSize,
+      fontWeight: typography.body.fontWeight,
+      lineHeight: typography.body.lineHeight,
+      letterSpacing: typography.body.letterSpacing,
+      color: typography.body.color,
+    },
+    // Meta: tighter to body, slight breathing room above via bodySection margin
+    meta: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      lineHeight: 18,                // Explicit line-height for consistency
+      color: typography.meta.color,
+      marginBottom: spacing.sm,      // Was md (12) → sm (8), tighter grouping
+    },
+    disclosure: {
+      fontSize: typography.disclosure.fontSize,
+      fontWeight: typography.disclosure.fontWeight,
+      fontStyle: typography.disclosure.fontStyle,
+      lineHeight: 18,                // Match meta line-height
+      color: typography.disclosure.color,
+      marginBottom: spacing.sm,
+    },
+    thinContentNotice: {
+      fontSize: 13,
+      fontWeight: '400',
+      fontStyle: 'italic',
+      lineHeight: 18,
+      color: colors.textSubtle,
+      marginBottom: spacing.lg,
+    },
 
-  // Footer spacer - breathing room before actions
-  footerSpacer: {
-    height: spacing.xxxl,
-  },
+    // Loading state
+    loadingSection: {
+      paddingVertical: spacing.xxl,
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: spacing.md,
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
 
-  // Footer actions - quiet inline text row (non-sticky)
-  footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-  },
-  footerActionText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-  footerActionActive: {
-    color: colors.textMuted,
-  },
-  footerActionPressed: {
-    opacity: 0.5,
-  },
-  footerSeparator: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: colors.textSubtle,
-    marginHorizontal: spacing.sm,
-  },
+    // Footer spacer - breathing room before actions
+    footerSpacer: {
+      height: spacing.xxxl,
+    },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: layout.screenPadding,
-  },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: spacing.xxl,
-    width: '100%',
-    maxWidth: 320,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  modalButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  modalButtonPressed: {
-    opacity: 0.5,
-  },
-  modalButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
+    // Footer actions - quiet inline text row (non-sticky)
+    footerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.lg,
+    },
+    footerActionText: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+    // Saved state uses sage accent color
+    footerActionActive: {
+      color: colors.accentSecondary,
+    },
+    footerActionPressed: {
+      opacity: 0.5,
+    },
+    footerSeparator: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      marginHorizontal: spacing.sm,
+    },
 
-  // Toast
-  toast: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  toastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.textPrimary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 20,
-    gap: spacing.xs,
-  },
-  toastCheck: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.background,
-  },
-  toastText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.background,
-  },
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: layout.screenPadding,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 320,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    modalButton: {
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    modalButtonPressed: {
+      opacity: 0.5,
+    },
+    modalButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
 
-  // Share menu
-  shareMenuOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  shareMenuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  shareMenuContent: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxxl,
-  },
-  shareMenuHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: colors.divider,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
-  },
-  shareMenuTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  shareOptionsList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-  },
-  shareOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: layout.screenPadding,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  shareOptionPressed: {
-    backgroundColor: colors.dividerSubtle,
-  },
-  shareOptionLabel: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: colors.textPrimary,
-  },
-  shareOptionChevron: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: colors.textMuted,
-  },
-  shareMenuCancel: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  shareMenuCancelPressed: {
-    opacity: 0.5,
-  },
-  shareMenuCancelText: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: colors.textMuted,
-  },
-});
+    // Toast
+    toast: {
+      position: 'absolute',
+      bottom: 100,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+    toastContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.textPrimary,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderRadius: 20,
+      gap: spacing.xs,
+    },
+    toastCheck: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.background,
+    },
+    toastText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.background,
+    },
+
+    // Share menu
+    shareMenuOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    shareMenuBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    shareMenuContent: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xxxl,
+    },
+    shareMenuHandle: {
+      width: 36,
+      height: 4,
+      backgroundColor: colors.divider,
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginBottom: spacing.lg,
+    },
+    shareMenuTitle: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    shareOptionsList: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+    },
+    shareOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: layout.screenPadding,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    shareOptionPressed: {
+      backgroundColor: colors.dividerSubtle,
+    },
+    shareOptionLabel: {
+      fontSize: 16,
+      fontWeight: '400',
+      color: colors.textPrimary,
+    },
+    shareOptionChevron: {
+      fontSize: 20,
+      fontWeight: '300',
+      color: colors.textMuted,
+    },
+    shareMenuCancel: {
+      marginTop: spacing.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+    },
+    shareMenuCancelPressed: {
+      opacity: 0.5,
+    },
+    shareMenuCancelText: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
+  });
+}

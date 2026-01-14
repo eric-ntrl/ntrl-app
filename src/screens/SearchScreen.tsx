@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { fetchBrief } from '../api';
 import { decodeHtmlEntities } from '../utils/text';
 import {
@@ -43,7 +44,13 @@ function formatRelativeTime(dateString: string): string {
   return 'Today';
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -60,10 +67,16 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>Search</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -74,10 +87,14 @@ function SearchInput({
   value,
   onChangeText,
   onSubmit,
+  styles,
+  colors,
 }: {
   value: string;
   onChangeText: (text: string) => void;
   onSubmit: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: Theme['colors'];
 }) {
   return (
     <View style={styles.searchInputContainer}>
@@ -112,10 +129,12 @@ function RecentSearchItem({
   query,
   onPress,
   onRemove,
+  styles,
 }: {
   query: string;
   onPress: () => void;
   onRemove: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.recentItem}>
@@ -144,9 +163,11 @@ function RecentSearchItem({
 function ArticleCard({
   item,
   onPress,
+  styles,
 }: {
   item: Item;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const timeLabel = formatRelativeTime(item.published_at);
   const headline = decodeHtmlEntities(item.headline);
@@ -174,7 +195,13 @@ function ArticleCard({
   );
 }
 
-function EmptyResults({ query }: { query: string }) {
+function EmptyResults({
+  query,
+  styles,
+}: {
+  query: string;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.emptyResults}>
       <Text style={styles.emptyResultsMessage}>
@@ -189,6 +216,10 @@ function EmptyResults({ query }: { query: string }) {
 
 export default function SearchScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [brief, setBrief] = useState<Brief | null>(null);
@@ -262,6 +293,7 @@ export default function SearchScreen({ navigation }: Props) {
     <ArticleCard
       item={item}
       onPress={() => navigation.navigate('ArticleDetail', { item })}
+      styles={styles}
     />
   );
 
@@ -271,14 +303,16 @@ export default function SearchScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <View style={styles.content}>
         <SearchInput
           value={query}
           onChangeText={handleQueryChange}
           onSubmit={handleSearch}
+          styles={styles}
+          colors={colors}
         />
 
         {showRecentSearches && (
@@ -290,12 +324,13 @@ export default function SearchScreen({ navigation }: Props) {
                 query={search.query}
                 onPress={() => handleRecentSearchPress(search.query)}
                 onRemove={() => handleRemoveRecentSearch(search.query)}
+                styles={styles}
               />
             ))}
           </View>
         )}
 
-        {showEmptyResults && <EmptyResults query={query} />}
+        {showEmptyResults && <EmptyResults query={query} styles={styles} />}
 
         {showResults && searchResults.length > 0 && (
           <FlatList
@@ -312,169 +347,173 @@ export default function SearchScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Content
-  content: {
-    flex: 1,
-    paddingHorizontal: layout.screenPadding,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Search Input
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  searchIcon: {
-    fontSize: 18,
-    color: colors.textMuted,
-    marginRight: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.textPrimary,
-    paddingVertical: spacing.md,
-  },
-  clearSearchButton: {
-    padding: spacing.xs,
-  },
-  clearSearchText: {
-    fontSize: 20,
-    color: colors.textMuted,
-    fontWeight: '300',
-  },
+    // Content
+    content: {
+      flex: 1,
+      paddingHorizontal: layout.screenPadding,
+    },
 
-  // Recent Searches
-  recentSection: {
-    marginTop: spacing.md,
-  },
-  recentTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1,
-    color: colors.textSubtle,
-    marginBottom: spacing.md,
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  recentItemContent: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-  },
-  recentItemPressed: {
-    opacity: 0.5,
-  },
-  recentItemText: {
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  recentItemRemove: {
-    padding: spacing.sm,
-  },
-  recentItemRemoveText: {
-    fontSize: 18,
-    color: colors.textMuted,
-    fontWeight: '300',
-  },
+    // Search Input
+    searchInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      paddingHorizontal: spacing.md,
+      marginTop: spacing.lg,
+      marginBottom: spacing.lg,
+    },
+    searchIcon: {
+      fontSize: 18,
+      color: colors.textMuted,
+      marginRight: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textPrimary,
+      paddingVertical: spacing.md,
+    },
+    clearSearchButton: {
+      padding: spacing.xs,
+    },
+    clearSearchText: {
+      fontSize: 20,
+      color: colors.textMuted,
+      fontWeight: '300',
+    },
 
-  // Results
-  resultsList: {
-    paddingBottom: spacing.xxxl,
-  },
+    // Recent Searches
+    recentSection: {
+      marginTop: spacing.md,
+    },
+    recentTitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1,
+      color: colors.textSubtle,
+      marginBottom: spacing.md,
+    },
+    recentItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    recentItemContent: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+    },
+    recentItemPressed: {
+      opacity: 0.5,
+    },
+    recentItemText: {
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    recentItemRemove: {
+      padding: spacing.sm,
+    },
+    recentItemRemoveText: {
+      fontSize: 18,
+      color: colors.textMuted,
+      fontWeight: '300',
+    },
 
-  // Article card
-  card: {
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  cardPressed: {
-    opacity: 0.6,
-  },
-  textColumn: {
-    flex: 1,
-  },
-  headline: {
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 22,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  summary: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 21,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  meta: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textMuted,
-  },
+    // Results
+    resultsList: {
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Empty Results
-  emptyResults: {
-    alignItems: 'center',
-    paddingTop: spacing.xxxl,
-  },
-  emptyResultsMessage: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  emptyResultsHint: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-});
+    // Article card
+    card: {
+      paddingVertical: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    cardPressed: {
+      opacity: 0.6,
+    },
+    textColumn: {
+      flex: 1,
+    },
+    headline: {
+      fontSize: 17,
+      fontWeight: '600',
+      lineHeight: 22,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    summary: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 21,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    meta: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
+
+    // Empty Results
+    emptyResults: {
+      alignItems: 'center',
+      paddingTop: spacing.xxxl,
+    },
+    emptyResultsMessage: {
+      fontSize: 17,
+      fontWeight: '500',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
+    emptyResultsHint: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+  });
+}

@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchBriefWithCache } from '../api';
-import { colors, typography, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
 import type { Item, Section, Brief } from '../types';
 
@@ -94,10 +95,14 @@ function Header({
   date,
   onSearchPress,
   onProfilePress,
+  styles,
+  colors,
 }: {
   date: string;
   onSearchPress: () => void;
   onProfilePress: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: Theme['colors'];
 }) {
   return (
     <View style={styles.header}>
@@ -135,7 +140,13 @@ function Header({
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({
+  title,
+  styles,
+}: {
+  title: string;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
@@ -147,10 +158,12 @@ function ArticleCard({
   item,
   timeLabel,
   onPress,
+  styles,
 }: {
   item: Item;
   timeLabel: string;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const headline = decodeHtmlEntities(item.headline);
   const summary = decodeHtmlEntities(item.summary);
@@ -178,9 +191,11 @@ function ArticleCard({
 function EndOfFeed({
   date,
   onAboutPress,
+  styles,
 }: {
   date: string;
   onAboutPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.endOfFeed}>
@@ -200,7 +215,13 @@ function EndOfFeed({
   );
 }
 
-function LoadingState() {
+function LoadingState({
+  styles,
+  colors,
+}: {
+  styles: ReturnType<typeof createStyles>;
+  colors: Theme['colors'];
+}) {
   return (
     <View style={styles.loadingState}>
       <ActivityIndicator size="large" color={colors.textMuted} />
@@ -209,7 +230,15 @@ function LoadingState() {
   );
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorState({
+  message,
+  onRetry,
+  styles,
+}: {
+  message: string;
+  onRetry: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyMessage}>{message}</Text>
@@ -228,6 +257,12 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 export default function FeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors, typography, spacing, layout } = theme;
+
+  // Memoize styles to avoid recreation on every render
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [brief, setBrief] = useState<Brief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -275,7 +310,7 @@ export default function FeedScreen({ navigation }: Props) {
 
   const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {
-      return <SectionHeader title={item.section.title} />;
+      return <SectionHeader title={item.section.title} styles={styles} />;
     }
 
     if (item.type === 'endOfFeed') {
@@ -283,6 +318,7 @@ export default function FeedScreen({ navigation }: Props) {
         <EndOfFeed
           date={headerDate}
           onAboutPress={() => navigation.navigate('About')}
+          styles={styles}
         />
       );
     }
@@ -293,6 +329,7 @@ export default function FeedScreen({ navigation }: Props) {
         item={item.item}
         timeLabel={timeLabel}
         onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
+        styles={styles}
       />
     );
   };
@@ -302,17 +339,19 @@ export default function FeedScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <Header
         date={headerDate}
         onSearchPress={() => navigation.navigate('Search')}
         onProfilePress={() => navigation.navigate('Profile')}
+        styles={styles}
+        colors={colors}
       />
 
       {loading && !brief ? (
-        <LoadingState />
+        <LoadingState styles={styles} colors={colors} />
       ) : error && !brief ? (
-        <ErrorState message={error} onRetry={() => loadBrief()} />
+        <ErrorState message={error} onRetry={() => loadBrief()} styles={styles} />
       ) : !hasContent ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyMessage}>No new updates right now.</Text>
@@ -352,191 +391,203 @@ export default function FeedScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+// Dynamic styles factory - uses theme values
+function createStyles(theme: Theme) {
+  const { colors, typography, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIconPressed: {
-    opacity: 0.5,
-  },
-  headerIconText: {
-    fontSize: 22,
-    color: colors.textMuted,
-  },
-  brand: {
-    ...typography.brand,
-    color: colors.textPrimary,
-  },
-  date: {
-    ...typography.date,
-    marginTop: spacing.xs,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // List
-  listContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingHorizontal: layout.screenPadding,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.lg,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerIconPressed: {
+      opacity: 0.5,
+    },
+    headerIconText: {
+      fontSize: 22,
+      color: colors.textMuted,
+    },
+    brand: {
+      fontSize: typography.brand.fontSize,
+      fontWeight: typography.brand.fontWeight,
+      letterSpacing: typography.brand.letterSpacing,
+      color: colors.textPrimary,
+    },
+    date: {
+      fontSize: typography.date.fontSize,
+      fontWeight: typography.date.fontWeight,
+      color: typography.date.color,
+      marginTop: spacing.xs,
+    },
 
-  // Section header
-  sectionHeader: {
-    marginTop: spacing.xxl,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-    color: colors.textSubtle,
-  },
+    // List
+    listContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Article card - with text wrapping fixes
-  card: {
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-    alignSelf: 'stretch',
-    width: '100%',
-    overflow: 'hidden',
-  },
-  cardPressed: {
-    opacity: 0.6,
-  },
-  textColumn: {
-    flex: 1,
-    minWidth: 0,
-    alignSelf: 'stretch',
-  },
-  headline: {
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 22,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  summary: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 21,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  meta: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textMuted,
-  },
+    // Section header - refined with more breathing room
+    sectionHeader: {
+      marginTop: 28, // Increased from 24
+      marginBottom: spacing.lg, // Increased from md
+    },
+    sectionTitle: {
+      fontSize: typography.sectionHeader.fontSize,
+      fontWeight: typography.sectionHeader.fontWeight,
+      letterSpacing: typography.sectionHeader.letterSpacing,
+      color: typography.sectionHeader.color,
+    },
 
-  // End of feed
-  endOfFeed: {
-    alignItems: 'center',
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xxl,
-  },
-  endDivider: {
-    width: 48,
-    height: 1,
-    backgroundColor: colors.divider,
-    marginBottom: spacing.xl,
-  },
-  endMessage: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-  },
-  endDate: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-    marginBottom: spacing.xl,
-  },
+    // Article card - with text wrapping fixes
+    card: {
+      paddingVertical: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+      alignSelf: 'stretch',
+      width: '100%',
+      overflow: 'hidden',
+    },
+    cardPressed: {
+      opacity: 0.6,
+    },
+    textColumn: {
+      flex: 1,
+      minWidth: 0,
+      alignSelf: 'stretch',
+    },
+    headline: {
+      fontSize: typography.headline.fontSize,
+      fontWeight: typography.headline.fontWeight,
+      lineHeight: typography.headline.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
+      color: typography.headline.color,
+      marginBottom: spacing.sm,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    summary: {
+      fontSize: typography.summary.fontSize,
+      fontWeight: typography.summary.fontWeight,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.summary.letterSpacing,
+      color: typography.summary.color,
+      marginBottom: spacing.md,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    meta: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: typography.meta.fontWeight,
+      letterSpacing: typography.meta.letterSpacing,
+      color: typography.meta.color,
+    },
 
-  // About link (moved to footer)
-  aboutLink: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  aboutLinkPressed: {
-    opacity: 0.5,
-  },
-  aboutLinkText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
+    // End of feed
+    endOfFeed: {
+      alignItems: 'center',
+      paddingTop: spacing.xxxl,
+      paddingBottom: spacing.xxl,
+    },
+    endDivider: {
+      width: 48,
+      height: 1,
+      backgroundColor: colors.divider,
+      marginBottom: spacing.xl,
+    },
+    endMessage: {
+      fontSize: typography.endMessage.fontSize,
+      fontWeight: typography.endMessage.fontWeight,
+      color: typography.endMessage.color,
+      marginBottom: spacing.xs,
+    },
+    endDate: {
+      fontSize: typography.endDate.fontSize,
+      fontWeight: typography.endDate.fontWeight,
+      color: typography.endDate.color,
+      marginBottom: spacing.xl,
+    },
 
-  // Loading state
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenPadding,
-  },
-  loadingText: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-  },
+    // About link (moved to footer)
+    aboutLink: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    aboutLinkPressed: {
+      opacity: 0.5,
+    },
+    aboutLinkText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
 
-  // Empty state
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenPadding,
-  },
-  emptyMessage: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
+    // Loading state
+    loadingState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: layout.screenPadding,
+    },
+    loadingText: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginTop: spacing.lg,
+    },
 
-  // Retry button
-  retryButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.textPrimary,
-    borderRadius: 8,
-  },
-  retryButtonPressed: {
-    opacity: 0.7,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.background,
-  },
-});
+    // Empty state
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: layout.screenPadding,
+    },
+    emptyMessage: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginBottom: spacing.lg,
+      textAlign: 'center',
+    },
+
+    // Retry button
+    retryButton: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      backgroundColor: colors.textPrimary,
+      borderRadius: 8,
+    },
+    retryButtonPressed: {
+      opacity: 0.7,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.background,
+    },
+  });
+}

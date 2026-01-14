@@ -9,7 +9,8 @@ import {
   Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
 import type { Item } from '../types';
 
@@ -79,7 +80,13 @@ function countByType(transformations: Transformation[]): Map<TransformationType,
   return counts;
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -96,10 +103,16 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>ntrl view</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -113,10 +126,12 @@ function HighlightedText({
   text,
   transformations,
   showHighlights,
+  styles,
 }: {
   text: string;
   transformations: Transformation[];
   showHighlights: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
   if (!text) {
     return null;
@@ -182,7 +197,13 @@ function HighlightedText({
 /**
  * Change categories list
  */
-function ChangeCategories({ transformations }: { transformations: Transformation[] }) {
+function ChangeCategories({
+  transformations,
+  styles,
+}: {
+  transformations: Transformation[];
+  styles: ReturnType<typeof createStyles>;
+}) {
   const typeCounts = useMemo(() => countByType(transformations), [transformations]);
 
   if (typeCounts.size === 0) {
@@ -206,6 +227,10 @@ function ChangeCategories({ transformations }: { transformations: Transformation
 
 export default function NtrlViewScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const { item, fullOriginalText, transformations = [] } = route.params;
 
   const [showHighlights, setShowHighlights] = useState(true);
@@ -215,8 +240,8 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       <ScrollView
         style={styles.scrollView}
@@ -255,11 +280,12 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
                 text={fullOriginalText!}
                 transformations={transformations}
                 showHighlights={showHighlights}
+                styles={styles}
               />
             </View>
 
             {/* Change categories */}
-            {hasChanges && <ChangeCategories transformations={transformations} />}
+            {hasChanges && <ChangeCategories transformations={transformations} styles={styles} />}
 
             {/* No changes notice */}
             {!hasChanges && (
@@ -289,185 +315,189 @@ export default function NtrlViewScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Scroll content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Intro
-  intro: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22,
-    color: colors.textMuted,
-    marginBottom: spacing.xl,
-  },
+    // Scroll content
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Article headline
-  articleHeadline: {
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 24,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
-  },
+    // Intro
+    intro: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textMuted,
+      marginBottom: spacing.xl,
+    },
 
-  // Toggle row
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  toggleLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
+    // Article headline
+    articleHeadline: {
+      fontSize: 18,
+      fontWeight: '600',
+      lineHeight: 24,
+      color: colors.textPrimary,
+      marginBottom: spacing.lg,
+    },
 
-  // Article section
-  articleSection: {
-    marginBottom: spacing.xxl,
-  },
-  articleText: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 26,
-    color: colors.textPrimary,
-  },
-  highlightedSpan: {
-    backgroundColor: colors.highlight,
-    borderRadius: 2,
-  },
+    // Toggle row
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.md,
+      marginBottom: spacing.lg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    toggleLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+    },
 
-  // Categories section
-  categoriesSection: {
-    marginBottom: spacing.xl,
-    paddingTop: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-  },
-  categoriesTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.md,
-  },
-  categoriesList: {
-    gap: spacing.sm,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textSecondary,
-  },
-  categoryCount: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
+    // Article section
+    articleSection: {
+      marginBottom: spacing.xxl,
+    },
+    articleText: {
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 26,
+      color: colors.textPrimary,
+    },
+    highlightedSpan: {
+      backgroundColor: colors.highlight,
+      borderRadius: 2,
+    },
 
-  // No changes notice
-  noChangesNotice: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  noChangesText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
+    // Categories section
+    categoriesSection: {
+      marginBottom: spacing.xl,
+      paddingTop: spacing.lg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+    },
+    categoriesTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      marginBottom: spacing.md,
+    },
+    categoriesList: {
+      gap: spacing.sm,
+    },
+    categoryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.xs,
+    },
+    categoryLabel: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textSecondary,
+    },
+    categoryCount: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
 
-  // Empty state
-  emptyState: {
-    paddingVertical: spacing.xxxl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textSubtle,
-    textAlign: 'center',
-  },
+    // No changes notice
+    noChangesNotice: {
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    noChangesText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
 
-  // Footer
-  footer: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.divider,
-  },
-  footerText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-});
+    // Empty state
+    emptyState: {
+      paddingVertical: spacing.xxxl,
+      alignItems: 'center',
+    },
+    emptyText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      textAlign: 'center',
+    },
+
+    // Footer
+    footer: {
+      marginTop: spacing.xl,
+      paddingTop: spacing.lg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.divider,
+    },
+    footerText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+  });
+}

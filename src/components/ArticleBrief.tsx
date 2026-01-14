@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 
 type Props = {
   /** Plain text with paragraph breaks (\n\n) from backend */
@@ -22,6 +23,9 @@ type Props = {
  * - Preserves paragraph breaks; does not auto-bullet or auto-title
  */
 export default function ArticleBrief({ text }: Props) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   // Split on double newlines (paragraph breaks)
   // Also handle \r\n for cross-platform compatibility
   const paragraphs = text
@@ -46,16 +50,20 @@ export default function ArticleBrief({ text }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    // No extra container styling - let parent control margins
-  },
-  paragraph: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 28,              // 1.75x for book-like reading
-    letterSpacing: 0.3,          // Subtle improvement for reading flow
-    color: colors.textPrimary,
-    marginBottom: 28,            // Paragraph spacing = line-height for calm rhythm
-  },
-});
+function createStyles(theme: Theme) {
+  const { colors, typography } = theme;
+
+  return StyleSheet.create({
+    container: {
+      // No extra container styling - let parent control margins
+    },
+    paragraph: {
+      fontSize: typography.body.fontSize,
+      fontWeight: typography.body.fontWeight,
+      lineHeight: typography.body.lineHeight,
+      letterSpacing: typography.body.letterSpacing,
+      color: typography.body.color,
+      marginBottom: typography.body.lineHeight, // Paragraph spacing = line-height for calm rhythm
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, layout } from '../theme';
+import { useTheme } from '../theme';
+import type { Theme } from '../theme/types';
 import { getSavedArticles, removeSavedArticle } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
 import type { SavedArticle } from '../storage/types';
@@ -39,7 +40,13 @@ function formatSavedTime(dateString: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
+function BackButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -56,10 +63,16 @@ function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({
+  onBack,
+  styles,
+}: {
+  onBack: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} />
+      <BackButton onPress={onBack} styles={styles} />
       <Text style={styles.headerTitle}>Saved Articles</Text>
       <View style={styles.headerSpacer} />
     </View>
@@ -71,11 +84,13 @@ function ArticleCard({
   savedAt,
   onPress,
   onRemove,
+  styles,
 }: {
   item: Item;
   savedAt: string;
   onPress: () => void;
   onRemove: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const timeLabel = formatSavedTime(savedAt);
   const headline = decodeHtmlEntities(item.headline);
@@ -104,7 +119,7 @@ function ArticleCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>★</Text>
@@ -116,7 +131,7 @@ function EmptyState() {
   );
 }
 
-function EndOfList() {
+function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
     <View style={styles.endOfList}>
       <View style={styles.endDivider} />
@@ -127,6 +142,10 @@ function EndOfList() {
 
 export default function SavedArticlesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -159,16 +178,17 @@ export default function SavedArticlesScreen({ navigation }: Props) {
       savedAt={item.savedAt}
       onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
       onRemove={() => handleRemove(item.item.id)}
+      styles={styles}
     />
   );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <Header onBack={() => navigation.goBack()} />
+      <StatusBar barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
 
       {savedArticles.length === 0 ? (
-        <EmptyState />
+        <EmptyState styles={styles} />
       ) : (
         <FlatList
           data={savedArticles}
@@ -183,132 +203,136 @@ export default function SavedArticlesScreen({ navigation }: Props) {
               tintColor={colors.textMuted}
             />
           }
-          ListFooterComponent={<EndOfList />}
+          ListFooterComponent={<EndOfList styles={styles} />}
         />
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+function createStyles(theme: Theme) {
+  const { colors, spacing, layout } = theme;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.5,
-  },
-  backArrow: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.textPrimary,
-    marginTop: -4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // List
-  listContent: {
-    paddingHorizontal: layout.screenPadding,
-    paddingBottom: spacing.xxxl,
-  },
+    // Header
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.5,
+    },
+    backArrow: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.textPrimary,
+      marginTop: -4,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
 
-  // Article card
-  card: {
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  cardPressed: {
-    opacity: 0.6,
-  },
-  textColumn: {
-    flex: 1,
-  },
-  headline: {
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 22,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  summary: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 21,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  meta: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textMuted,
-  },
+    // List
+    listContent: {
+      paddingHorizontal: layout.screenPadding,
+      paddingBottom: spacing.xxxl,
+    },
 
-  // Empty state
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenPadding,
-  },
-  emptyIcon: {
-    fontSize: 32,
-    color: colors.textSubtle,
-    marginBottom: spacing.lg,
-  },
-  emptyMessage: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  emptyHint: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: colors.textSubtle,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+    // Article card
+    card: {
+      paddingVertical: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    cardPressed: {
+      opacity: 0.6,
+    },
+    textColumn: {
+      flex: 1,
+    },
+    headline: {
+      fontSize: 17,
+      fontWeight: '600',
+      lineHeight: 22,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    summary: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 21,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    meta: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
 
-  // End of list
-  endOfList: {
-    alignItems: 'center',
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xxl,
-  },
-  endDivider: {
-    width: 48,
-    height: 1,
-    backgroundColor: colors.divider,
-    marginBottom: spacing.xl,
-  },
-  endMessage: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.textSubtle,
-  },
-});
+    // Empty state
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: layout.screenPadding,
+    },
+    emptyIcon: {
+      fontSize: 32,
+      color: colors.textSubtle,
+      marginBottom: spacing.lg,
+    },
+    emptyMessage: {
+      fontSize: 17,
+      fontWeight: '500',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
+    emptyHint: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+
+    // End of list
+    endOfList: {
+      alignItems: 'center',
+      paddingTop: spacing.xxxl,
+      paddingBottom: spacing.xxl,
+    },
+    endDivider: {
+      width: 48,
+      height: 1,
+      backgroundColor: colors.divider,
+      marginBottom: spacing.xl,
+    },
+    endMessage: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textSubtle,
+    },
+  });
+}
