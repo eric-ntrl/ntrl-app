@@ -287,6 +287,13 @@ export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // 404 means no brief available - return empty brief, don't fall back to cache
+      if (response.status === 404) {
+        return {
+          brief: { generated_at: new Date().toISOString(), sections: [] },
+          fromCache: false,
+        };
+      }
       const text = await response.text();
       throw new Error(text || `HTTP ${response.status}`);
     }

@@ -16,11 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { openExternalUrl } from '../utils/links';
-import { getReadableArticle } from '../services/readerMode';
-import { makeCalmDetailSummary, createFallbackSummary } from '../services/detailSummary';
-import { findRedlines, type RedlineSpan } from '../services/redline';
+import { createFallbackSummary } from '../services/detailSummary';
 import { fetchTransparency } from '../api';
-import { FEATURE_FLAGS } from '../config';
 import type { TransparencySpan } from '../types';
 import type { Transformation, TransformationType } from '../navigation/types';
 import {
@@ -276,17 +273,14 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const timeLabel = formatRelativeTime(item.published_at);
 
   const [showSourceError, setShowSourceError] = useState(false);
-  const [fullArticleLoading, setFullArticleLoading] = useState(true);
-  const [extractedText, setExtractedText] = useState<string | null>(null);
   // Initialize summary from item.detail immediately - no loading required
-  const [summaryParagraphs, setSummaryParagraphs] = useState<string[]>(() => {
+  const [summaryParagraphs] = useState<string[]>(() => {
     const fallback = createFallbackSummary(item.detail);
     return fallback.length > 0 ? fallback : composeBodyText(item.detail);
   });
-  const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
   const [backendTransformations, setBackendTransformations] = useState<Transformation[]>([]);
   const [originalBodyText, setOriginalBodyText] = useState<string | null>(null);
-  const [showThinContentNotice, setShowThinContentNotice] = useState(false);
+  const [transparencyLoading, setTransparencyLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
   const [isSaved, setIsSaved] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -311,21 +305,23 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     getAvailableShareTargets().then(setShareTargets);
   }, []);
 
-  // Fetch transparency data from backend if feature flag enabled
+  // Fetch transparency data from backend
   useEffect(() => {
-    if (FEATURE_FLAGS.USE_BACKEND_REDLINES) {
-      fetchTransparency(item.id)
-        .then((result) => {
-          const transformations = mapSpansToTransformations(result.spans);
-          setBackendTransformations(transformations);
-          // Store original body for correct span highlighting
-          setOriginalBodyText(result.originalBody);
-        })
-        .catch((error) => {
-          console.warn('[ArticleDetail] Failed to fetch transparency:', error);
-          // Fall back to empty transformations - don't break the UI
-        });
-    }
+    setTransparencyLoading(true);
+    fetchTransparency(item.id)
+      .then((result) => {
+        const transformations = mapSpansToTransformations(result.spans);
+        setBackendTransformations(transformations);
+        // Store original body for correct span highlighting
+        setOriginalBodyText(result.originalBody);
+      })
+      .catch((error) => {
+        console.warn('[ArticleDetail] Failed to fetch transparency:', error);
+        // Fall back to empty transformations - don't break the UI
+      })
+      .finally(() => {
+        setTransparencyLoading(false);
+      });
   }, [item.id]);
 
   // Cleanup animations on unmount to prevent memory leaks
@@ -338,46 +334,8 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     };
   }, []);
 
-  // Fetch full article in background (non-blocking)
-  // Brief view is available immediately from item.detail
-  useEffect(() => {
-    async function loadFullArticle() {
-      setFullArticleLoading(true);
-
-      try {
-        // Try to fetch full article from source
-        const result = await getReadableArticle(item.url);
-
-        if (result && result.text && result.quality.okForSummary) {
-          // Good extraction - generate calm summary from full text
-          setExtractedText(result.text);
-          const summary = makeCalmDetailSummary(result.text);
-          if (summary.length > 0) {
-            setSummaryParagraphs(summary);
-          }
-          // Detect redlines on full extracted text
-          setRedlines(findRedlines(result.text));
-        } else {
-          // Thin or failed extraction - keep using RSS detail fallback
-          setExtractedText(result?.text || null);
-          setRedlines(result?.text ? findRedlines(result.text) : []);
-          setShowThinContentNotice(true);
-        }
-      } catch (error) {
-        console.warn('[ArticleDetail] Full article load failed:', error);
-        setShowThinContentNotice(true);
-      } finally {
-        setFullArticleLoading(false);
-      }
-    }
-
-    loadFullArticle();
-  }, [item.url]);
-
-  // Determine if content was modified - use backend flag when available, or fall back to local detection
-  const hasRemovedContent = FEATURE_FLAGS.USE_BACKEND_REDLINES
-    ? (item.has_manipulative_content || backendTransformations.length > 0 || !!item.detail.disclosure)
-    : (redlines.length > 0 || !!item.detail.disclosure);
+  // Determine if content was modified
+  const hasRemovedContent = item.has_manipulative_content || backendTransformations.length > 0 || !!item.detail.disclosure;
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -511,24 +469,23 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
 
           {/* Right: ntrl view */}
           <Pressable
-            onPress={() =>
+            onPress={() => {
+              // Only navigate if we have transparency data
+              if (transparencyLoading) return;
               navigation.navigate('NtrlView', {
                 item,
-                // Use original body from backend for correct span positions
-                fullOriginalText: FEATURE_FLAGS.USE_BACKEND_REDLINES
-                  ? originalBodyText
-                  : extractedText || item.detail.full,
-                // Use backend transformations when feature flag enabled
-                transformations: FEATURE_FLAGS.USE_BACKEND_REDLINES
-                  ? backendTransformations
-                  : [],
-              })
-            }
-            style={({ pressed }) => pressed && styles.metadataPressed}
+                fullOriginalText: originalBodyText,
+                transformations: backendTransformations,
+              });
+            }}
+            style={({ pressed }) => [pressed && !transparencyLoading && styles.metadataPressed]}
             accessibilityRole="link"
-            accessibilityLabel="View ntrl transparency"
+            accessibilityLabel={transparencyLoading ? 'Loading ntrl view' : 'View ntrl transparency'}
+            disabled={transparencyLoading}
           >
-            <Text style={styles.metadataNtrlView}>ntrl view</Text>
+            <Text style={[styles.metadataNtrlView, transparencyLoading && styles.metadataLoading]}>
+              {transparencyLoading ? 'loading...' : 'ntrl view'}
+            </Text>
           </Pressable>
         </View>
 
@@ -545,24 +502,17 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         {/* Body - Brief or Full mode */}
         <View style={styles.bodySection}>
           {viewMode === 'brief' ? (
-            // Brief mode: show immediately from RSS detail
-            <ArticleBrief text={summaryParagraphs.join('\n\n')} />
-          ) : // Full mode: show extracted text, loading state, or fallback
-          fullArticleLoading ? (
-            <View style={styles.loadingSection}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
-              <Text style={styles.loadingText}>Loading full article...</Text>
-            </View>
-          ) : extractedText ? (
-            <Text style={styles.bodyText}>{extractedText}</Text>
+            // Brief mode: show detail_brief from API
+            <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+          ) : // Full mode: show detail_full from API (already neutralized)
+          item.detail.full ? (
+            <Text style={styles.bodyText}>{item.detail.full}</Text>
           ) : (
             <>
-              <ArticleBrief text={summaryParagraphs.join('\n\n')} />
-              {showThinContentNotice && (
-                <Text style={styles.thinContentNotice}>
-                  Full text not available from this source.
-                </Text>
-              )}
+              <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+              <Text style={styles.thinContentNotice}>
+                Full text not available from this source.
+              </Text>
             </>
           )}
         </View>
@@ -780,6 +730,9 @@ function createStyles(theme: Theme) {
     },
     metadataPressed: {
       opacity: 0.5,
+    },
+    metadataLoading: {
+      opacity: 0.4,
     },
     // Body section: constrain measure for optimal reading
     bodySection: {

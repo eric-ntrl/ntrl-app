@@ -7,7 +7,7 @@ A "neutral news" app that strips manipulative language from news articles and pr
 - **Framework:** React Native 0.81.5 with Expo 54
 - **Language:** TypeScript 5.9
 - **Navigation:** React Navigation (Native Stack)
-- **Platforms:** iOS, Android, Web
+- **Platforms:** iOS, Android (mobile-only)
 
 ## Project Structure
 ```
@@ -15,15 +15,13 @@ src/
 ├── screens/          # App screens
 │   ├── FeedScreen.tsx           # Main daily brief
 │   ├── ArticleDetailScreen.tsx  # Full article view
-│   ├── RedlineScreen.tsx        # Transparency view
+│   ├── NtrlViewScreen.tsx       # Transparency view
 │   └── AboutScreen.tsx          # App info
 ├── services/         # Business logic
-│   ├── readerMode.ts            # Article extraction
-│   ├── redline.ts               # Manipulation detection
-│   └── detailSummary.ts         # Summary composition
+│   └── detailSummary.ts         # Summary composition helpers
 ├── api.ts            # API client (calls ntrl-api backend)
-├── config.ts         # API_BASE_URL configuration
-├── theme.ts          # Design system (colors, typography, spacing)
+├── config/           # Environment configuration
+├── theme/            # Design system (colors, typography, spacing)
 ├── types.ts          # TypeScript interfaces
 └── utils/            # Helper functions
 ```
@@ -101,22 +99,6 @@ Backend: `ntrl-api` (FastAPI/Python)
   - API data consumption
   - Theme/styling
   - Navigation
-
-### Deprecated Services (Do NOT Extend)
-
-The following services are **deprecated placeholder code**:
-
-| Service | Status | Use Instead |
-|---------|--------|-------------|
-| `src/services/readerMode.ts` | ⚠️ Deprecated | Backend `/v1/stories/{id}/transparency` |
-| `src/services/redline.ts` | ⚠️ Deprecated | Backend TransparencySpan data |
-
-These exist for dev/demo purposes only when backend is unavailable.
-
-**Do NOT add features to these services.** All new functionality should use backend APIs.
-
-See `FEATURE_FLAGS` in `src/config/index.ts` for migration toggles.
-See `docs/ARCHITECTURE.md` for full migration status.
 
 ## Commands
 ```bash

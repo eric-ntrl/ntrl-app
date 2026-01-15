@@ -36,10 +36,6 @@ export type RootStackParamList = {
   ArticleDetail: {
     item: Item;
   };
-  Redline: {
-    item: Item;
-    extractedText?: string | null;
-  };
   About: undefined;
   Profile: undefined;
   SavedArticles: undefined;
@@ -63,7 +59,6 @@ export type RootStackParamList = {
  */
 export type FeedScreenProps = NativeStackScreenProps<RootStackParamList, 'Feed'>;
 export type ArticleDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'ArticleDetail'>;
-export type RedlineScreenProps = NativeStackScreenProps<RootStackParamList, 'Redline'>;
 export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
 export type ProfileScreenProps = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 export type SavedArticlesScreenProps = NativeStackScreenProps<RootStackParamList, 'SavedArticles'>;

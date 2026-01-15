@@ -42,6 +42,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-002',
@@ -61,6 +62,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-003',
@@ -80,6 +82,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-004',
@@ -99,6 +102,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-005',
@@ -118,6 +122,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-006',
@@ -137,6 +142,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-007',
@@ -156,6 +162,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
     {
       id: 'fallback-008',
@@ -175,6 +182,7 @@ export function getFallbackArticles(): Item[] {
         full: null,
         disclosure: 'Language adjusted for clarity.',
       },
+      has_manipulative_content: true,
     },
   ];
 }

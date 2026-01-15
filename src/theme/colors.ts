@@ -24,8 +24,8 @@ const baseColors = {
   dividerSubtle: '#F0EEEA', // Very subtle divider
 
   // Transparency highlights (soft, low-opacity, never alert red)
-  highlight: 'rgba(212, 175, 55, 0.20)', // Soft gold/amber at 20%
-  highlightBorder: 'rgba(212, 175, 55, 0.40)', // Slightly stronger for underline
+  highlight: 'rgba(255, 200, 50, 0.50)', // Gold/amber at 50% for visibility
+  highlightBorder: 'rgba(255, 200, 50, 0.70)', // Slightly stronger for underline
 
   // Interactive
   link: '#5C7A8A', // Muted teal-gray for links
@@ -83,8 +83,8 @@ export const colorsV1Dark: ThemeColors = {
   dividerSubtle: '#2E2A27',
 
   // Soft warm highlights
-  highlight: 'rgba(240, 235, 227, 0.08)',
-  highlightBorder: 'rgba(240, 235, 227, 0.15)',
+  highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
+  highlightBorder: 'rgba(255, 200, 50, 0.60)',
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
@@ -113,9 +113,9 @@ export const colorsV2Dark: ThemeColors = {
   divider: '#3A3633',
   dividerSubtle: '#2E2A27',
 
-  // Soft warm highlights
-  highlight: 'rgba(240, 235, 227, 0.08)',
-  highlightBorder: 'rgba(240, 235, 227, 0.15)',
+  // Soft warm highlights - gold/amber for visibility
+  highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
+  highlightBorder: 'rgba(255, 200, 50, 0.60)',
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',

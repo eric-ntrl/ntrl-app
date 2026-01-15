@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "extra": {
-      "environment": "staging"
+      "environment": "development"
     },
     "splash": {
       "image": "./assets/splash-icon.png",

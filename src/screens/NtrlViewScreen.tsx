@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Switch, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
+import { openExternalUrl } from '../utils/links';
 import type { NtrlViewScreenProps, TransformationType, Transformation } from '../navigation/types';
 
 /**
@@ -188,10 +189,27 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
 
   const { item, fullOriginalText, transformations = [] } = route.params;
 
+  // Debug logging
+  console.log('[NtrlView] Received data:', {
+    itemId: item.id,
+    fullOriginalTextLength: fullOriginalText?.length || 0,
+    transformationsCount: transformations.length,
+    transformations: transformations.slice(0, 3).map(t => ({ start: t.start, end: t.end, original: t.original?.substring(0, 30) })),
+  });
+
   const [showHighlights, setShowHighlights] = useState(true);
+  const [showSourceError, setShowSourceError] = useState(false);
 
   const hasContent = !!fullOriginalText;
   const hasChanges = transformations.length > 0;
+
+  // Handle external source link with error fallback
+  const handleViewSource = async () => {
+    const success = await openExternalUrl(item.url, item.source_url);
+    if (!success) {
+      setShowSourceError(true);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -260,11 +278,35 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
           </View>
         )}
 
-        {/* Source attribution */}
+        {/* Source attribution with link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Source: {item.source}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.footerLink, pressed && styles.footerLinkPressed]}
+            onPress={handleViewSource}
+          >
+            <Text style={styles.footerLinkText}>View original article →</Text>
+          </Pressable>
         </View>
       </ScrollView>
+
+      {/* Source error modal */}
+      <Modal visible={showSourceError} transparent animationType="fade" onRequestClose={() => setShowSourceError(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Source unavailable</Text>
+            <Text style={styles.modalBody}>
+              This link couldn't be opened. You can try again later.
+            </Text>
+            <Pressable
+              style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
+              onPress={() => setShowSourceError(false)}
+            >
+              <Text style={styles.modalButtonText}>Go back</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -447,11 +489,67 @@ function createStyles(theme: Theme) {
       paddingTop: spacing.lg,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.divider,
+      alignItems: 'center',
     },
     footerText: {
       fontSize: 13,
       fontWeight: '400',
       color: colors.textSubtle,
+      marginBottom: spacing.md,
+    },
+    footerLink: {
+      paddingVertical: spacing.sm,
+    },
+    footerLinkPressed: {
+      opacity: 0.5,
+    },
+    footerLinkText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: layout.screenPadding,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 320,
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 22,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    modalButton: {
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    modalButtonPressed: {
+      opacity: 0.5,
+    },
+    modalButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
     },
   });
 }

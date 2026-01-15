@@ -33,7 +33,7 @@ type EnvironmentConfig = {
 
 const CONFIG: Record<Environment, EnvironmentConfig> = {
   development: {
-    API_BASE_URL: 'http://localhost:8000',
+    API_BASE_URL: 'https://api-staging-7b4d.up.railway.app',
     ENABLE_DEV_MODE: true,
     ENABLE_LOGGING: true,
   },
@@ -77,33 +77,3 @@ export const isProduction = ENV === 'production';
  */
 export const isDevelopment = ENV === 'development';
 
-/**
- * Feature flags for gradual backend migration.
- *
- * These flags control whether the app uses deprecated frontend services
- * or production backend API endpoints. Set to `true` once backend
- * endpoints are production-ready.
- *
- * @see docs/ARCHITECTURE.md for migration status
- */
-export const FEATURE_FLAGS = {
-  /**
-   * Use backend API for full article text instead of client-side extraction.
-   *
-   * When `false`: Uses deprecated `src/services/readerMode.ts` (client-side URL fetching)
-   * When `true`: Uses backend `/v1/stories/{id}/transparency` or `/v1/stories/{id}/full-text`
-   *
-   * Set to `true` once backend full-text endpoints are production-ready.
-   */
-  USE_BACKEND_FULL_TEXT: false,
-
-  /**
-   * Use backend API for redline/transparency spans instead of client-side detection.
-   *
-   * When `false`: Uses deprecated `src/services/redline.ts` (client-side pattern matching)
-   * When `true`: Uses backend `/v1/stories/{id}/transparency` endpoint
-   *
-   * Backend TransparencySpan generation is now complete - using API data.
-   */
-  USE_BACKEND_REDLINES: true,
-} as const;

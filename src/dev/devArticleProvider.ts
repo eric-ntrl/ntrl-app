@@ -164,6 +164,7 @@ function mapRSSToItem(rssItem: RSSItem, sourceName: string, sourceUrl: string): 
   const id = generateId(sourceName, rssItem.guid || rssItem.link);
   const originalHeadline = rssItem.title;
   const neutralHeadline = neutralizeHeadline(originalHeadline);
+  const detail = createPlaceholderDetail(originalHeadline, rssItem.description, sourceName);
 
   return {
     id,
@@ -174,7 +175,8 @@ function mapRSSToItem(rssItem: RSSItem, sourceName: string, sourceUrl: string): 
     summary: createNeutralSummary(rssItem.description),
     url: rssItem.link,
     original_text: originalHeadline, // Store original headline as "original text" for redline demo
-    detail: createPlaceholderDetail(originalHeadline, rssItem.description, sourceName),
+    detail,
+    has_manipulative_content: !!detail.disclosure,
   };
 }
 

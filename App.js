@@ -7,7 +7,6 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 import FeedScreen from './src/screens/FeedScreen';
 import ArticleDetailScreen from './src/screens/ArticleDetailScreen';
-import RedlineScreen from './src/screens/RedlineScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SavedArticlesScreen from './src/screens/SavedArticlesScreen';
@@ -27,7 +26,6 @@ export default function App() {
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="Feed" component={FeedScreen} />
               <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
-              <Stack.Screen name="Redline" component={RedlineScreen} />
               <Stack.Screen name="About" component={AboutScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="SavedArticles" component={SavedArticlesScreen} />
