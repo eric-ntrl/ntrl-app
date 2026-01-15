@@ -19,6 +19,10 @@ import { openExternalUrl } from '../utils/links';
 import { getReadableArticle } from '../services/readerMode';
 import { makeCalmDetailSummary, createFallbackSummary } from '../services/detailSummary';
 import { findRedlines, type RedlineSpan } from '../services/redline';
+import { fetchTransparency } from '../api';
+import { FEATURE_FLAGS } from '../config';
+import type { TransparencySpan } from '../types';
+import type { Transformation, TransformationType } from '../navigation/types';
 import {
   isArticleSaved,
   saveArticle,
@@ -40,6 +44,42 @@ import SegmentedControl from '../components/SegmentedControl';
 import ArticleBrief from '../components/ArticleBrief';
 
 type ViewMode = 'brief' | 'full';
+
+/**
+ * Map API TransparencySpan action to app TransformationType
+ */
+function mapActionToType(action: string): TransformationType {
+  const actionLower = action.toLowerCase();
+  if (actionLower.includes('urgency') || actionLower.includes('urgent')) {
+    return 'urgency';
+  }
+  if (actionLower.includes('emotion') || actionLower.includes('fear') || actionLower.includes('outrage')) {
+    return 'emotional';
+  }
+  if (actionLower.includes('clickbait') || actionLower.includes('click')) {
+    return 'clickbait';
+  }
+  if (actionLower.includes('sensational') || actionLower.includes('exaggerat')) {
+    return 'sensational';
+  }
+  if (actionLower.includes('opinion') || actionLower.includes('bias')) {
+    return 'opinion';
+  }
+  return 'other';
+}
+
+/**
+ * Convert API TransparencySpan[] to app Transformation[]
+ */
+function mapSpansToTransformations(spans: TransparencySpan[]): Transformation[] {
+  return spans.map((span) => ({
+    start: span.start_char,
+    end: span.end_char,
+    type: mapActionToType(span.action),
+    original: span.original_text,
+    filtered: span.replacement_text || '',
+  }));
+}
 
 /**
  * Format date for header display
@@ -112,60 +152,41 @@ function truncateToSentences(text: string, maxSentences: number): string {
 /**
  * Compose article body as organic narrative paragraphs
  * Enforces max 10 sentences / 3 paragraphs
- * Removes filler when substance exists
+ * Uses the new Detail schema: title, brief, full, disclosure
  */
 function composeBodyText(detail: Item['detail']): string[] {
   const paragraphs: string[] = [];
   let totalSentences = 0;
 
-  // First paragraph: what happened (primary content)
-  if (detail.what_happened && !containsFiller(detail.what_happened)) {
-    const sentences = countSentences(detail.what_happened);
+  // Primary content: use brief summary
+  if (detail.brief && !containsFiller(detail.brief)) {
+    const sentences = countSentences(detail.brief);
     if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
-      paragraphs.push(detail.what_happened);
+      paragraphs.push(detail.brief);
       totalSentences += sentences;
     } else {
       // Truncate to fit within limit
       const remaining = DETAIL_MAX_SENTENCES - totalSentences;
-      paragraphs.push(truncateToSentences(detail.what_happened, remaining));
+      paragraphs.push(truncateToSentences(detail.brief, remaining));
       totalSentences = DETAIL_MAX_SENTENCES;
     }
   }
 
-  // Second paragraph: context (why it matters)
+  // If we have full content and room for more, add first paragraph
   if (
     paragraphs.length < DETAIL_MAX_PARAGRAPHS &&
     totalSentences < DETAIL_MAX_SENTENCES &&
-    detail.why_it_matters &&
-    !containsFiller(detail.why_it_matters)
+    detail.full &&
+    !containsFiller(detail.full)
   ) {
-    const sentences = countSentences(detail.why_it_matters);
-    if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
-      paragraphs.push(detail.why_it_matters);
-      totalSentences += sentences;
-    }
-  }
+    // Extract first few sentences from full content
+    const fullSentences = detail.full.match(/[^.!?]+[.!?]+/g) || [];
+    const additionalSentences = fullSentences.slice(0, 3).join('').trim();
 
-  // Third paragraph: uncertainty expressed naturally (only if room and substance)
-  if (
-    paragraphs.length < DETAIL_MAX_PARAGRAPHS &&
-    totalSentences < DETAIL_MAX_SENTENCES &&
-    detail.uncertain &&
-    detail.uncertain.length > 0
-  ) {
-    const validUncertainties = detail.uncertain.filter((u) => u && !containsFiller(u));
-
-    if (validUncertainties.length > 0) {
-      const uncertaintyText = validUncertainties
-        .map(
-          (u) =>
-            `It remains unclear ${u.toLowerCase().replace(/^(whether|if|when|how|why)\s*/i, '$1 ')}.`
-        )
-        .join(' ');
-
-      const sentences = countSentences(uncertaintyText);
+    if (additionalSentences && additionalSentences.length > 50) {
+      const sentences = countSentences(additionalSentences);
       if (totalSentences + sentences <= DETAIL_MAX_SENTENCES) {
-        paragraphs.push(uncertaintyText);
+        paragraphs.push(additionalSentences);
       }
     }
   }
@@ -263,6 +284,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     return fallback.length > 0 ? fallback : composeBodyText(item.detail);
   });
   const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
+  const [backendTransformations, setBackendTransformations] = useState<Transformation[]>([]);
   const [showThinContentNotice, setShowThinContentNotice] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
   const [isSaved, setIsSaved] = useState(false);
@@ -287,6 +309,21 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   useEffect(() => {
     getAvailableShareTargets().then(setShareTargets);
   }, []);
+
+  // Fetch transparency data from backend if feature flag enabled
+  useEffect(() => {
+    if (FEATURE_FLAGS.USE_BACKEND_REDLINES) {
+      fetchTransparency(item.id)
+        .then((spans) => {
+          const transformations = mapSpansToTransformations(spans);
+          setBackendTransformations(transformations);
+        })
+        .catch((error) => {
+          console.warn('[ArticleDetail] Failed to fetch transparency:', error);
+          // Fall back to empty transformations - don't break the UI
+        });
+    }
+  }, [item.id]);
 
   // Cleanup animations on unmount to prevent memory leaks
   useEffect(() => {
@@ -334,8 +371,10 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     loadFullArticle();
   }, [item.url]);
 
-  const hasRemovedContent =
-    redlines.length > 0 || (item.detail.removed && item.detail.removed.length > 0);
+  // Determine if content was modified - use backend flag when available, or fall back to local detection
+  const hasRemovedContent = FEATURE_FLAGS.USE_BACKEND_REDLINES
+    ? (item.has_manipulative_content || backendTransformations.length > 0 || !!item.detail.disclosure)
+    : (redlines.length > 0 || !!item.detail.disclosure);
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -472,9 +511,11 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
             onPress={() =>
               navigation.navigate('NtrlView', {
                 item,
-                fullOriginalText: extractedText,
-                // transformations will come from backend in future
-                transformations: [],
+                fullOriginalText: extractedText || item.detail.full,
+                // Use backend transformations when feature flag enabled
+                transformations: FEATURE_FLAGS.USE_BACKEND_REDLINES
+                  ? backendTransformations
+                  : [],
               })
             }
             style={({ pressed }) => pressed && styles.metadataPressed}

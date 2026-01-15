@@ -101,9 +101,9 @@ export const FEATURE_FLAGS = {
    * Use backend API for redline/transparency spans instead of client-side detection.
    *
    * When `false`: Uses deprecated `src/services/redline.ts` (client-side pattern matching)
-   * When `true`: Uses backend `/v1/stories/{id}/transparency` or `/v1/stories/{id}/redlines`
+   * When `true`: Uses backend `/v1/stories/{id}/transparency` endpoint
    *
-   * Set to `true` once backend TransparencySpan generation is complete for LLM providers.
+   * Backend TransparencySpan generation is now complete - using API data.
    */
-  USE_BACKEND_REDLINES: false,
+  USE_BACKEND_REDLINES: true,
 } as const;

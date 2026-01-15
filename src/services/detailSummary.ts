@@ -297,26 +297,33 @@ export function hasSubstantiveContent(text: string): boolean {
 }
 
 /**
- * Create a minimal fallback summary from RSS detail fields
+ * Create a minimal fallback summary from detail fields
  * Used when reader-mode extraction fails or is too thin
  */
 export function createFallbackSummary(detail: {
-  what_happened?: string;
-  why_it_matters?: string;
+  title?: string;
+  brief?: string;
+  full?: string | null;
 }): string[] {
   const parts: string[] = [];
 
-  if (detail.what_happened) {
-    const cleaned = neutralizeSentence(detail.what_happened);
+  // Use brief as primary fallback content
+  if (detail.brief) {
+    const cleaned = neutralizeSentence(detail.brief);
     if (cleaned.length > 30 && !FILLER_PHRASES.some((f) => cleaned.toLowerCase().includes(f))) {
       parts.push(cleaned);
     }
   }
 
-  if (detail.why_it_matters) {
-    const cleaned = neutralizeSentence(detail.why_it_matters);
-    if (cleaned.length > 30 && !FILLER_PHRASES.some((f) => cleaned.toLowerCase().includes(f))) {
-      parts.push(cleaned);
+  // If brief is empty but we have full content, extract first sentences
+  if (parts.length === 0 && detail.full) {
+    const sentences = detail.full.match(/[^.!?]+[.!?]+/g) || [];
+    const firstSentences = sentences.slice(0, 3).join('').trim();
+    if (firstSentences.length > 30) {
+      const cleaned = neutralizeSentence(firstSentences);
+      if (!FILLER_PHRASES.some((f) => cleaned.toLowerCase().includes(f))) {
+        parts.push(cleaned);
+      }
     }
   }
 

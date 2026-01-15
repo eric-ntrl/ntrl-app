@@ -23,35 +23,18 @@ type Row =
   | { type: 'item'; item: Item }
   | { type: 'endOfFeed' };
 
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-
 /**
- * Filter items to only include those published within the last 24 hours
+ * Flatten brief into rows for FlatList rendering.
+ * Note: 24h filtering is now done server-side via ?hours=24 parameter.
  */
-function filterRecentItems(items: Item[], now: Date): Item[] {
-  const cutoff = now.getTime() - TWENTY_FOUR_HOURS_MS;
-  return items.filter((item) => {
-    // Ensure UTC parsing - API returns UTC timestamps without 'Z' suffix
-    const dateString = item.published_at;
-    const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
-    const publishedAt = new Date(utcString).getTime();
-    return publishedAt >= cutoff;
-  });
-}
-
-/**
- * Flatten brief into rows, filtering to 24h window
- */
-function flatten(b: Brief, now: Date): Row[] {
+function flatten(b: Brief): Row[] {
   const rows: Row[] = [];
 
   for (const section of b.sections) {
-    const recentItems = filterRecentItems(section.items, now);
-
-    // Only add section if it has recent items
-    if (recentItems.length > 0) {
-      rows.push({ type: 'section', section: { ...section, items: recentItems } });
-      for (const item of recentItems) {
+    // Only add section if it has items
+    if (section.items.length > 0) {
+      rows.push({ type: 'section', section });
+      for (const item of section.items) {
         rows.push({ type: 'item', item });
       }
     }
@@ -287,7 +270,8 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
   // refreshKey dependency ensures timestamps update on pull-to-refresh
   const now = useMemo(() => new Date(), [refreshKey]);
   const headerDate = formatHeaderDate(now);
-  const rows = useMemo(() => (brief ? flatten(brief, now) : []), [brief, now]);
+  // Note: 24h filtering is now done server-side via ?hours=24 parameter
+  const rows = useMemo(() => (brief ? flatten(brief) : []), [brief]);
 
   const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {

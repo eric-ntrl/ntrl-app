@@ -1,9 +1,17 @@
 export type Detail = {
-  what_happened: string;
-  why_it_matters: string;
-  known: string[];
-  uncertain: string[];
-  removed?: string[];
+  title: string;
+  brief: string;
+  full: string | null;
+  disclosure: string | null;
+};
+
+export type TransparencySpan = {
+  start_char: number;
+  end_char: number;
+  original_text: string;
+  action: string;
+  reason: string;
+  replacement_text: string | null;
 };
 
 export type Item = {
@@ -15,6 +23,7 @@ export type Item = {
   summary: string;
   url: string; // Article URL (may 404)
   original_text?: string; // Original article text before neutralization
+  has_manipulative_content: boolean; // Whether content was modified by NTRL
   detail: Detail;
 };
 

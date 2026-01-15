@@ -8,7 +8,7 @@
  */
 
 import { API_BASE_URL } from './config';
-import type { Brief, Section, Item, Detail } from './types';
+import type { Brief, Section, Item, Detail, TransparencySpan } from './types';
 import { getCachedBrief, cacheBrief } from './storage/storageService';
 
 // ============================================================================
@@ -16,17 +16,19 @@ import { getCachedBrief, cacheBrief } from './storage/storageService';
 // ============================================================================
 type ApiBriefStory = {
   id: string;
-  // New field names (current API)
-  feed_title?: string;
-  feed_summary?: string;
-  // Legacy field names (backwards compatibility)
-  neutral_headline?: string;
-  neutral_summary?: string;
+  // Feed outputs
+  feed_title: string;
+  feed_summary: string;
   source_name: string;
   source_url: string;
   published_at: string;
   has_manipulative_content: boolean;
   position: number;
+  // Detail outputs (embedded to eliminate N+1 calls)
+  detail_title: string | null;
+  detail_brief: string | null;
+  detail_full: string | null;
+  disclosure: string | null;
 };
 
 type ApiBriefSection = {
@@ -46,34 +48,38 @@ type ApiBriefResponse = {
 
 type ApiStoryDetail = {
   id: string;
-  // New field names (current API)
-  feed_title?: string;
-  feed_summary?: string;
-  // Legacy field names (backwards compatibility)
-  neutral_headline?: string;
-  neutral_summary?: string;
-  what_happened: string | null;
-  why_it_matters: string | null;
-  what_is_known: string[] | null;
-  what_is_uncertain: string[] | null;
+  // Feed outputs
+  feed_title: string;
+  feed_summary: string;
+  // Detail outputs (new schema)
+  detail_title: string | null;
+  detail_brief: string | null;
+  detail_full: string | null;
+  // Metadata
   disclosure: string | null;
   has_manipulative_content: boolean;
   source_name: string;
   source_url: string;
   published_at: string;
-  section: string;
+  section: string | null;
+};
+
+type ApiTransparencySpan = {
+  start_char: number;
+  end_char: number;
+  original_text: string;
+  action: string;
+  reason: string;
+  replacement_text: string | null;
 };
 
 type ApiTransparencyResponse = {
   id: string;
-  // New field names (current API)
-  feed_title?: string;
-  feed_summary?: string;
-  // Legacy field names (backwards compatibility)
-  neutral_headline?: string;
-  neutral_summary?: string;
-  removed_phrases: string[];
-  source_name: string;
+  feed_title: string;
+  feed_summary: string;
+  detail_full: string | null;
+  spans: ApiTransparencySpan[];
+  has_manipulative_content: boolean;
   source_url: string;
 };
 
@@ -91,16 +97,16 @@ function transformBrief(api: ApiBriefResponse): Brief {
             source: story.source_name,
             source_url: story.source_url,
             published_at: story.published_at,
-            // Support both new (feed_*) and legacy (neutral_*) field names
-            headline: story.feed_title || story.neutral_headline || '',
-            summary: story.feed_summary || story.neutral_summary || '',
+            headline: story.feed_title || '',
+            summary: story.feed_summary || '',
             url: story.source_url,
+            has_manipulative_content: story.has_manipulative_content,
+            // Detail fields now embedded from API (no N+1 calls needed)
             detail: {
-              what_happened: '',
-              why_it_matters: '',
-              known: [],
-              uncertain: [],
-              removed: [],
+              title: story.detail_title || story.feed_title || '',
+              brief: story.detail_brief || story.feed_summary || '',
+              full: story.detail_full,
+              disclosure: story.disclosure,
             },
           })
         ),
@@ -129,7 +135,8 @@ function transformBrief(api: ApiBriefResponse): Brief {
  * ```
  */
 export async function fetchBrief(): Promise<Brief> {
-  const response = await fetch(`${API_BASE_URL}/v1/brief`);
+  // Use server-side 24h filtering to reduce payload size
+  const response = await fetch(`${API_BASE_URL}/v1/brief?hours=24`);
 
   if (!response.ok) {
     const text = await response.text();
@@ -263,7 +270,8 @@ export async function fetchBriefWithCache(): Promise<BriefFetchResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const response = await fetch(`${API_BASE_URL}/v1/brief`, {
+    // Use server-side 24h filtering to reduce payload size
+    const response = await fetch(`${API_BASE_URL}/v1/brief?hours=24`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -323,31 +331,30 @@ export async function fetchStoryDetail(storyId: string): Promise<Detail> {
 
   const data: ApiStoryDetail = await response.json();
   return {
-    what_happened: data.what_happened || '',
-    why_it_matters: data.why_it_matters || '',
-    known: data.what_is_known || [],
-    uncertain: data.what_is_uncertain || [],
-    removed: [],
+    title: data.detail_title || data.feed_title || '',
+    brief: data.detail_brief || data.feed_summary || '',
+    full: data.detail_full,
+    disclosure: data.disclosure,
   };
 }
 
 /**
- * Fetch transparency data showing what was removed from a story.
+ * Fetch transparency data showing what was changed in a story.
  *
- * Returns a list of phrases that were identified as manipulative
- * and removed during the neutralization process.
+ * Returns transparency spans with details about each manipulation
+ * that was identified and how it was neutralized.
  *
  * @param storyId - The unique identifier of the story
- * @returns Promise resolving to array of removed phrases
+ * @returns Promise resolving to array of transparency spans
  * @throws Error if request fails after all retries
  *
  * @example
  * ```typescript
- * const removed = await fetchTransparency('story-123');
- * console.log(`${removed.length} phrases were neutralized`);
+ * const spans = await fetchTransparency('story-123');
+ * console.log(`${spans.length} manipulations were neutralized`);
  * ```
  */
-export async function fetchTransparency(storyId: string): Promise<string[]> {
+export async function fetchTransparency(storyId: string): Promise<TransparencySpan[]> {
   const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
 
   if (!response.ok) {
@@ -355,5 +362,5 @@ export async function fetchTransparency(storyId: string): Promise<string[]> {
   }
 
   const data: ApiTransparencyResponse = await response.json();
-  return data.removed_phrases || [];
+  return data.spans || [];
 }
