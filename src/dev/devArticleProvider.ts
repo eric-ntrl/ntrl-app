@@ -149,15 +149,11 @@ function createPlaceholderDetail(
   const detailText =
     cleanDescription.length > 400 ? cleanDescription.substring(0, 397) + '...' : cleanDescription;
 
-  // Only use fallback if truly no content
-  const hasSubstance = detailText.length >= DETAIL_MIN_CHARS;
-
   return {
-    what_happened: detailText || `${sourceName} reports on this story.`,
-    why_it_matters: '',
-    known: [],
-    uncertain: hasSubstance ? ['what further developments may follow'] : [],
-    removed: removed.length > 0 ? removed : undefined,
+    title: headline,
+    brief: detailText || `${sourceName} reports on this story.`,
+    full: null,
+    disclosure: removed.length > 0 ? 'Language adjusted for clarity.' : null,
   };
 }
 

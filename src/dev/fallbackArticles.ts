@@ -36,12 +36,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'In a major development, world leaders gathered for critical talks on sweeping trade reforms that could reshape the global economy.',
       detail: {
-        what_happened:
+        title: 'International summit addresses trade policy framework',
+        brief:
           'Officials from several countries held discussions on trade policy at an international summit. Trade policy changes can affect import/export costs and economic relationships between nations.',
-        why_it_matters: '',
-        known: [],
-        uncertain: ['what the final agreement terms will be', 'when implementation might begin'],
-        removed: ['major development', 'critical', 'sweeping', 'reshape'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -56,12 +55,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'The central bank shocked markets with its sobering assessment, warning of turbulent times ahead as inflation fears grip the economy.',
       detail: {
-        what_happened:
+        title: 'Central bank releases quarterly economic assessment',
+        brief:
           'The central bank published its quarterly report on economic conditions. The assessment includes sector-by-sector analysis and may influence future monetary policy decisions.',
-        why_it_matters: '',
-        known: [],
-        uncertain: ['how this will affect interest rates', 'what policy changes may follow'],
-        removed: ['shocked', 'sobering', 'warning', 'turbulent', 'fears', 'grip'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -76,12 +74,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'A groundbreaking infrastructure project promises to revolutionize regional transport, with officials hailing it as a game-changer for local communities.',
       detail: {
-        what_happened:
+        title: 'Regional infrastructure project moves to planning phase',
+        brief:
           'A regional transportation project received approval to proceed to planning. Environmental and community impact assessments will follow before construction can begin.',
-        why_it_matters: '',
-        known: [],
-        uncertain: ['what the final project scope will be', 'when construction might start'],
-        removed: ['groundbreaking', 'revolutionize', 'hailing', 'game-changer'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -96,15 +93,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'Tech giants stunned Wall Street with explosive earnings that crushed analyst expectations, sending stocks soaring in after-hours trading.',
       detail: {
-        what_happened:
+        title: 'Technology companies report quarterly performance figures',
+        brief:
           'Multiple technology companies published their quarterly financial results. Results varied across companies, with some exceeding expectations while others reported lower figures.',
-        why_it_matters: '',
-        known: [],
-        uncertain: [
-          'how markets will respond in coming days',
-          'what guidance companies will provide',
-        ],
-        removed: ['stunned', 'explosive', 'crushed', 'soaring'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -119,12 +112,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'The energy sector is in turmoil as dramatic production swings threaten to upend markets and send prices spiraling.',
       detail: {
-        what_happened:
+        title: 'Energy sector sees shifts in production patterns',
+        brief:
           'Energy production data shows shifts in output patterns across the sector. Analysts are monitoring these trends for potential effects on prices and supply.',
-        why_it_matters: '',
-        known: [],
-        uncertain: ['what is driving the production changes', 'whether prices will be affected'],
-        removed: ['turmoil', 'dramatic', 'threaten', 'upend', 'spiraling'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -139,15 +131,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'A breakthrough medical study offers hope to millions, with researchers claiming stunning results that could transform treatment forever.',
       detail: {
-        what_happened:
+        title: 'Healthcare research consortium publishes study findings',
+        brief:
           'Researchers from multiple institutions published findings from a collaborative healthcare study. The results show both promising areas and aspects requiring further investigation.',
-        why_it_matters: '',
-        known: [],
-        uncertain: [
-          'whether the findings will lead to new treatments',
-          'how long clinical applications might take',
-        ],
-        removed: ['breakthrough', 'hope to millions', 'stunning', 'transform forever'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -162,15 +150,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'In a shocking turn, the committee rammed through the controversial bill despite fierce opposition from critics who warn of dire consequences.',
       detail: {
-        what_happened:
+        title: 'Legislative committee advances policy proposal',
+        brief:
           'A legislative committee voted to advance a policy proposal to the next stage of review. Additional hearings and potential amendments are expected before any final consideration.',
-        why_it_matters: '',
-        known: [],
-        uncertain: [
-          'whether the proposal will pass in its current form',
-          'what amendments may be introduced',
-        ],
-        removed: ['shocking', 'rammed through', 'controversial', 'fierce', 'dire consequences'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
     {
@@ -185,12 +169,11 @@ export function getFallbackArticles(): Item[] {
       original_text:
         'Extreme weather devastates farming communities as desperate farmers face catastrophic losses that threaten their livelihoods.',
       detail: {
-        what_happened:
+        title: 'Weather patterns affect agricultural regions',
+        brief:
           'Weather conditions affected agricultural areas in multiple regions. Officials are currently assessing the extent of the impact on crops and farming operations.',
-        why_it_matters: '',
-        known: [],
-        uncertain: ['how severely crops have been affected', 'how long recovery might take'],
-        removed: ['Extreme', 'devastates', 'desperate', 'catastrophic', 'threaten'],
+        full: null,
+        disclosure: 'Language adjusted for clarity.',
       },
     },
   ];

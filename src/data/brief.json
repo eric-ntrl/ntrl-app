@@ -15,11 +15,10 @@
           "url": "https://www.reuters.com/world/climate-summit-2026",
           "original_text": "In a landmark moment, leaders hailed the breakthrough agreement as a major victory after tense overnight negotiations. Critics warned the plan could be dangerously weak unless countries commit immediately to aggressive enforcement. Supporters said the framework offers a realistic path forward and provides hope for communities already facing severe impacts.",
           "detail": {
-            "what_happened": "Delegates approved a framework that sets target ranges for emissions reductions across multiple sectors. The agreement includes reporting guidelines and review intervals.",
-            "why_it_matters": "The framework establishes a common baseline for future negotiations and may influence domestic policy in participating nations.",
-            "known": ["147 countries participated", "Framework was approved", "Includes reporting requirements"],
-            "uncertain": ["Implementation timeline", "Enforcement mechanisms", "Whether targets will be met"],
-            "removed": ["landmark", "breakthrough", "major victory", "tense", "dangerously weak", "immediately", "aggressive", "realistic path forward", "provides hope", "severe"]
+            "title": "Climate summit reaches framework agreement on emissions targets",
+            "brief": "Delegates approved a framework that sets target ranges for emissions reductions across multiple sectors. The agreement includes reporting guidelines and review intervals. The framework establishes a common baseline for future negotiations and may influence domestic policy in participating nations.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         },
         {
@@ -32,11 +31,10 @@
           "url": "https://www.bloomberg.com/news/trade-volume-2026",
           "original_text": "Global trade is surging as shipping volumes hit record levels. The dramatic 3.2% jump signals a booming economy that experts say could reshape markets worldwide.",
           "detail": {
-            "what_happened": "Container shipping volumes rose 3.2% quarter-over-quarter according to industry tracking data.",
-            "why_it_matters": "Trade volume trends can indicate broader economic activity patterns.",
-            "known": ["3.2% increase measured", "Third consecutive quarter of growth"],
-            "uncertain": ["Whether growth rate will continue", "Impact of pending trade policy changes"],
-            "removed": ["surging", "record levels", "dramatic", "booming", "reshape markets"]
+            "title": "International trade volume increases for third consecutive quarter",
+            "brief": "Container shipping volumes rose 3.2% quarter-over-quarter according to industry tracking data. Trade volume trends can indicate broader economic activity patterns.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         }
       ]
@@ -55,11 +53,10 @@
           "url": "https://apnews.com/article/federal-reserve-rates-2026",
           "original_text": "The Federal Reserve held interest rates steady in a move that shocked no one but left markets wondering what comes next. Fed Chair signaled cautious optimism while warning of potential headwinds ahead.",
           "detail": {
-            "what_happened": "The Federal Reserve held interest rates steady at the current target range after their January meeting.",
-            "why_it_matters": "Interest rate decisions affect borrowing costs for consumers and businesses.",
-            "known": ["Rates unchanged", "Decision was unanimous", "Next meeting in March"],
-            "uncertain": ["Future rate trajectory", "How inflation data will evolve"],
-            "removed": ["shocked", "wondering", "cautious optimism", "warning", "headwinds"]
+            "title": "Federal Reserve maintains current interest rate policy",
+            "brief": "The Federal Reserve held interest rates steady at the current target range after their January meeting. Interest rate decisions affect borrowing costs for consumers and businesses.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         }
       ]
@@ -78,11 +75,10 @@
           "url": "https://www.wsj.com/business/manufacturing-output-2026",
           "original_text": "Manufacturing activity held steady as the sector avoided a feared collapse. Industry insiders breathed a sigh of relief as employment numbers defied gloomy predictions.",
           "detail": {
-            "what_happened": "The monthly manufacturing index showed production levels matching prior quarter figures.",
-            "why_it_matters": "Manufacturing output is one indicator of industrial economic activity.",
-            "known": ["Production levels stable", "Employment unchanged"],
-            "uncertain": ["Q1 projections", "Supply chain conditions"],
-            "removed": ["feared collapse", "breathed a sigh of relief", "defied", "gloomy predictions"]
+            "title": "Manufacturing sector reports steady production output levels",
+            "brief": "The monthly manufacturing index showed production levels matching prior quarter figures. Manufacturing output is one indicator of industrial economic activity.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         }
       ]
@@ -101,11 +97,10 @@
           "url": "https://www.technologyreview.com/battery-tech-2026",
           "original_text": "A game-changing battery breakthrough could revolutionize the EV industry. The stunning new technology promises to deliver unprecedented range and charging speeds that will leave competitors scrambling.",
           "detail": {
-            "what_happened": "Researchers moved a new battery design from laboratory to commercial testing with three automotive partners.",
-            "why_it_matters": "Battery technology advances could affect electric vehicle range and charging times.",
-            "known": ["Testing has begun", "Three automotive partners involved", "18-month evaluation period"],
-            "uncertain": ["Whether technology will scale", "Cost implications", "Performance in real conditions"],
-            "removed": ["game-changing", "breakthrough", "revolutionize", "stunning", "unprecedented", "leave competitors scrambling"]
+            "title": "New battery technology enters commercial testing phase",
+            "brief": "Researchers moved a new battery design from laboratory to commercial testing with three automotive partners. Battery technology advances could affect electric vehicle range and charging times.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         },
         {
@@ -118,11 +113,10 @@
           "url": "https://arstechnica.com/security/patches-2026",
           "original_text": "A critical security flaw has been urgently patched after experts warned of imminent attacks. Users must update immediately to avoid potentially devastating consequences.",
           "detail": {
-            "what_happened": "Security patches were released by major OS vendors addressing multiple identified vulnerabilities.",
-            "why_it_matters": "Unpatched systems may be exposed to known security issues.",
-            "known": ["Patches available", "Multiple vendors affected", "Standard update channels work"],
-            "uncertain": ["Extent of exploitation before patches", "Whether all issues are resolved"],
-            "removed": ["critical", "urgently", "imminent attacks", "must", "immediately", "devastating"]
+            "title": "Software update addresses security vulnerabilities in common systems",
+            "brief": "Security patches were released by major OS vendors addressing multiple identified vulnerabilities. Unpatched systems may be exposed to known security issues.",
+            "full": null,
+            "disclosure": "Language adjusted for clarity."
           }
         }
       ]
