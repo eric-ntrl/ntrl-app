@@ -285,6 +285,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   });
   const [redlines, setRedlines] = useState<RedlineSpan[]>([]);
   const [backendTransformations, setBackendTransformations] = useState<Transformation[]>([]);
+  const [originalBodyText, setOriginalBodyText] = useState<string | null>(null);
   const [showThinContentNotice, setShowThinContentNotice] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
   const [isSaved, setIsSaved] = useState(false);
@@ -314,9 +315,11 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   useEffect(() => {
     if (FEATURE_FLAGS.USE_BACKEND_REDLINES) {
       fetchTransparency(item.id)
-        .then((spans) => {
-          const transformations = mapSpansToTransformations(spans);
+        .then((result) => {
+          const transformations = mapSpansToTransformations(result.spans);
           setBackendTransformations(transformations);
+          // Store original body for correct span highlighting
+          setOriginalBodyText(result.originalBody);
         })
         .catch((error) => {
           console.warn('[ArticleDetail] Failed to fetch transparency:', error);
@@ -511,7 +514,10 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
             onPress={() =>
               navigation.navigate('NtrlView', {
                 item,
-                fullOriginalText: extractedText || item.detail.full,
+                // Use original body from backend for correct span positions
+                fullOriginalText: FEATURE_FLAGS.USE_BACKEND_REDLINES
+                  ? originalBodyText
+                  : extractedText || item.detail.full,
                 // Use backend transformations when feature flag enabled
                 transformations: FEATURE_FLAGS.USE_BACKEND_REDLINES
                   ? backendTransformations

@@ -75,10 +75,20 @@ type ApiTransparencySpan = {
 
 type ApiTransparencyResponse = {
   id: string;
+  // Original content (for transparency view)
+  original_title: string;
+  original_description: string | null;
+  original_body: string | null;
+  original_body_available: boolean;
+  original_body_expired: boolean;
+  // Filtered outputs
   feed_title: string;
   feed_summary: string;
   detail_full: string | null;
+  // What was changed
   spans: ApiTransparencySpan[];
+  // Metadata
+  disclosure: string;
   has_manipulative_content: boolean;
   source_url: string;
 };
@@ -339,22 +349,38 @@ export async function fetchStoryDetail(storyId: string): Promise<Detail> {
 }
 
 /**
+ * Result from fetching transparency data.
+ */
+export type TransparencyFetchResult = {
+  /** Original article body text (for highlighting spans) */
+  originalBody: string | null;
+  /** Whether original body is available */
+  originalBodyAvailable: boolean;
+  /** Whether original body has expired */
+  originalBodyExpired: boolean;
+  /** Transparency spans showing what was changed */
+  spans: TransparencySpan[];
+  /** Original source URL */
+  sourceUrl: string;
+};
+
+/**
  * Fetch transparency data showing what was changed in a story.
  *
- * Returns transparency spans with details about each manipulation
- * that was identified and how it was neutralized.
+ * Returns the original article body and transparency spans with details
+ * about each manipulation that was identified and how it was neutralized.
  *
  * @param storyId - The unique identifier of the story
- * @returns Promise resolving to array of transparency spans
+ * @returns Promise resolving to transparency data including original body and spans
  * @throws Error if request fails after all retries
  *
  * @example
  * ```typescript
- * const spans = await fetchTransparency('story-123');
+ * const { originalBody, spans } = await fetchTransparency('story-123');
  * console.log(`${spans.length} manipulations were neutralized`);
  * ```
  */
-export async function fetchTransparency(storyId: string): Promise<TransparencySpan[]> {
+export async function fetchTransparency(storyId: string): Promise<TransparencyFetchResult> {
   const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
 
   if (!response.ok) {
@@ -362,5 +388,11 @@ export async function fetchTransparency(storyId: string): Promise<TransparencySp
   }
 
   const data: ApiTransparencyResponse = await response.json();
-  return data.spans || [];
+  return {
+    originalBody: data.original_body,
+    originalBodyAvailable: data.original_body_available,
+    originalBodyExpired: data.original_body_expired,
+    spans: data.spans || [],
+    sourceUrl: data.source_url,
+  };
 }
