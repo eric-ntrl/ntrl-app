@@ -428,7 +428,8 @@ function createStyles(theme: Theme) {
 
     // Article card - with text wrapping fixes
     card: {
-      paddingVertical: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: 26, // +10px for editorial rhythm between items
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -454,7 +455,7 @@ function createStyles(theme: Theme) {
     headline: {
       fontSize: 16,
       fontWeight: '600',
-      lineHeight: 24,
+      lineHeight: 26, // +8% for subtle title dominance
       letterSpacing: -0.2,
       color: colors.textPrimary,
     },
