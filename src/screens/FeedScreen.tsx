@@ -151,11 +151,10 @@ function ArticleCard({
       onPress={onPress}
     >
       <View style={styles.textColumn}>
-        <Text style={styles.headline} numberOfLines={2} ellipsizeMode="tail">
-          {headline}
-        </Text>
-        <Text style={styles.summary} numberOfLines={3} ellipsizeMode="tail">
-          {summary}
+        <Text style={styles.articleText} numberOfLines={5} ellipsizeMode="tail">
+          <Text style={styles.headline}>{headline}</Text>
+          {'  '}
+          <Text style={styles.summary}>{summary}</Text>
         </Text>
         <Text style={styles.meta}>
           {item.source} · {timeLabel}
@@ -444,25 +443,28 @@ function createStyles(theme: Theme) {
       minWidth: 0,
       alignSelf: 'stretch',
     },
-    headline: {
-      fontSize: typography.headline.fontSize,
-      fontWeight: typography.headline.fontWeight,
-      lineHeight: typography.headline.lineHeight,
-      letterSpacing: typography.headline.letterSpacing,
-      color: typography.headline.color,
-      marginBottom: spacing.sm,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-    summary: {
-      fontSize: typography.summary.fontSize,
-      fontWeight: typography.summary.fontWeight,
-      lineHeight: typography.summary.lineHeight,
-      letterSpacing: typography.summary.letterSpacing,
-      color: typography.summary.color,
+    // Container for inline headline + summary text
+    articleText: {
+      fontSize: 16,
+      lineHeight: 24,
+      letterSpacing: -0.2,
       marginBottom: spacing.md,
-      flexShrink: 1,
-      minWidth: 0,
+    },
+    // Headline: bold, primary color (flows inline with summary)
+    headline: {
+      fontSize: 16,
+      fontWeight: '600',
+      lineHeight: 24,
+      letterSpacing: -0.2,
+      color: colors.textPrimary,
+    },
+    // Summary: regular weight, secondary color (continues inline after headline)
+    summary: {
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 24,
+      letterSpacing: -0.2,
+      color: colors.textSecondary,
     },
     meta: {
       fontSize: typography.meta.fontSize,
