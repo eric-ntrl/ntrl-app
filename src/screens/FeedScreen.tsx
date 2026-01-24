@@ -164,26 +164,26 @@ function ArticleCard({
   );
 }
 
-function EndOfFeed({
+function FeedIntro({
   date,
-  onAboutPress,
   styles,
 }: {
   date: string;
-  onAboutPress: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
+  // Short version since header already shows the date
+  // Fallback includes date for defensive case where header might not render
+  return (
+    <Text style={styles.feedIntro}>
+      {date ? 'Here is your neutral brief.' : 'Here is your neutral brief for today.'}
+    </Text>
+  );
+}
+
+function EndOfFeed({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
     <View style={styles.endOfFeed}>
-      <View style={styles.endDivider} />
-      <Text style={styles.endMessage}>You're all caught up</Text>
-      <Text style={styles.endDate}>Today · {date}</Text>
-      <Pressable
-        style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
-        onPress={onAboutPress}
-      >
-        <Text style={styles.aboutLinkText}>About NTRL</Text>
-      </Pressable>
+      <Text style={styles.endClosing}>End of today's brief.</Text>
     </View>
   );
 }
@@ -278,13 +278,7 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
     }
 
     if (item.type === 'endOfFeed') {
-      return (
-        <EndOfFeed
-          date={headerDate}
-          onAboutPress={() => navigation.navigate('About')}
-          styles={styles}
-        />
-      );
+      return <EndOfFeed styles={styles} />;
     }
 
     const timeLabel = formatRelativeTime(item.item.published_at, now);
@@ -340,6 +334,7 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
                 : `item-${r.item.id}`
           }
           renderItem={renderItem}
+          ListHeaderComponent={<FeedIntro date={headerDate} styles={styles} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -474,29 +469,25 @@ function createStyles(theme: Theme) {
       color: typography.meta.color,
     },
 
+    // Feed intro (top of list)
+    feedIntro: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
+
     // End of feed
     endOfFeed: {
       alignItems: 'center',
-      paddingTop: spacing.xxxl,
+      paddingTop: spacing.xxl,
       paddingBottom: spacing.xxl,
     },
-    endDivider: {
-      width: 48,
-      height: 1,
-      backgroundColor: colors.divider,
-      marginBottom: spacing.xl,
-    },
-    endMessage: {
-      fontSize: typography.endMessage.fontSize,
-      fontWeight: typography.endMessage.fontWeight,
-      color: typography.endMessage.color,
-      marginBottom: spacing.xs,
-    },
-    endDate: {
-      fontSize: typography.endDate.fontSize,
-      fontWeight: typography.endDate.fontWeight,
-      color: typography.endDate.color,
-      marginBottom: spacing.xl,
+    endClosing: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+      textAlign: 'center',
     },
 
     // About link (moved to footer)
