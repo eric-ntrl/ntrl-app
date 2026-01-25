@@ -108,6 +108,71 @@ npm run android    # Run on Android emulator
 npm run web        # Run in browser
 ```
 
+## UI Self-Testing (CRITICAL for Claude)
+
+**Claude MUST test UI changes visually before asking the user to verify.** There are 3 methods available:
+
+### Method 1: Playwright (Web - Fastest)
+Captures screenshots of the web version. Good for feed layout and basic content verification.
+
+```bash
+cd /Users/ericrbrown/Documents/NTRL/code/ntrl-app
+npx playwright test e2e/claude-ui-check.spec.ts
+```
+
+Screenshots saved to `e2e/snapshots/`:
+- `claude-feed-mobile.png` - Mobile viewport
+- `claude-feed-fullpage.png` - Full page
+- `claude-feed-dark.png` - Dark mode
+
+### Method 2: Maestro (iOS Simulator - Most Complete)
+Runs automated UI flows on iOS simulator. Captures feed, article detail, and ntrl-view.
+
+```bash
+# Ensure simulator is running with Expo app loaded
+maestro test .maestro/claude-ui-capture.yaml
+```
+
+Screenshots saved to `claude-screenshots/`:
+- Feed screen (scrolled states)
+- Section navigation
+- Article detail view
+- NTRL transparency view
+
+### Method 3: Direct Simulator Screenshots
+For ad-hoc verification when you need to see the current state.
+
+```bash
+# Boot simulator if needed
+xcrun simctl boot "iPhone 17 Pro"
+
+# Open NTRL app in Expo Go
+xcrun simctl openurl booted "exp://127.0.0.1:8081"
+
+# Wait for app to load, then capture
+sleep 5
+xcrun simctl io booted screenshot /tmp/sim-screenshot.png
+```
+
+Then read `/tmp/sim-screenshot.png` to view.
+
+### When to Test
+
+Always test UI after:
+1. Backend neutralization changes (affects detail_full, spans)
+2. API response format changes
+3. Frontend component changes
+4. Theme/styling updates
+
+### What to Verify
+
+| Screen | What to Check |
+|--------|---------------|
+| Feed | Titles are neutralized (no clickbait, urgency) |
+| Article Detail (Brief) | Summary is factual, calm |
+| Article Detail (Full) | Body text is neutralized |
+| NTRL View | Manipulative phrases are highlighted |
+
 ## Related Files
 - API backend: `../ntrl-api/`
 - Design specs: `../../Screen Mocks/`
