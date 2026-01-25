@@ -282,6 +282,19 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const [originalBodyText, setOriginalBodyText] = useState<string | null>(null);
   const [transparencyLoading, setTransparencyLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
+
+  // Debug logging for detail content
+  useEffect(() => {
+    console.log('[ArticleDetail] Detail content:', {
+      itemId: item.id,
+      detailBriefLength: item.detail.brief?.length || 0,
+      detailBriefPreview: item.detail.brief?.substring(0, 100) || '(none)',
+      detailFullLength: item.detail.full?.length || 0,
+      detailFullPreview: item.detail.full?.substring(0, 100) || '(none)',
+      disclosure: item.detail.disclosure,
+      hasManipulative: item.has_manipulative_content,
+    });
+  }, [item.id, item.detail]);
   const [isSaved, setIsSaved] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
@@ -310,6 +323,19 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     setTransparencyLoading(true);
     fetchTransparency(item.id)
       .then((result) => {
+        // Debug logging for diagnostic purposes
+        console.log('[ArticleDetail] Transparency data received:', {
+          itemId: item.id,
+          originalBodyLength: result.originalBody?.length || 0,
+          originalBodyPreview: result.originalBody?.substring(0, 100) || '(none)',
+          spanCount: result.spans.length,
+          spans: result.spans.slice(0, 3).map(s => ({
+            start: s.start_char,
+            end: s.end_char,
+            text: s.original_text?.substring(0, 30),
+          })),
+        });
+
         const transformations = mapSpansToTransformations(result.spans);
         setBackendTransformations(transformations);
         // Store original body for correct span highlighting
@@ -472,6 +498,14 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
             onPress={() => {
               // Only navigate if we have transparency data
               if (transparencyLoading) return;
+
+              // Debug logging before navigation
+              console.log('[ArticleDetail] Navigating to NtrlView with:', {
+                itemId: item.id,
+                fullOriginalTextLength: originalBodyText?.length || 0,
+                transformationsCount: backendTransformations.length,
+              });
+
               navigation.navigate('NtrlView', {
                 item,
                 fullOriginalText: originalBodyText,
