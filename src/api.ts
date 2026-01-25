@@ -97,12 +97,14 @@ type ApiTransparencyResponse = {
 function transformBrief(api: ApiBriefResponse): Brief {
   return {
     generated_at: api.assembled_at,
-    sections: api.sections.map(
-      (section): Section => ({
+    sections: api.sections
+      .map((section): Section => ({
         key: section.name,
         title: section.display_name,
-        items: section.stories.map(
-          (story): Item => ({
+        items: section.stories
+          // Filter out stories with empty titles (failed neutralization)
+          .filter((story) => story.feed_title && story.feed_title.trim() !== '')
+          .map((story): Item => ({
             id: story.id,
             source: story.source_name,
             source_url: story.source_url,
@@ -118,10 +120,10 @@ function transformBrief(api: ApiBriefResponse): Brief {
               full: story.detail_full,
               disclosure: story.disclosure,
             },
-          })
-        ),
-      })
-    ),
+          })),
+      }))
+      // Filter out empty sections
+      .filter((section) => section.items.length > 0),
   };
 }
 
