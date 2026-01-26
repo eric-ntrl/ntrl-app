@@ -108,53 +108,102 @@ npm run android    # Run on Android emulator
 npm run web        # Run in browser
 ```
 
+## The 4-View Content Architecture
+
+| View | UI Location | Content Source | Description |
+|------|-------------|----------------|-------------|
+| **Original** | ntrl-view (highlight OFF) | `original_body` | Original text from S3 |
+| **ntrl-view** | ntrl-view (highlight ON) | `original_body` + `spans` | Same text with highlighted spans |
+| **Full** | Article Detail (Full tab) | `detail_full` | LLM-neutralized full article |
+| **Brief** | Article Detail (Brief tab) | `detail_brief` | LLM-synthesized summary |
+
+**Key insight**: Spans reference positions in `original_body`, not `detail_full`. The ntrl-view toggle controls highlight visibility, not text content.
+
 ## UI Self-Testing (CRITICAL for Claude)
 
-**Claude MUST test UI changes visually before asking the user to verify.** There are 3 methods available:
+**Claude MUST test UI changes visually before asking the user to verify.**
 
-### Method 1: Playwright (Web - Fastest)
-Captures screenshots of the web version. Good for feed layout and basic content verification.
+### RECOMMENDED: Playwright Custom Script (Most Reliable)
+
+This method captures all views reliably and can navigate through the app:
 
 ```bash
 cd /Users/ericrbrown/Documents/NTRL/code/ntrl-app
+
+# Start Expo if not running
+npm start -- --web &
+sleep 5
+
+# Create capture script
+cat > capture-screens.cjs << 'EOF'
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+
+  await page.goto('http://localhost:8081');
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: '/tmp/web-feed.png' });
+  console.log('Feed captured');
+
+  try {
+    // Click first article (adjust text to match)
+    await page.click('text=<first-article-title>');
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: '/tmp/web-brief.png' });
+    console.log('Brief captured');
+
+    await page.click('text=Full');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: '/tmp/web-full.png' });
+    console.log('Full captured');
+
+    await page.click('text=ntrl view');
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: '/tmp/web-ntrl.png' });
+    console.log('Ntrl view captured');
+  } catch (e) {
+    console.log('Error:', e.message);
+    await page.screenshot({ path: '/tmp/web-error.png' });
+  }
+  await browser.close();
+})();
+EOF
+
+# Run it
+node capture-screens.cjs
+
+# Clean up
+rm capture-screens.cjs
+```
+
+Then use the Read tool on `/tmp/web-feed.png`, `/tmp/web-brief.png`, `/tmp/web-full.png`, `/tmp/web-ntrl.png` to view.
+
+### Alternative: Playwright Test Suite
+
+```bash
 npx playwright test e2e/claude-ui-check.spec.ts
 ```
 
-Screenshots saved to `e2e/snapshots/`:
-- `claude-feed-mobile.png` - Mobile viewport
-- `claude-feed-fullpage.png` - Full page
-- `claude-feed-dark.png` - Dark mode
+Screenshots saved to `e2e/snapshots/`. Note: Some tests may fail if Safari/WebKit not installed.
 
-### Method 2: Maestro (iOS Simulator - Most Complete)
-Runs automated UI flows on iOS simulator. Captures feed, article detail, and ntrl-view.
+### Alternative: iOS Simulator (Manual)
 
 ```bash
-# Ensure simulator is running with Expo app loaded
-maestro test .maestro/claude-ui-capture.yaml
-```
-
-Screenshots saved to `claude-screenshots/`:
-- Feed screen (scrolled states)
-- Section navigation
-- Article detail view
-- NTRL transparency view
-
-### Method 3: Direct Simulator Screenshots
-For ad-hoc verification when you need to see the current state.
-
-```bash
-# Boot simulator if needed
+# Boot simulator
 xcrun simctl boot "iPhone 17 Pro"
+open -a Simulator
 
-# Open NTRL app in Expo Go
+# Open app via Expo
 xcrun simctl openurl booted "exp://127.0.0.1:8081"
+sleep 10
 
-# Wait for app to load, then capture
-sleep 5
+# Capture screenshot
 xcrun simctl io booted screenshot /tmp/sim-screenshot.png
 ```
 
-Then read `/tmp/sim-screenshot.png` to view.
+**Note**: Maestro often has driver timeout issues. Playwright custom scripts are more reliable.
 
 ### When to Test
 
@@ -169,9 +218,17 @@ Always test UI after:
 | Screen | What to Check |
 |--------|---------------|
 | Feed | Titles are neutralized (no clickbait, urgency) |
-| Article Detail (Brief) | Summary is factual, calm |
-| Article Detail (Full) | Body text is neutralized |
-| NTRL View | Manipulative phrases are highlighted |
+| Article Detail (Brief) | `detail_brief` - coherent summary, factual |
+| Article Detail (Full) | `detail_full` - readable, not garbled, neutralized |
+| NTRL View (highlights ON) | `original_body` with yellow highlighted spans |
+
+## Console Logging (Debug)
+
+The frontend logs diagnostic info to console (visible in Expo dev tools or browser):
+- `[ArticleDetail] Transparency data received:` - spans and originalBody info
+- `[ArticleDetail] Detail content:` - brief/full lengths and previews
+- `[ArticleDetail] Navigating to NtrlView:` - what's being passed
+- `[NtrlView] Received data:` - what NtrlView component received
 
 ## Related Files
 - API backend: `../ntrl-api/`
