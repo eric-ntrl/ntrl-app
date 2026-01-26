@@ -136,10 +136,10 @@ function HighlightedText({
   }
 
   return (
-    <Text style={styles.articleText}>
+    <Text style={styles.articleText} testID="ntrl-view-text">
       {segments.map((segment, index) =>
         segment.highlighted ? (
-          <Text key={index} style={styles.highlightedSpan}>
+          <Text key={index} style={styles.highlightedSpan} testID={`highlight-span-${index}`}>
             {segment.text}
           </Text>
         ) : (
@@ -212,7 +212,7 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]} testID="ntrl-view-screen">
       <StatusBar
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
@@ -234,11 +234,21 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
 
         {hasContent ? (
           <>
-            {/* Highlights toggle */}
+            {/* Highlights toggle with count badge */}
             {hasChanges && (
-              <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>Show highlights</Text>
+              <View style={styles.toggleRow} testID="highlight-toggle-row">
+                <View style={styles.toggleLabelRow}>
+                  <Text style={styles.toggleLabel}>Show highlights</Text>
+                  {showHighlights && (
+                    <View style={styles.highlightBadge}>
+                      <Text style={styles.badgeText}>
+                        {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Switch
+                  testID="highlight-toggle"
                   value={showHighlights}
                   onValueChange={setShowHighlights}
                   trackColor={{ false: colors.divider, true: colors.accent }}
@@ -249,31 +259,43 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
             )}
 
             {/* Full article text with highlights */}
-            <View style={styles.articleSection}>
+            <View style={[
+              styles.articleSection,
+              hasChanges && !showHighlights && styles.articleSectionDimmed
+            ]}>
               <HighlightedText
                 text={fullOriginalText!}
                 transformations={transformations}
                 showHighlights={showHighlights}
                 styles={styles}
               />
+              {/* Indicator when highlights are hidden */}
+              {hasChanges && !showHighlights && (
+                <Text style={styles.highlightsHiddenHint}>
+                  Toggle "Show highlights" to see what was flagged
+                </Text>
+              )}
             </View>
 
             {/* Change categories */}
             {hasChanges && <ChangeCategories transformations={transformations} styles={styles} />}
 
-            {/* No changes notice */}
+            {/* Clean article notice */}
             {!hasChanges && (
-              <View style={styles.noChangesNotice}>
-                <Text style={styles.noChangesText}>No changes were needed for this article.</Text>
+              <View style={styles.cleanArticle}>
+                <Text style={styles.cleanText}>No manipulation detected</Text>
+                <Text style={styles.cleanSubtext}>
+                  This article appears to be written in neutral language.
+                </Text>
               </View>
             )}
           </>
         ) : (
-          /* Empty state */
+          /* Original text unavailable */
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No changes to show.</Text>
+            <Text style={styles.emptyText}>Original text unavailable</Text>
             <Text style={styles.emptySubtext}>
-              The full article text is not available for verification.
+              The original article text has expired from storage.
             </Text>
           </View>
         )}
@@ -394,15 +416,35 @@ function createStyles(theme: Theme) {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
     },
+    toggleLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+    },
     toggleLabel: {
       fontSize: 14,
       fontWeight: '500',
       color: colors.textSecondary,
     },
+    highlightBadge: {
+      backgroundColor: colors.highlight,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: 4,
+    },
+    badgeText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
 
     // Article section
     articleSection: {
       marginBottom: spacing.xxl,
+    },
+    articleSectionDimmed: {
+      opacity: 0.7,
     },
     articleText: {
       fontSize: 16,
@@ -413,6 +455,14 @@ function createStyles(theme: Theme) {
     highlightedSpan: {
       backgroundColor: colors.highlight,
       borderRadius: 2,
+    },
+    highlightsHiddenHint: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+      fontStyle: 'italic',
+      marginTop: spacing.md,
+      textAlign: 'center',
     },
 
     // Categories section
@@ -450,17 +500,24 @@ function createStyles(theme: Theme) {
       color: colors.textMuted,
     },
 
-    // No changes notice
-    noChangesNotice: {
+    // Clean article notice
+    cleanArticle: {
       backgroundColor: colors.surface,
       borderRadius: 8,
       paddingVertical: spacing.lg,
       paddingHorizontal: spacing.lg,
       marginBottom: spacing.xl,
+      alignItems: 'center',
     },
-    noChangesText: {
-      fontSize: 14,
-      fontWeight: '500',
+    cleanText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    cleanSubtext: {
+      fontSize: 13,
+      fontWeight: '400',
       color: colors.textMuted,
       textAlign: 'center',
     },
