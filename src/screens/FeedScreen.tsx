@@ -17,6 +17,7 @@ import { getPreferences } from '../storage/storageService';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
+import { formatTimeAgo } from '../utils/dateFormatters';
 import type { Item, Section, Brief } from '../types';
 import type { FeedScreenProps } from '../navigation/types';
 
@@ -57,24 +58,6 @@ function formatHeaderDate(date: Date): string {
   });
 }
 
-/**
- * Format relative time consistently
- * Only for items within 24h window
- */
-function formatRelativeTime(dateString: string, now: Date): string {
-  // Ensure UTC parsing - API returns UTC timestamps without 'Z' suffix
-  const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
-  const date = new Date(utcString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  // Should not reach here due to 24h filter, but fallback
-  return 'Today';
-}
 
 function Header({
   date,
@@ -220,6 +203,12 @@ function ErrorState({
   );
 }
 
+/**
+ * Displays the main daily news brief as a sectioned feed.
+ * - Fetches and caches the brief from the API, with pull-to-refresh support
+ * - Filters sections client-side based on user topic preferences
+ * - Navigates to ArticleDetail, Search, or Profile on user interaction
+ */
 export default function FeedScreen({ navigation }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
@@ -301,7 +290,7 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
       return <EndOfFeed styles={styles} />;
     }
 
-    const timeLabel = formatRelativeTime(item.item.published_at, now);
+    const timeLabel = formatTimeAgo(item.item.published_at, now);
     return (
       <ArticleCard
         item={item.item}

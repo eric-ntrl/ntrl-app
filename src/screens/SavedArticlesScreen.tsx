@@ -15,31 +15,13 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { getSavedArticles, removeSavedArticle } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
+import { formatTimeAgo } from '../utils/dateFormatters';
 import { LIMITS } from '../constants';
 import type { SavedArticle } from '../storage/types';
 import type { Item } from '../types';
 import type { SavedArticlesScreenProps } from '../navigation/types';
 
 const PAGE_SIZE = LIMITS.PAGE_SIZE;
-
-/**
- * Format relative time for saved articles
- */
-function formatSavedTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function BackButton({
   onPress,
@@ -90,7 +72,7 @@ function ArticleCard({
   onRemove: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const timeLabel = formatSavedTime(savedAt);
+  const timeLabel = formatTimeAgo(savedAt);
   const headline = decodeHtmlEntities(item.headline);
   const summary = decodeHtmlEntities(item.summary);
 
@@ -138,6 +120,12 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
   );
 }
 
+/**
+ * Displays the user's saved articles in a paginated list.
+ * - Loads saved articles from local storage on focus, with pull-to-refresh
+ * - Supports long-press to remove a saved article
+ * - Navigates to ArticleDetail on tap
+ */
 export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();

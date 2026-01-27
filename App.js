@@ -17,6 +17,33 @@ import SourceTransparencyScreen from './src/screens/SourceTransparencyScreen';
 
 const Stack = createNativeStackNavigator();
 
+/**
+ * Wraps a screen component with ErrorBoundary so that errors in individual
+ * screens are isolated and don't crash the entire app. The user sees a
+ * "Try Again" fallback scoped to the failing screen only.
+ */
+function withScreenErrorBoundary(ScreenComponent) {
+  const WrappedScreen = (props) => (
+    <ErrorBoundary>
+      <ScreenComponent {...props} />
+    </ErrorBoundary>
+  );
+  WrappedScreen.displayName = `withScreenErrorBoundary(${ScreenComponent.displayName || ScreenComponent.name || 'Component'})`;
+  return WrappedScreen;
+}
+
+// Hoist wrapped screens to module scope so component references are stable
+// and don't cause unnecessary remounts on re-render.
+const SafeFeedScreen = withScreenErrorBoundary(FeedScreen);
+const SafeArticleDetailScreen = withScreenErrorBoundary(ArticleDetailScreen);
+const SafeAboutScreen = withScreenErrorBoundary(AboutScreen);
+const SafeProfileScreen = withScreenErrorBoundary(ProfileScreen);
+const SafeSavedArticlesScreen = withScreenErrorBoundary(SavedArticlesScreen);
+const SafeHistoryScreen = withScreenErrorBoundary(HistoryScreen);
+const SafeSearchScreen = withScreenErrorBoundary(SearchScreen);
+const SafeNtrlViewScreen = withScreenErrorBoundary(NtrlViewScreen);
+const SafeSourceTransparencyScreen = withScreenErrorBoundary(SourceTransparencyScreen);
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -24,15 +51,15 @@ export default function App() {
         <SafeAreaProvider>
           <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Feed" component={FeedScreen} />
-              <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
-              <Stack.Screen name="About" component={AboutScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen name="SavedArticles" component={SavedArticlesScreen} />
-              <Stack.Screen name="History" component={HistoryScreen} />
-              <Stack.Screen name="Search" component={SearchScreen} />
-              <Stack.Screen name="NtrlView" component={NtrlViewScreen} />
-              <Stack.Screen name="SourceTransparency" component={SourceTransparencyScreen} />
+              <Stack.Screen name="Feed" component={SafeFeedScreen} />
+              <Stack.Screen name="ArticleDetail" component={SafeArticleDetailScreen} />
+              <Stack.Screen name="About" component={SafeAboutScreen} />
+              <Stack.Screen name="Profile" component={SafeProfileScreen} />
+              <Stack.Screen name="SavedArticles" component={SafeSavedArticlesScreen} />
+              <Stack.Screen name="History" component={SafeHistoryScreen} />
+              <Stack.Screen name="Search" component={SafeSearchScreen} />
+              <Stack.Screen name="NtrlView" component={SafeNtrlViewScreen} />
+              <Stack.Screen name="SourceTransparency" component={SafeSourceTransparencyScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaProvider>

@@ -271,6 +271,15 @@ function HighlightLegend({
   );
 }
 
+/**
+ * Displays the original article text with inline manipulation highlights.
+ * - Highlights flagged spans using category-specific colors (emotional, urgency, etc.)
+ * - Provides a toggle to show/hide highlights and a collapsible color legend
+ * - Shows a summary of changes by manipulation type
+ * @param route.params.item - The feed Item for context (headline, source)
+ * @param route.params.fullOriginalText - The original article body text
+ * @param route.params.transformations - Array of detected manipulation spans
+ */
 export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
@@ -280,12 +289,14 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
   const { item, fullOriginalText, transformations = [] } = route.params;
 
   // Debug logging
-  console.log('[NtrlView] Received data:', {
-    itemId: item.id,
-    fullOriginalTextLength: fullOriginalText?.length || 0,
-    transformationsCount: transformations.length,
-    transformations: transformations.slice(0, 3).map(t => ({ start: t.start, end: t.end, original: t.original?.substring(0, 30) })),
-  });
+  if (__DEV__) {
+    console.log('[NtrlView] Received data:', {
+      itemId: item.id,
+      fullOriginalTextLength: fullOriginalText?.length || 0,
+      transformationsCount: transformations.length,
+      transformations: transformations.slice(0, 3).map(t => ({ start: t.start, end: t.end, original: t.original?.substring(0, 30) })),
+    });
+  }
 
   const [showHighlights, setShowHighlights] = useState(true);
   const [showLegend, setShowLegend] = useState(false);

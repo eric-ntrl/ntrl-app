@@ -196,6 +196,12 @@ function ColorModeOption({
   );
 }
 
+/**
+ * Displays user settings and preferences for the NTRL app.
+ * - Allows toggling feed topic categories, text size, and light/dark appearance
+ * - Provides navigation to Saved Articles, Reading History, and About
+ * - Persists preferences to SecureStore; changes take effect on next feed load
+ */
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, textSize, setTextSize, colorMode, colorModePreference, setColorMode } = useTheme();

@@ -278,6 +278,13 @@ function SourceUnavailableModal({
   );
 }
 
+/**
+ * Displays a single article with Brief/Full content tabs and footer actions.
+ * - Toggles between a short summary (Brief) and the full neutralized text (Full)
+ * - Fetches transparency data for the ntrl view link
+ * - Supports save/unsave, native share, copy link, and external source viewing
+ * @param route.params.item - The feed Item object to display
+ */
 export default function ArticleDetailScreen({ route, navigation }: ArticleDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
@@ -301,15 +308,17 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
 
   // Debug logging for detail content
   useEffect(() => {
-    console.log('[ArticleDetail] Detail content:', {
-      itemId: item.id,
-      detailBriefLength: item.detail.brief?.length || 0,
-      detailBriefPreview: item.detail.brief?.substring(0, 100) || '(none)',
-      detailFullLength: item.detail.full?.length || 0,
-      detailFullPreview: item.detail.full?.substring(0, 100) || '(none)',
-      disclosure: item.detail.disclosure,
-      hasManipulative: item.has_manipulative_content,
-    });
+    if (__DEV__) {
+      console.log('[ArticleDetail] Detail content:', {
+        itemId: item.id,
+        detailBriefLength: item.detail.brief?.length || 0,
+        detailBriefPreview: item.detail.brief?.substring(0, 100) || '(none)',
+        detailFullLength: item.detail.full?.length || 0,
+        detailFullPreview: item.detail.full?.substring(0, 100) || '(none)',
+        disclosure: item.detail.disclosure,
+        hasManipulative: item.has_manipulative_content,
+      });
+    }
   }, [item.id, item.detail]);
   const [isSaved, setIsSaved] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -340,17 +349,19 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     fetchTransparency(item.id)
       .then((result) => {
         // Debug logging for diagnostic purposes
-        console.log('[ArticleDetail] Transparency data received:', {
-          itemId: item.id,
-          originalBodyLength: result.originalBody?.length || 0,
-          originalBodyPreview: result.originalBody?.substring(0, 100) || '(none)',
-          spanCount: result.spans.length,
-          spans: result.spans.slice(0, 3).map(s => ({
-            start: s.start_char,
-            end: s.end_char,
-            text: s.original_text?.substring(0, 30),
-          })),
-        });
+        if (__DEV__) {
+          console.log('[ArticleDetail] Transparency data received:', {
+            itemId: item.id,
+            originalBodyLength: result.originalBody?.length || 0,
+            originalBodyPreview: result.originalBody?.substring(0, 100) || '(none)',
+            spanCount: result.spans.length,
+            spans: result.spans.slice(0, 3).map(s => ({
+              start: s.start_char,
+              end: s.end_char,
+              text: s.original_text?.substring(0, 30),
+            })),
+          });
+        }
 
         const transformations = mapSpansToTransformations(result.spans);
         setBackendTransformations(transformations);
@@ -516,11 +527,13 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
               if (transparencyLoading) return;
 
               // Debug logging before navigation
-              console.log('[ArticleDetail] Navigating to NtrlView with:', {
-                itemId: item.id,
-                fullOriginalTextLength: originalBodyText?.length || 0,
-                transformationsCount: backendTransformations.length,
-              });
+              if (__DEV__) {
+                console.log('[ArticleDetail] Navigating to NtrlView with:', {
+                  itemId: item.id,
+                  fullOriginalTextLength: originalBodyText?.length || 0,
+                  transformationsCount: backendTransformations.length,
+                });
+              }
 
               navigation.navigate('NtrlView', {
                 item,

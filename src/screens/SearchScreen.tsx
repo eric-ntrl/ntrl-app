@@ -197,6 +197,12 @@ function EmptyResults({
   );
 }
 
+/**
+ * Provides client-side search across the current daily brief articles.
+ * - Filters articles by matching query against headlines and summaries
+ * - Maintains and displays recent search history with remove support
+ * - Navigates to ArticleDetail when a result is tapped
+ */
 export default function SearchScreen({ navigation }: SearchScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();

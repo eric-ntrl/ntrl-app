@@ -15,31 +15,13 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { getHistory, clearHistory } from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
+import { formatTimeAgo } from '../utils/dateFormatters';
 import { LIMITS } from '../constants';
 import type { HistoryEntry } from '../storage/types';
 import type { Item } from '../types';
 import type { HistoryScreenProps } from '../navigation/types';
 
 const PAGE_SIZE = LIMITS.PAGE_SIZE;
-
-/**
- * Format relative time for history entries
- */
-function formatViewedTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function BackButton({
   onPress,
@@ -116,7 +98,7 @@ function ArticleCard({
   onPress: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const timeLabel = formatViewedTime(viewedAt);
+  const timeLabel = formatTimeAgo(viewedAt);
   const headline = decodeHtmlEntities(item.headline);
   const summary = decodeHtmlEntities(item.summary);
 
@@ -161,6 +143,12 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
   );
 }
 
+/**
+ * Displays the user's reading history in a paginated list.
+ * - Loads history entries from local storage on focus, with pull-to-refresh
+ * - Supports clearing all history via a header button
+ * - Navigates to ArticleDetail on tap
+ */
 export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();

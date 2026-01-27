@@ -71,6 +71,13 @@ function SourceUnavailableModal({
   );
 }
 
+/**
+ * Displays transparency information about how NTRL processes a given source.
+ * - Explains what NTRL does and does not do with source content
+ * - Provides an external link to visit the original source website
+ * @param route.params.sourceName - Display name of the news source
+ * @param route.params.sourceUrl - URL to the original article or source site
+ */
 export default function SourceTransparencyScreen({
   route,
   navigation,

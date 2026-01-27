@@ -58,6 +58,11 @@ function Section({
   );
 }
 
+/**
+ * Displays static informational content about the NTRL app.
+ * - Explains what NTRL does and does not do, what it removes vs. preserves
+ * - Describes the content processing pipeline at a high level
+ */
 export default function AboutScreen({ navigation }: AboutScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
