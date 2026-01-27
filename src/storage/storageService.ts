@@ -144,16 +144,27 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 /**
  * Migrate topic preferences from old format to new:
  * - Rename 'tech' → 'technology'
- * - Add new categories (enabled by default for existing users)
+ * - Add new categories (only when migrating from old 5-topic format)
+ *
+ * Returns null if no migration is needed (avoids re-adding user-deselected topics).
  */
-function migrateTopics(topics: string[]): string[] {
+function migrateTopics(topics: string[]): string[] | null {
+  const hadTech = topics.includes('tech');
   // Rename tech → technology
   let migrated = topics.map((t) => (t === 'tech' ? 'technology' : t));
-  // Add new categories (enabled by default for existing users)
-  for (const t of ALL_TOPICS) {
-    if (!migrated.includes(t)) {
-      migrated.push(t);
+
+  // Only add new categories if we detected an old-format preference (had 'tech')
+  if (hadTech) {
+    for (const t of ALL_TOPICS) {
+      if (!migrated.includes(t)) {
+        migrated.push(t);
+      }
     }
+  }
+
+  // Return null if nothing changed (no migration needed)
+  if (migrated.length === topics.length && migrated.every((t, i) => t === topics[i])) {
+    return null;
   }
   return migrated;
 }
@@ -194,10 +205,9 @@ export async function getPreferences(): Promise<UserPreferences> {
     const prefs = await getSecureJSON<UserPreferences>(SECURE_KEYS.PREFERENCES);
     if (!prefs) return DEFAULT_PREFERENCES;
 
-    // Migrate topics (tech → technology, add new categories)
+    // Migrate topics if needed (tech → technology rename)
     const migratedTopics = migrateTopics(prefs.topics);
-    if (migratedTopics.length !== prefs.topics.length ||
-        migratedTopics.some((t, i) => t !== prefs.topics[i])) {
+    if (migratedTopics) {
       // Topics were migrated — persist the change
       const updated = { ...prefs, topics: migratedTopics };
       await setSecureJSON(SECURE_KEYS.PREFERENCES, updated);
