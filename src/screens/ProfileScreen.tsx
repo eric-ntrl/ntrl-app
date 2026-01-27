@@ -7,13 +7,18 @@ import type { Theme, TextSizePreference, ColorModePreference } from '../theme/ty
 import { getPreferences, updatePreferences } from '../storage/storageService';
 import type { ProfileScreenProps } from '../navigation/types';
 
-// Topic options matching API sections
+// Topic options matching API feed categories
 const TOPICS = [
   { key: 'world', label: 'World' },
-  { key: 'us', label: 'US' },
+  { key: 'us', label: 'U.S.' },
   { key: 'local', label: 'Local' },
   { key: 'business', label: 'Business' },
-  { key: 'tech', label: 'Tech' },
+  { key: 'technology', label: 'Technology' },
+  { key: 'science', label: 'Science' },
+  { key: 'health', label: 'Health' },
+  { key: 'environment', label: 'Environment' },
+  { key: 'sports', label: 'Sports' },
+  { key: 'culture', label: 'Culture' },
 ];
 
 // Text size options
@@ -335,7 +340,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>Topic filtering coming in a future update</Text>
+          <Text style={styles.cardHint}>Select topics to customize your feed</Text>
         </View>
 
         {/* Share NTRL Section */}

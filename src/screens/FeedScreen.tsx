@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { FeedSkeleton } from '../components/skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchBriefWithCache } from '../api';
+import { getPreferences } from '../storage/storageService';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
@@ -231,6 +233,7 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Triggers timestamp recalculation
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
   const loadBrief = useCallback(async (isRefresh = false) => {
     try {
@@ -261,16 +264,33 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
     loadBrief();
   }, [loadBrief]);
 
+  // Load topic preferences when screen gains focus (catches changes from ProfileScreen)
+  useFocusEffect(
+    useCallback(() => {
+      getPreferences().then((prefs) => setSelectedTopics(prefs.topics));
+    }, [])
+  );
+
   const onRefresh = useCallback(() => {
     loadBrief(true);
   }, [loadBrief]);
+
+  // Filter brief sections by user's selected topics
+  const filteredBrief = useMemo(() => {
+    if (!brief) return null;
+    if (selectedTopics.length === 0) return brief;
+    return {
+      ...brief,
+      sections: brief.sections.filter((s) => selectedTopics.includes(s.key)),
+    };
+  }, [brief, selectedTopics]);
 
   // Use current time as anchor for all calculations
   // refreshKey dependency ensures timestamps update on pull-to-refresh
   const now = useMemo(() => new Date(), [refreshKey]);
   const headerDate = formatHeaderDate(now);
   // Note: 24h filtering is now done server-side via ?hours=24 parameter
-  const rows = useMemo(() => (brief ? flatten(brief) : []), [brief]);
+  const rows = useMemo(() => (filteredBrief ? flatten(filteredBrief) : []), [filteredBrief]);
 
   const renderItem = ({ item, index }: { item: Row; index: number }) => {
     if (item.type === 'section') {

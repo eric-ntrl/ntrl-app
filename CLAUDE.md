@@ -13,10 +13,15 @@ A "neutral news" app that strips manipulative language from news articles and pr
 ```
 src/
 ├── screens/          # App screens
-│   ├── FeedScreen.tsx           # Main daily brief
+│   ├── FeedScreen.tsx           # Main daily brief (filters by user topic preferences)
 │   ├── ArticleDetailScreen.tsx  # Full article view
+│   ├── ProfileScreen.tsx        # Settings: topics, text size, appearance
 │   ├── NtrlViewScreen.tsx       # Transparency view
 │   └── AboutScreen.tsx          # App info
+├── storage/          # Local storage
+│   ├── storageService.ts        # AsyncStorage + SecureStore helpers
+│   ├── secureStorage.ts         # Expo SecureStore wrapper
+│   └── types.ts                 # Storage type definitions
 ├── services/         # Business logic
 │   └── detailSummary.ts         # Summary composition helpers
 ├── api.ts            # API client (calls ntrl-api backend)
@@ -90,15 +95,48 @@ Backend: `ntrl-api` (FastAPI/Python)
 - **Backend (ntrl-api)** handles:
   - Article ingestion from RSS sources
   - Content extraction and storage (S3)
+  - Article classification (LLM → 20 domains → 10 feed categories)
   - Neutralization via LLM (4 providers + mock fallback)
   - Transparency span generation
-  - Brief assembly
+  - Brief assembly (grouped by 10 feed categories)
 
 - **Frontend (ntrl-app)** handles:
   - UI presentation only
   - API data consumption
   - Theme/styling
   - Navigation
+  - User topic preferences (client-side filtering of brief sections)
+
+## Feed Categories & Topic Selection (Jan 2026)
+
+### 10 Feed Categories
+
+The brief is organized into 10 user-facing categories (classified by LLM on the backend):
+
+| Key | Display Name |
+|-----|-------------|
+| `world` | World |
+| `us` | U.S. |
+| `local` | Local |
+| `business` | Business |
+| `technology` | Technology |
+| `science` | Science |
+| `health` | Health |
+| `environment` | Environment |
+| `sports` | Sports |
+| `culture` | Culture |
+
+### User Topic Selection
+
+Users can toggle categories on/off in ProfileScreen. Filtering is **client-side** — the API always returns all categories, and `FeedScreen` filters `brief.sections` by the user's `selectedTopics` preference.
+
+**How it works:**
+1. ProfileScreen saves topic preferences to SecureStore via `updatePreferences()`
+2. FeedScreen loads preferences via `useFocusEffect` → `getPreferences()`
+3. `filteredBrief` memo filters `brief.sections` by `selectedTopics`
+4. All 10 topics are enabled by default for new users
+
+**Preference migration:** Existing users who had the old 5-topic format (`tech` key) are auto-migrated: `tech` → `technology`, and 5 new categories are auto-enabled. See `migrateTopics()` in `storageService.ts`.
 
 ## Commands
 ```bash

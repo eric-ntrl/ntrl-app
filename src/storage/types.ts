@@ -20,7 +20,7 @@ export type TextSizePreference = 'small' | 'medium' | 'large';
 export type ColorModePreference = 'light' | 'dark' | 'system';
 
 export type UserPreferences = {
-  topics: string[]; // Selected topic keys: 'world', 'us', 'local', 'business', 'tech'
+  topics: string[]; // Selected topic keys: 'world', 'us', 'local', 'business', 'technology', 'science', 'health', 'environment', 'sports', 'culture'
   textSize: TextSizePreference; // Reading text size preference
   colorMode: ColorModePreference; // Light/dark/system appearance
 };

@@ -130,11 +130,33 @@ export async function clearHistory(): Promise<void> {
 // User Preferences (Stored in SecureStore)
 // ============================================
 
+const ALL_TOPICS = [
+  'world', 'us', 'local', 'business', 'technology',
+  'science', 'health', 'environment', 'sports', 'culture',
+];
+
 const DEFAULT_PREFERENCES: UserPreferences = {
-  topics: ['world', 'us', 'local', 'business', 'tech'], // All enabled by default
+  topics: [...ALL_TOPICS], // All 10 categories enabled by default
   textSize: 'medium', // Default reading text size
   colorMode: 'system', // Follow device appearance by default
 };
+
+/**
+ * Migrate topic preferences from old format to new:
+ * - Rename 'tech' → 'technology'
+ * - Add new categories (enabled by default for existing users)
+ */
+function migrateTopics(topics: string[]): string[] {
+  // Rename tech → technology
+  let migrated = topics.map((t) => (t === 'tech' ? 'technology' : t));
+  // Add new categories (enabled by default for existing users)
+  for (const t of ALL_TOPICS) {
+    if (!migrated.includes(t)) {
+      migrated.push(t);
+    }
+  }
+  return migrated;
+}
 
 /**
  * Migrates preferences from AsyncStorage to SecureStore (one-time migration).
@@ -171,6 +193,17 @@ export async function getPreferences(): Promise<UserPreferences> {
     // Get from SecureStore
     const prefs = await getSecureJSON<UserPreferences>(SECURE_KEYS.PREFERENCES);
     if (!prefs) return DEFAULT_PREFERENCES;
+
+    // Migrate topics (tech → technology, add new categories)
+    const migratedTopics = migrateTopics(prefs.topics);
+    if (migratedTopics.length !== prefs.topics.length ||
+        migratedTopics.some((t, i) => t !== prefs.topics[i])) {
+      // Topics were migrated — persist the change
+      const updated = { ...prefs, topics: migratedTopics };
+      await setSecureJSON(SECURE_KEYS.PREFERENCES, updated);
+      return updated;
+    }
+
     return prefs;
   } catch (error) {
     console.warn('[Storage] Failed to get preferences:', error);
