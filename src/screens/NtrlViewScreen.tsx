@@ -221,6 +221,56 @@ function ChangeCategories({
   );
 }
 
+/**
+ * Legend item data for highlight colors
+ */
+const LEGEND_ITEMS = [
+  { label: 'Emotional language', colorKey: 'highlightEmotional' as const },
+  { label: 'Urgency/hype', colorKey: 'highlightUrgency' as const },
+  { label: 'Editorial opinion', colorKey: 'highlightEditorial' as const },
+  { label: 'Clickbait/selling', colorKey: 'highlightClickbait' as const },
+];
+
+/**
+ * Collapsible legend explaining highlight colors
+ */
+function HighlightLegend({
+  expanded,
+  onToggle,
+  styles,
+  colors,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: ThemeColors;
+}) {
+  return (
+    <View style={styles.legendContainer}>
+      <Pressable
+        onPress={onToggle}
+        style={({ pressed }) => [styles.legendToggle, pressed && styles.legendTogglePressed]}
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? 'Hide color legend' : 'Show color legend'}
+      >
+        <Text style={styles.legendToggleText}>
+          {expanded ? '▾' : '▸'} What do colors mean?
+        </Text>
+      </Pressable>
+      {expanded && (
+        <View style={styles.legendContent}>
+          {LEGEND_ITEMS.map((item) => (
+            <View key={item.colorKey} style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: colors[item.colorKey] }]} />
+              <Text style={styles.legendLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
@@ -238,6 +288,7 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
   });
 
   const [showHighlights, setShowHighlights] = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
   const [showSourceError, setShowSourceError] = useState(false);
 
   const hasContent = !!fullOriginalText;
@@ -276,26 +327,36 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
           <>
             {/* Highlights toggle with count badge */}
             {hasChanges && (
-              <View style={styles.toggleRow} testID="highlight-toggle-row">
-                <View style={styles.toggleLabelRow}>
-                  <Text style={styles.toggleLabel}>Show highlights</Text>
-                  {showHighlights && (
-                    <View style={styles.highlightBadge}>
-                      <Text style={styles.badgeText}>
-                        {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
-                      </Text>
-                    </View>
-                  )}
+              <>
+                <View style={styles.toggleRow} testID="highlight-toggle-row">
+                  <View style={styles.toggleLabelRow}>
+                    <Text style={styles.toggleLabel}>Show highlights</Text>
+                    {showHighlights && (
+                      <View style={styles.highlightBadge}>
+                        <Text style={styles.badgeText}>
+                          {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Switch
+                    testID="highlight-toggle"
+                    value={showHighlights}
+                    onValueChange={setShowHighlights}
+                    trackColor={{ false: colors.divider, true: colors.accent }}
+                    thumbColor={colors.background}
+                    ios_backgroundColor={colors.divider}
+                  />
                 </View>
-                <Switch
-                  testID="highlight-toggle"
-                  value={showHighlights}
-                  onValueChange={setShowHighlights}
-                  trackColor={{ false: colors.divider, true: colors.accent }}
-                  thumbColor={colors.background}
-                  ios_backgroundColor={colors.divider}
-                />
-              </View>
+                {showHighlights && (
+                  <HighlightLegend
+                    expanded={showLegend}
+                    onToggle={() => setShowLegend(!showLegend)}
+                    styles={styles}
+                    colors={colors}
+                  />
+                )}
+              </>
             )}
 
             {/* Full article text with highlights */}
@@ -478,6 +539,42 @@ function createStyles(theme: Theme) {
       fontSize: 12,
       fontWeight: '500',
       color: colors.textPrimary,
+    },
+
+    // Highlight legend
+    legendContainer: {
+      marginBottom: spacing.lg,
+    },
+    legendToggle: {
+      paddingVertical: spacing.sm,
+    },
+    legendTogglePressed: {
+      opacity: 0.5,
+    },
+    legendToggleText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
+    legendContent: {
+      marginTop: spacing.sm,
+      paddingLeft: spacing.md,
+      gap: spacing.xs,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    legendSwatch: {
+      width: 14,
+      height: 14,
+      borderRadius: 2,
+    },
+    legendLabel: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textSecondary,
     },
 
     // Article section
