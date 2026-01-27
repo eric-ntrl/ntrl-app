@@ -138,6 +138,8 @@ Users can toggle categories on/off in ProfileScreen. Filtering is **client-side*
 
 **Preference migration:** Existing users who had the old 5-topic format (`tech` key) are auto-migrated: `tech` → `technology`, and 5 new categories are auto-enabled. See `migrateTopics()` in `storageService.ts`.
 
+**Important:** `migrateTopics()` only runs when the `tech` key is detected (actual old-format data). It does NOT re-add topics on every `getPreferences()` call — this was a bug that was fixed. If you modify migration logic, ensure it doesn't override user deselections.
+
 ## Commands
 ```bash
 npm start          # Start Expo dev server
