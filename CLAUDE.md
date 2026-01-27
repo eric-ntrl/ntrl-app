@@ -139,6 +139,16 @@ type SpanReason = 'clickbait' | 'urgency_inflation' | 'emotional_trigger'
   | 'selling' | 'agenda_signaling' | 'rhetorical_framing' | 'editorial_voice';
 ```
 
+### Highlight Legend (Jan 2026)
+
+The ntrl view includes a collapsible legend below the toggle row explaining what each highlight color means:
+- Collapsed by default ("What do colors mean?")
+- Shows 4 color swatches with human-readable labels: Emotional language, Urgency/hype, Editorial opinion, Clickbait/selling
+- Only visible when highlights are toggled ON
+- Component: `HighlightLegend` in `NtrlViewScreen.tsx`
+
+The badge ("N phrases flagged") also hides when the toggle is OFF.
+
 ## UI Self-Testing (CRITICAL for Claude)
 
 **Claude MUST test UI changes visually before asking the user to verify.**
@@ -240,7 +250,7 @@ Always test UI after:
 | Feed | Titles are neutralized (no clickbait, urgency) |
 | Article Detail (Brief) | `detail_brief` - coherent summary, factual |
 | Article Detail (Full) | `detail_full` - readable, not garbled, neutralized |
-| NTRL View (highlights ON) | `original_body` with yellow highlighted spans |
+| NTRL View (highlights ON) | `original_body` with category-colored highlights, legend, badge |
 
 ## Console Logging (Debug)
 
