@@ -230,6 +230,61 @@ The frontend logs diagnostic info to console (visible in Expo dev tools or brows
 - `[ArticleDetail] Navigating to NtrlView:` - what's being passed
 - `[NtrlView] Received data:` - what NtrlView component received
 
+## Test IDs Available
+
+The following `testID` attributes exist for testing:
+- `testID="ntrl-view-screen"` - The ntrl view container
+- `testID="ntrl-view-text"` - The article text in ntrl view
+- `testID="highlight-span-{index}"` - Individual highlighted spans (0, 1, 2, ...)
+- `testID="highlight-toggle"` - The highlight toggle switch
+- `testID="highlight-toggle-row"` - The toggle row container
+
+**Note:** Feed items do NOT have `testID="article-item"`. Use text-based navigation instead:
+```javascript
+// Find article by title text
+await page.getByText('Article Title', { exact: false }).first().click();
+```
+
+## Highlight Validation Script
+
+Quick script to capture ntrl view and verify highlights:
+
+```javascript
+// capture-highlights.cjs
+const { chromium } = require('@playwright/test');
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto('http://localhost:8081');
+  await page.waitForTimeout(4000);
+
+  // Navigate to article by text
+  await page.getByText('Harry Styles', { exact: false }).first().click();
+  await page.waitForTimeout(2000);
+
+  // Go to ntrl view
+  await page.getByText('ntrl view').click();
+  await page.waitForTimeout(3000);
+
+  // Capture screenshot
+  await page.screenshot({ path: '/tmp/ntrl-view.png' });
+
+  // Count and log highlights
+  const highlights = page.locator('[data-testid^="highlight-span-"]');
+  const count = await highlights.count();
+  console.log(`Highlights found: ${count}`);
+
+  for (let i = 0; i < count; i++) {
+    const text = await highlights.nth(i).textContent();
+    console.log(`  ${i}: "${text}"`);
+  }
+
+  await browser.close();
+})();
+```
+
+Run with: `node capture-highlights.cjs`
+
 ## Related Files
 - API backend: `../ntrl-api/`
 - Design specs: `../../Screen Mocks/`
