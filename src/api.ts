@@ -390,13 +390,22 @@ export type TransparencyFetchResult = {
  * ```
  */
 export async function fetchTransparency(storyId: string): Promise<TransparencyFetchResult> {
-  const response = await fetchWithRetry(`${API_BASE_URL}/v1/stories/${storyId}/transparency`);
+  const response = await fetchWithRetry(
+    `${API_BASE_URL}/v1/stories/${storyId}/transparency`,
+    {},
+    1  // Only 1 retry (2 attempts max) — transparency is non-critical
+  );
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const data: ApiTransparencyResponse = await response.json();
+  const data: ApiTransparencyResponse = await Promise.race([
+    response.json(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Body parse timeout')), 10000)
+    ),
+  ]);
   return {
     originalBody: data.original_body,
     originalBodyAvailable: data.original_body_available,
