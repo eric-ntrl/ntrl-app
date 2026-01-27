@@ -19,7 +19,7 @@ import { openExternalUrl } from '../utils/links';
 import { createFallbackSummary } from '../services/detailSummary';
 import { fetchTransparency } from '../api';
 import type { TransparencySpan } from '../types';
-import type { Transformation, TransformationType } from '../navigation/types';
+import type { Transformation, TransformationType, SpanReason } from '../navigation/types';
 import {
   isArticleSaved,
   saveArticle,
@@ -43,26 +43,41 @@ import ArticleBrief from '../components/ArticleBrief';
 type ViewMode = 'brief' | 'full';
 
 /**
- * Map API TransparencySpan action to app TransformationType
+ * Map API reason to app TransformationType for display
  */
-function mapActionToType(action: string): TransformationType {
-  const actionLower = action.toLowerCase();
-  if (actionLower.includes('urgency') || actionLower.includes('urgent')) {
+function mapReasonToType(reason: string): TransformationType {
+  const reasonLower = reason.toLowerCase();
+  if (reasonLower === 'urgency_inflation') {
     return 'urgency';
   }
-  if (actionLower.includes('emotion') || actionLower.includes('fear') || actionLower.includes('outrage')) {
+  if (reasonLower === 'emotional_trigger') {
     return 'emotional';
   }
-  if (actionLower.includes('clickbait') || actionLower.includes('click')) {
+  if (reasonLower === 'clickbait') {
     return 'clickbait';
   }
-  if (actionLower.includes('sensational') || actionLower.includes('exaggerat')) {
+  if (reasonLower === 'selling' || reasonLower === 'rhetorical_framing') {
     return 'sensational';
   }
-  if (actionLower.includes('opinion') || actionLower.includes('bias')) {
+  if (reasonLower === 'editorial_voice' || reasonLower === 'agenda_signaling') {
     return 'opinion';
   }
   return 'other';
+}
+
+/**
+ * Validate and cast reason string to SpanReason type
+ */
+function castToSpanReason(reason: string): SpanReason {
+  const validReasons: SpanReason[] = [
+    'clickbait', 'urgency_inflation', 'emotional_trigger',
+    'selling', 'agenda_signaling', 'rhetorical_framing', 'editorial_voice'
+  ];
+  const reasonLower = reason.toLowerCase() as SpanReason;
+  if (validReasons.includes(reasonLower)) {
+    return reasonLower;
+  }
+  return 'rhetorical_framing'; // Default fallback
 }
 
 /**
@@ -72,7 +87,8 @@ function mapSpansToTransformations(spans: TransparencySpan[]): Transformation[] 
   return spans.map((span) => ({
     start: span.start_char,
     end: span.end_char,
-    type: mapActionToType(span.action),
+    type: mapReasonToType(span.reason),
+    reason: castToSpanReason(span.reason),
     original: span.original_text,
     filtered: span.replacement_text || '',
   }));

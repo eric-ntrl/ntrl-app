@@ -5,7 +5,8 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
 import { openExternalUrl } from '../utils/links';
-import type { NtrlViewScreenProps, TransformationType, Transformation } from '../navigation/types';
+import type { NtrlViewScreenProps, TransformationType, Transformation, SpanReason } from '../navigation/types';
+import type { ThemeColors } from '../theme/types';
 
 /**
  * Get human-readable label for transformation type
@@ -25,6 +26,31 @@ function getTypeLabel(type: TransformationType): string {
     case 'other':
     default:
       return 'Other adjustments';
+  }
+}
+
+/**
+ * Get highlight color based on span reason
+ */
+function getHighlightColor(reason: SpanReason | undefined, colors: ThemeColors): string {
+  if (!reason) {
+    return colors.highlight; // Default gold/amber
+  }
+
+  switch (reason) {
+    case 'urgency_inflation':
+      return colors.highlightUrgency;
+    case 'emotional_trigger':
+      return colors.highlightEmotional;
+    case 'editorial_voice':
+    case 'agenda_signaling':
+      return colors.highlightEditorial;
+    case 'clickbait':
+    case 'selling':
+      return colors.highlightClickbait;
+    case 'rhetorical_framing':
+    default:
+      return colors.highlight; // Default gold/amber for general framing
   }
 }
 
@@ -83,11 +109,13 @@ function HighlightedText({
   transformations,
   showHighlights,
   styles,
+  colors,
 }: {
   text: string;
   transformations: Transformation[];
   showHighlights: boolean;
   styles: ReturnType<typeof createStyles>;
+  colors: ThemeColors;
 }) {
   if (!text) {
     return null;
@@ -100,8 +128,12 @@ function HighlightedText({
   // Sort transformations by start position
   const sorted = [...transformations].sort((a, b) => a.start - b.start);
 
-  // Build segments with highlights
-  const segments: Array<{ text: string; highlighted: boolean }> = [];
+  // Build segments with highlights and color info
+  const segments: Array<{
+    text: string;
+    highlighted: boolean;
+    highlightColor?: string;
+  }> = [];
   let currentPos = 0;
 
   for (const transform of sorted) {
@@ -118,11 +150,12 @@ function HighlightedText({
       });
     }
 
-    // Add highlighted segment
+    // Add highlighted segment with category-specific color
     const endPos = Math.min(transform.end, text.length);
     segments.push({
       text: text.substring(transform.start, endPos),
       highlighted: true,
+      highlightColor: getHighlightColor(transform.reason, colors),
     });
     currentPos = endPos;
   }
@@ -139,7 +172,14 @@ function HighlightedText({
     <Text style={styles.articleText} testID="ntrl-view-text">
       {segments.map((segment, index) =>
         segment.highlighted ? (
-          <Text key={index} style={styles.highlightedSpan} testID={`highlight-span-${index}`}>
+          <Text
+            key={index}
+            style={[
+              styles.highlightedSpan,
+              { backgroundColor: segment.highlightColor }
+            ]}
+            testID={`highlight-span-${index}`}
+          >
             {segment.text}
           </Text>
         ) : (
@@ -268,6 +308,7 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
                 transformations={transformations}
                 showHighlights={showHighlights}
                 styles={styles}
+                colors={colors}
               />
               {/* Indicator when highlights are hidden */}
               {hasChanges && !showHighlights && (

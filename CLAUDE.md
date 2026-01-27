@@ -119,6 +119,26 @@ npm run web        # Run in browser
 
 **Key insight**: Spans reference positions in `original_body`, not `detail_full`. The ntrl-view toggle controls highlight visibility, not text content.
 
+### Category-Specific Highlight Colors (Jan 2026)
+
+ntrl-view uses different highlight colors based on manipulation type:
+
+| Reason | Color | Light Mode | Dark Mode |
+|--------|-------|------------|-----------|
+| `urgency_inflation` | Dusty rose | `rgba(200, 120, 120, 0.35)` | `rgba(200, 120, 120, 0.30)` |
+| `emotional_trigger` | Slate blue | `rgba(130, 160, 200, 0.35)` | `rgba(130, 160, 200, 0.30)` |
+| `editorial_voice`, `agenda_signaling` | Lavender | `rgba(160, 130, 180, 0.35)` | `rgba(160, 130, 180, 0.30)` |
+| `clickbait`, `selling` | Amber/tan | `rgba(200, 160, 100, 0.35)` | `rgba(200, 160, 100, 0.30)` |
+| Default (rhetorical_framing, etc.) | Gold | `rgba(255, 200, 50, 0.50)` | `rgba(255, 200, 50, 0.40)` |
+
+Colors are muted to maintain "calm reading" aesthetic. All have similar saturation for visual harmony.
+
+**SpanReason type** (`navigation/types.ts`):
+```typescript
+type SpanReason = 'clickbait' | 'urgency_inflation' | 'emotional_trigger'
+  | 'selling' | 'agenda_signaling' | 'rhetorical_framing' | 'editorial_voice';
+```
+
 ## UI Self-Testing (CRITICAL for Claude)
 
 **Claude MUST test UI changes visually before asking the user to verify.**

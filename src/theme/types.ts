@@ -28,9 +28,15 @@ export interface ThemeColors {
   divider: string;
   dividerSubtle: string;
 
-  // Highlights (transparency view)
+  // Highlights (transparency view) - default/fallback
   highlight: string;
   highlightBorder: string;
+
+  // Category-specific highlights (muted, calm colors)
+  highlightUrgency: string;      // Muted dusty rose - urgency inflation
+  highlightEmotional: string;    // Muted slate blue - emotional triggers
+  highlightEditorial: string;    // Muted lavender - editorial voice
+  highlightClickbait: string;    // Muted amber/tan - clickbait
 
   // Interactive
   link: string;

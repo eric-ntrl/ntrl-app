@@ -18,12 +18,25 @@ export type TransformationType =
   | 'other';
 
 /**
+ * Span reason from the backend - maps to highlight colors
+ */
+export type SpanReason =
+  | 'clickbait'
+  | 'urgency_inflation'
+  | 'emotional_trigger'
+  | 'selling'
+  | 'agenda_signaling'
+  | 'rhetorical_framing'
+  | 'editorial_voice';
+
+/**
  * Transformation record showing what was changed.
  */
 export type Transformation = {
   start: number;
   end: number;
   type: TransformationType;
+  reason: SpanReason; // Backend reason for highlight color mapping
   original: string;
   filtered: string;
 };
