@@ -1,10 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Share } from 'react-native';
+
+function SettingsIcon({ color }: { color: string }) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}>
+      <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75 }} />
+      <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }} />
+      <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }} />
+    </View>
+  );
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import type { Theme, TextSizePreference, ColorModePreference } from '../theme/types';
+import type { Theme } from '../theme/types';
 import { getPreferences, updatePreferences } from '../storage/storageService';
+import { lightTap } from '../utils/haptics';
 import type { ProfileScreenProps } from '../navigation/types';
 
 // Topic options matching API feed categories
@@ -21,54 +32,30 @@ const TOPICS = [
   { key: 'culture', label: 'Culture' },
 ];
 
-// Text size options
-const TEXT_SIZE_OPTIONS: { key: TextSizePreference; label: string }[] = [
-  { key: 'small', label: 'Small' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'large', label: 'Large' },
-];
-
-// Color mode options
-const COLOR_MODE_OPTIONS: { key: ColorModePreference; label: string }[] = [
-  { key: 'light', label: 'Light' },
-  { key: 'dark', label: 'Dark' },
-  { key: 'system', label: 'System' },
-];
-
-function BackButton({
-  onPress,
-  styles,
-}: {
-  onPress: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-      hitSlop={12}
-      accessibilityLabel="Go back"
-      accessibilityRole="button"
-    >
-      <Text style={styles.backArrow}>‹</Text>
-    </Pressable>
-  );
-}
-
 function Header({
-  onBack,
+  onSettings,
   styles,
+  colors,
 }: {
-  onBack: () => void;
+  onSettings: () => void;
   styles: ReturnType<typeof createStyles>;
+  colors: Theme['colors'];
 }) {
   return (
     <View style={styles.header}>
-      <BackButton onPress={onBack} styles={styles} />
+      <View style={styles.headerLeft} />
       <View style={styles.headerCenter}>
-        <Text style={styles.headerBrand}>NTRL</Text>
+        <Text style={styles.headerBrand}>Profile</Text>
       </View>
-      <View style={styles.headerSpacer} />
+      <Pressable
+        style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
+        onPress={onSettings}
+        hitSlop={8}
+        accessibilityLabel="Settings"
+        accessibilityRole="button"
+      >
+        <SettingsIcon color={colors.textMuted} />
+      </Pressable>
     </View>
   );
 }
@@ -140,71 +127,22 @@ function TopicChip({
   );
 }
 
-function TextSizeOption({
-  label,
-  selected,
-  onSelect,
-  styles,
-}: {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.textSizeOption,
-        selected && styles.textSizeOptionSelected,
-        pressed && styles.textSizeOptionPressed,
-      ]}
-      onPress={onSelect}
-      accessibilityLabel={`${label} text size ${selected ? 'selected' : ''}`}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-    >
-      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function ColorModeOption({
-  label,
-  selected,
-  onSelect,
-  styles,
-}: {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.textSizeOption,
-        selected && styles.textSizeOptionSelected,
-        pressed && styles.textSizeOptionPressed,
-      ]}
-      onPress={onSelect}
-      accessibilityLabel={`${label} appearance ${selected ? 'selected' : ''}`}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-    >
-      <Text style={[styles.textSizeLabel, selected && styles.textSizeLabelSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 /**
- * Displays user settings and preferences for the NTRL app.
- * - Allows toggling feed topic categories, text size, and light/dark appearance
- * - Provides navigation to Saved Articles, Reading History, and About
- * - Persists preferences to SecureStore; changes take effect on next feed load
+ * ProfileScreen — user-facing content and preferences.
+ * Config (text size, appearance, account) moved to SettingsScreen.
+ * Gear icon in header navigates to Settings.
+ *
+ * Section order:
+ * 1. How NTRL Works
+ * 2. Reading History
+ * 3. Saved Articles
+ * 4. Topics
+ * 5. Share NTRL
+ * 6. About NTRL
  */
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
-  const { theme, textSize, setTextSize, colorMode, colorModePreference, setColorMode } = useTheme();
+  const { theme, colorMode } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -222,6 +160,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 
   const handleTopicToggle = async (topicKey: string) => {
+    lightTap();
     let newTopics: string[];
     if (selectedTopics.includes(topicKey)) {
       newTopics = selectedTopics.filter((t) => t !== topicKey);
@@ -230,14 +169,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
     setSelectedTopics(newTopics);
     await updatePreferences({ topics: newTopics });
-  };
-
-  const handleTextSizeChange = async (size: TextSizePreference) => {
-    await setTextSize(size);
-  };
-
-  const handleColorModeChange = async (mode: ColorModePreference) => {
-    await setColorMode(mode);
   };
 
   const handleInviteFriends = async () => {
@@ -257,84 +188,48 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header onBack={() => navigation.goBack()} styles={styles} />
+      <Header
+        onSettings={() => navigation.navigate('Settings')}
+        styles={styles}
+        colors={colors}
+      />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Account Section */}
-        <SectionHeader title="Account" styles={styles} />
+        {/* 1. How NTRL Works */}
+        <SectionHeader title="How NTRL Works" styles={styles} />
         <View style={styles.card}>
-          <Text style={styles.cardText}>Sign in to sync your preferences across devices</Text>
-          <Pressable
-            style={({ pressed }) => [styles.signInButton, pressed && styles.signInButtonPressed]}
-            accessibilityLabel="Sign in"
-            accessibilityRole="button"
-          >
-            <Text style={styles.signInButtonText}>Coming soon</Text>
-          </Pressable>
+          <Text style={styles.cardText}>
+            NTRL strips manipulative language from news — clickbait, urgency cues, and emotional
+            triggers — so you can read what actually happened without being sold to or worked up.
+            Every article shows what was changed.
+          </Text>
         </View>
 
-        {/* Your Content Section */}
+        {/* 2. Reading History */}
         <SectionHeader title="Your Content" styles={styles} />
         <View style={styles.navCard}>
-          <NavigationRow
-            icon="★"
-            label="Saved Articles"
-            onPress={() => navigation.navigate('SavedArticles')}
-            styles={styles}
-          />
-          <View style={styles.navDivider} />
           <NavigationRow
             icon="◷"
             label="Reading History"
             onPress={() => navigation.navigate('History')}
             styles={styles}
           />
+          <View style={styles.navDivider} />
+          <NavigationRow
+            icon="★"
+            label="Saved Articles"
+            onPress={() => navigation.navigate('SavedArticles')}
+            styles={styles}
+          />
         </View>
 
-        {/* Reading Section - Text Size */}
-        <SectionHeader title="Reading" styles={styles} />
+        {/* 4. Topics */}
+        <SectionHeader title="Topics" styles={styles} />
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Text Size</Text>
-          <View style={styles.textSizeContainer}>
-            {TEXT_SIZE_OPTIONS.map((option) => (
-              <TextSizeOption
-                key={option.key}
-                label={option.label}
-                selected={textSize === option.key}
-                onSelect={() => handleTextSizeChange(option.key)}
-                styles={styles}
-              />
-            ))}
-          </View>
-          <Text style={styles.cardHint}>Adjusts text in articles and headlines</Text>
-        </View>
-
-        {/* Appearance Section - Color Mode */}
-        <SectionHeader title="Appearance" styles={styles} />
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Mode</Text>
-          <View style={styles.textSizeContainer}>
-            {COLOR_MODE_OPTIONS.map((option) => (
-              <ColorModeOption
-                key={option.key}
-                label={option.label}
-                selected={colorModePreference === option.key}
-                onSelect={() => handleColorModeChange(option.key)}
-                styles={styles}
-              />
-            ))}
-          </View>
-          <Text style={styles.cardHint}>System follows your device settings</Text>
-        </View>
-
-        {/* Preferences Section */}
-        <SectionHeader title="Preferences" styles={styles} />
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Topics</Text>
           <View style={styles.chipContainer}>
             {TOPICS.map((topic) => (
               <TopicChip
@@ -349,7 +244,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Text style={styles.cardHint}>Select topics to customize your feed</Text>
         </View>
 
-        {/* Share NTRL Section */}
+        {/* 5. Share NTRL */}
         <SectionHeader title="Share NTRL" styles={styles} />
         <View style={styles.navCard}>
           <NavigationRow
@@ -360,7 +255,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           />
         </View>
 
-        {/* About Link */}
+        {/* 6. About NTRL */}
         <Pressable
           style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
           onPress={() => navigation.navigate('About')}
@@ -393,20 +288,8 @@ function createStyles(theme: Theme) {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
     },
-    backButton: {
+    headerLeft: {
       width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    backButtonPressed: {
-      opacity: 0.5,
-    },
-    backArrow: {
-      fontSize: 32,
-      fontWeight: '300',
-      color: colors.textPrimary,
-      marginTop: -4,
     },
     headerCenter: {
       alignItems: 'center',
@@ -417,8 +300,18 @@ function createStyles(theme: Theme) {
       letterSpacing: 0.5,
       color: colors.textPrimary,
     },
-    headerSpacer: {
+    headerIcon: {
       width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerIconPressed: {
+      opacity: 0.5,
+    },
+    headerIconText: {
+      fontSize: 22,
+      color: colors.textMuted,
     },
 
     // Content
@@ -454,13 +347,6 @@ function createStyles(theme: Theme) {
       fontWeight: '400',
       lineHeight: 22,
       color: colors.textSecondary,
-      marginBottom: spacing.md,
-    },
-    cardLabel: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: colors.textMuted,
-      marginBottom: spacing.md,
     },
     cardHint: {
       fontSize: 12,
@@ -468,23 +354,6 @@ function createStyles(theme: Theme) {
       color: colors.textSubtle,
       marginTop: spacing.md,
       fontStyle: 'italic',
-    },
-
-    // Sign In Button
-    signInButton: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-      backgroundColor: colors.divider,
-      borderRadius: 8,
-      alignSelf: 'flex-start',
-    },
-    signInButtonPressed: {
-      opacity: 0.6,
-    },
-    signInButtonText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textMuted,
     },
 
     // Navigation Card
@@ -540,7 +409,7 @@ function createStyles(theme: Theme) {
     },
     chipSelected: {
       borderColor: colors.accent,
-      backgroundColor: 'rgba(122, 139, 153, 0.1)',
+      backgroundColor: colors.accentSecondarySubtle,
     },
     chipPressed: {
       opacity: 0.6,
@@ -551,38 +420,6 @@ function createStyles(theme: Theme) {
       color: colors.textMuted,
     },
     chipTextSelected: {
-      color: colors.textPrimary,
-      fontWeight: '500',
-    },
-
-    // Text Size Options
-    textSizeContainer: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    textSizeOption: {
-      flex: 1,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.divider,
-      backgroundColor: colors.background,
-      alignItems: 'center',
-    },
-    textSizeOptionSelected: {
-      borderColor: colors.accentSecondary,
-      backgroundColor: colors.accentSecondarySubtle,
-    },
-    textSizeOptionPressed: {
-      opacity: 0.6,
-    },
-    textSizeLabel: {
-      fontSize: 14,
-      fontWeight: '400',
-      color: colors.textMuted,
-    },
-    textSizeLabelSelected: {
       color: colors.textPrimary,
       fontWeight: '500',
     },

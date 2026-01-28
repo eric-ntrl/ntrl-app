@@ -1,6 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { AppState, StyleSheet, Text } from 'react-native';
-import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { AppState, StyleSheet, Text, View } from 'react-native';
+import {
+  NavigationContainer,
+  DarkTheme,
+  DefaultTheme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -15,7 +19,6 @@ import {
 import TodayScreen from './src/screens/TodayScreen';
 import SectionsScreen from './src/screens/SectionsScreen';
 import ArticleDetailScreen from './src/screens/ArticleDetailScreen';
-import NtrlViewScreen from './src/screens/NtrlViewScreen';
 import SourceTransparencyScreen from './src/screens/SourceTransparencyScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -25,6 +28,7 @@ import SavedArticlesScreen from './src/screens/SavedArticlesScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 
 // Navigators
+const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const TodayStackNav = createNativeStackNavigator();
 const SectionsStackNav = createNativeStackNavigator();
@@ -37,6 +41,15 @@ function TabIcon({ label, color }) {
   return <Text style={{ fontSize: 20, color, marginTop: 2 }}>{label}</Text>;
 }
 
+function ProfileIcon({ color }) {
+  return (
+    <View style={{ alignItems: 'center', marginTop: 2 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+      <View style={{ width: 14, height: 6, borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: color, marginTop: 2 }} />
+    </View>
+  );
+}
+
 /**
  * Today tab — session-filtered articles
  */
@@ -47,27 +60,6 @@ function TodayStackScreen() {
         {(props) => (
           <ErrorBoundary>
             <TodayScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </TodayStackNav.Screen>
-      <TodayStackNav.Screen name="ArticleDetail">
-        {(props) => (
-          <ErrorBoundary>
-            <ArticleDetailScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </TodayStackNav.Screen>
-      <TodayStackNav.Screen name="NtrlView">
-        {(props) => (
-          <ErrorBoundary>
-            <NtrlViewScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </TodayStackNav.Screen>
-      <TodayStackNav.Screen name="SourceTransparency">
-        {(props) => (
-          <ErrorBoundary>
-            <SourceTransparencyScreen {...props} />
           </ErrorBoundary>
         )}
       </TodayStackNav.Screen>
@@ -85,27 +77,6 @@ function SectionsStackScreen() {
         {(props) => (
           <ErrorBoundary>
             <SectionsScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </SectionsStackNav.Screen>
-      <SectionsStackNav.Screen name="ArticleDetail">
-        {(props) => (
-          <ErrorBoundary>
-            <ArticleDetailScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </SectionsStackNav.Screen>
-      <SectionsStackNav.Screen name="NtrlView">
-        {(props) => (
-          <ErrorBoundary>
-            <NtrlViewScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </SectionsStackNav.Screen>
-      <SectionsStackNav.Screen name="SourceTransparency">
-        {(props) => (
-          <ErrorBoundary>
-            <SourceTransparencyScreen {...props} />
           </ErrorBoundary>
         )}
       </SectionsStackNav.Screen>
@@ -133,20 +104,6 @@ function ProfileStackScreen() {
           </ErrorBoundary>
         )}
       </ProfileStackNav.Screen>
-      <ProfileStackNav.Screen name="Settings">
-        {(props) => (
-          <ErrorBoundary>
-            <SettingsScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </ProfileStackNav.Screen>
-      <ProfileStackNav.Screen name="About">
-        {(props) => (
-          <ErrorBoundary>
-            <AboutScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </ProfileStackNav.Screen>
       <ProfileStackNav.Screen name="SavedArticles">
         {(props) => (
           <ErrorBoundary>
@@ -161,50 +118,8 @@ function ProfileStackScreen() {
           </ErrorBoundary>
         )}
       </ProfileStackNav.Screen>
-      <ProfileStackNav.Screen name="ArticleDetail">
-        {(props) => (
-          <ErrorBoundary>
-            <ArticleDetailScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </ProfileStackNav.Screen>
-      <ProfileStackNav.Screen name="NtrlView">
-        {(props) => (
-          <ErrorBoundary>
-            <NtrlViewScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </ProfileStackNav.Screen>
-      <ProfileStackNav.Screen name="SourceTransparency">
-        {(props) => (
-          <ErrorBoundary>
-            <SourceTransparencyScreen {...props} />
-          </ErrorBoundary>
-        )}
-      </ProfileStackNav.Screen>
     </ProfileStackNav.Navigator>
   );
-}
-
-// Screens where bottom tab bar should be hidden
-const HIDE_TAB_BAR_ROUTES = [
-  'ArticleDetail',
-  'NtrlView',
-  'SourceTransparency',
-  'Settings',
-  'About',
-];
-
-function getTabBarStyle(route, colors) {
-  const routeName = getFocusedRouteNameFromRoute(route);
-  if (routeName && HIDE_TAB_BAR_ROUTES.includes(routeName)) {
-    return { display: 'none' };
-  }
-  return {
-    backgroundColor: colors.background,
-    borderTopColor: colors.divider,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  };
 }
 
 /**
@@ -224,36 +139,98 @@ function AppTabs() {
           fontSize: 11,
           fontWeight: '500',
         },
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopColor: colors.divider,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
       }}
     >
       <Tab.Screen
         name="TodayTab"
         component={TodayStackScreen}
-        options={({ route }) => ({
+        options={{
           tabBarLabel: 'Today',
           tabBarIcon: ({ color }) => <TabIcon label="◉" color={color} />,
-          tabBarStyle: getTabBarStyle(route, colors),
-        })}
+        }}
       />
       <Tab.Screen
         name="SectionsTab"
         component={SectionsStackScreen}
-        options={({ route }) => ({
+        options={{
           tabBarLabel: 'Sections',
           tabBarIcon: ({ color }) => <TabIcon label="☰" color={color} />,
-          tabBarStyle: getTabBarStyle(route, colors),
-        })}
+        }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackScreen}
-        options={({ route }) => ({
+        options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => <TabIcon label="○" color={color} />,
-          tabBarStyle: getTabBarStyle(route, colors),
-        })}
+          tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
+        }}
       />
     </Tab.Navigator>
+  );
+}
+
+/**
+ * Navigation wrapper — applies theme-aware colors to NavigationContainer
+ * so the navigation chrome (tab bar container, screen backgrounds) matches
+ * the current color mode and avoids light-mode flashes during transitions.
+ */
+function AppNavigator() {
+  const { theme, colorMode } = useTheme();
+  const { colors } = theme;
+
+  const navigationTheme = useMemo(() => {
+    const base = colorMode === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.background,
+        card: colors.background,
+        border: colors.divider,
+        text: colors.textPrimary,
+      },
+    };
+  }, [colorMode, colors]);
+
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="MainTabs" component={AppTabs} />
+        <RootStack.Screen name="ArticleDetail">
+          {(props) => (
+            <ErrorBoundary>
+              <ArticleDetailScreen {...props} />
+            </ErrorBoundary>
+          )}
+        </RootStack.Screen>
+<RootStack.Screen name="SourceTransparency">
+          {(props) => (
+            <ErrorBoundary>
+              <SourceTransparencyScreen {...props} />
+            </ErrorBoundary>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen name="Settings">
+          {(props) => (
+            <ErrorBoundary>
+              <SettingsScreen {...props} />
+            </ErrorBoundary>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen name="About">
+          {(props) => (
+            <ErrorBoundary>
+              <AboutScreen {...props} />
+            </ErrorBoundary>
+          )}
+        </RootStack.Screen>
+      </RootStack.Navigator>
+    </NavigationContainer>
   );
 }
 
@@ -294,9 +271,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <NavigationContainer>
-          <AppTabs />
-        </NavigationContainer>
+        <AppNavigator />
       </ThemeProvider>
     </SafeAreaProvider>
   );

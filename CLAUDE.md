@@ -13,17 +13,31 @@ A "neutral news" app that strips manipulative language from news articles and pr
 ```
 src/
 ├── screens/          # App screens
-│   ├── FeedScreen.tsx           # Main daily brief (filters by user topic preferences)
-│   ├── ArticleDetailScreen.tsx  # Full article view
-│   ├── ProfileScreen.tsx        # Settings: topics, text size, appearance
-│   ├── NtrlViewScreen.tsx       # Transparency view
+│   ├── TodayScreen.tsx          # Session-filtered articles (brand: "NTRL")
+│   ├── SectionsScreen.tsx       # All category sections (brand: "NTRL")
+│   ├── ArticleDetailScreen.tsx  # Article view with Brief/Full/Ntrl tabs
+│   ├── NtrlViewScreen.tsx       # (Dead code) Legacy standalone transparency view
+│   ├── ProfileScreen.tsx        # User content, topics, navigation to Settings
+│   ├── SettingsScreen.tsx       # Text size, appearance, account settings
+│   ├── SearchScreen.tsx         # Article search
+│   ├── SavedArticlesScreen.tsx  # Saved articles list
+│   ├── HistoryScreen.tsx        # Reading history
+│   ├── SourceTransparencyScreen.tsx  # Source info
 │   └── AboutScreen.tsx          # App info
+├── components/       # Reusable components
+│   ├── NtrlContent.tsx          # Inline transparency view (highlights, legend, categories)
+│   ├── ArticleBrief.tsx         # Brief article paragraphs (serif)
+│   ├── SegmentedControl.tsx     # Brief/Full/Ntrl tab switcher
+│   ├── SkeletonCard.tsx         # Loading skeleton placeholders
+│   └── ErrorBoundary.tsx        # Error boundary wrapper
 ├── storage/          # Local storage
 │   ├── storageService.ts        # AsyncStorage + SecureStore helpers
 │   ├── secureStorage.ts         # Expo SecureStore wrapper
 │   └── types.ts                 # Storage type definitions
 ├── services/         # Business logic
 │   └── detailSummary.ts         # Summary composition helpers
+├── navigation/       # Navigation types
+│   └── types.ts                 # Type-safe route definitions
 ├── api.ts            # API client (calls ntrl-api backend)
 ├── config/           # Environment configuration
 ├── theme/            # Design system (colors, typography, spacing)
@@ -128,11 +142,11 @@ The brief is organized into 10 user-facing categories (classified by LLM on the 
 
 ### User Topic Selection
 
-Users can toggle categories on/off in ProfileScreen. Filtering is **client-side** — the API always returns all categories, and `FeedScreen` filters `brief.sections` by the user's `selectedTopics` preference.
+Users can toggle categories on/off in ProfileScreen. Filtering is **client-side** — the API always returns all categories, and `SectionsScreen`/`TodayScreen` filter `brief.sections` by the user's `selectedTopics` preference.
 
 **How it works:**
 1. ProfileScreen saves topic preferences to SecureStore via `updatePreferences()`
-2. FeedScreen loads preferences via `useFocusEffect` → `getPreferences()`
+2. SectionsScreen/TodayScreen loads preferences via `useFocusEffect` → `getPreferences()`
 3. `filteredBrief` memo filters `brief.sections` by `selectedTopics`
 4. All 10 topics are enabled by default for new users
 
@@ -148,16 +162,17 @@ npm run android    # Run on Android emulator
 npm run web        # Run in browser
 ```
 
-## The 4-View Content Architecture
+## The 3-Tab Content Architecture
 
-| View | UI Location | Content Source | Description |
-|------|-------------|----------------|-------------|
-| **Original** | ntrl-view (highlight OFF) | `original_body` | Original text from S3 |
-| **ntrl-view** | ntrl-view (highlight ON) | `original_body` + `spans` | Same text with highlighted spans |
-| **Full** | Article Detail (Full tab) | `detail_full` | LLM-neutralized full article |
-| **Brief** | Article Detail (Brief tab) | `detail_brief` | LLM-synthesized summary |
+ArticleDetailScreen has three view modes, all rendered inline (no navigation transitions):
 
-**Key insight**: Spans reference positions in `original_body`, not `detail_full`. The ntrl-view toggle controls highlight visibility, not text content.
+| Tab | Content Source | Description |
+|-----|----------------|-------------|
+| **Brief** | `detail_brief` | LLM-synthesized summary (serif, via ArticleBrief component) |
+| **Full** | `detail_full` | LLM-neutralized full article (serif) |
+| **Ntrl** | `original_body` + `spans` | Original text with highlighted manipulation spans (via NtrlContent component) |
+
+**Key insight**: Spans reference positions in `original_body`, not `detail_full`. The Ntrl tab shows the original text with category-colored inline highlights. All three tabs swap content in-place with no page transitions.
 
 ### Category-Specific Highlight Colors (Jan 2026)
 
@@ -181,13 +196,13 @@ type SpanReason = 'clickbait' | 'urgency_inflation' | 'emotional_trigger'
 
 ### Highlight Legend (Jan 2026)
 
-The ntrl view includes a collapsible legend below the toggle row explaining what each highlight color means:
+The Ntrl tab includes a collapsible legend explaining what each highlight color means:
 - Collapsed by default ("What do colors mean?")
 - Shows 4 color swatches with human-readable labels: Emotional language, Urgency/hype, Editorial opinion, Clickbait/selling
-- Only visible when highlights are toggled ON
-- Component: `HighlightLegend` in `NtrlViewScreen.tsx`
+- Highlights are always ON (no toggle)
+- Component: `HighlightLegend` in `NtrlContent.tsx`
 
-The badge ("N phrases flagged") also hides when the toggle is OFF.
+The badge ("N phrases flagged") is always visible when changes exist.
 
 ## UI Self-Testing (CRITICAL for Claude)
 
@@ -229,10 +244,10 @@ const { chromium } = require('playwright');
     await page.screenshot({ path: '/tmp/web-full.png' });
     console.log('Full captured');
 
-    await page.click('text=ntrl view');
+    await page.click('text=Ntrl');
     await page.waitForTimeout(2000);
     await page.screenshot({ path: '/tmp/web-ntrl.png' });
-    console.log('Ntrl view captured');
+    console.log('Ntrl tab captured');
   } catch (e) {
     console.log('Error:', e.message);
     await page.screenshot({ path: '/tmp/web-error.png' });
@@ -290,24 +305,20 @@ Always test UI after:
 | Feed | Titles are neutralized (no clickbait, urgency) |
 | Article Detail (Brief) | `detail_brief` - coherent summary, factual |
 | Article Detail (Full) | `detail_full` - readable, not garbled, neutralized |
-| NTRL View (highlights ON) | `original_body` with category-colored highlights, legend, badge |
+| Article Detail (Ntrl tab) | `original_body` with category-colored highlights, legend, badge |
 
 ## Console Logging (Debug)
 
 The frontend logs diagnostic info to console (visible in Expo dev tools or browser):
 - `[ArticleDetail] Transparency data received:` - spans and originalBody info
 - `[ArticleDetail] Detail content:` - brief/full lengths and previews
-- `[ArticleDetail] Navigating to NtrlView:` - what's being passed
-- `[NtrlView] Received data:` - what NtrlView component received
 
 ## Test IDs Available
 
 The following `testID` attributes exist for testing:
-- `testID="ntrl-view-screen"` - The ntrl view container
+- `testID="ntrl-view-screen"` - The ntrl content container (inline in ArticleDetailScreen)
 - `testID="ntrl-view-text"` - The article text in ntrl view
 - `testID="highlight-span-{index}"` - Individual highlighted spans (0, 1, 2, ...)
-- `testID="highlight-toggle"` - The highlight toggle switch
-- `testID="highlight-toggle-row"` - The toggle row container
 
 **Note:** Feed items do NOT have `testID="article-item"`. Use text-based navigation instead:
 ```javascript
@@ -317,7 +328,7 @@ await page.getByText('Article Title', { exact: false }).first().click();
 
 ## Highlight Validation Script
 
-Quick script to capture ntrl view and verify highlights:
+Quick script to capture ntrl tab and verify highlights:
 
 ```javascript
 // capture-highlights.cjs
@@ -332,8 +343,8 @@ const { chromium } = require('@playwright/test');
   await page.getByText('Harry Styles', { exact: false }).first().click();
   await page.waitForTimeout(2000);
 
-  // Go to ntrl view
-  await page.getByText('ntrl view').click();
+  // Switch to Ntrl tab (inline in ArticleDetailScreen)
+  await page.getByText('Ntrl').click();
   await page.waitForTimeout(3000);
 
   // Capture screenshot

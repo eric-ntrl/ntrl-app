@@ -42,6 +42,7 @@ import type { Item } from '../types';
 import type { ArticleDetailScreenProps } from '../navigation/types';
 import SegmentedControl from '../components/SegmentedControl';
 import ArticleBrief from '../components/ArticleBrief';
+import NtrlContent from '../components/NtrlContent';
 
 type ViewMode = 'brief' | 'full' | 'ntrl';
 
@@ -304,22 +305,10 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const [transparencyLoading, setTransparencyLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
 
-  // Handle segment selection — navigate to NtrlView on 'ntrl' tap
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     lightTap();
-    if (mode === 'ntrl') {
-      // Navigate to NtrlView screen instead of changing tab
-      if (!transparencyLoading) {
-        navigation.navigate('NtrlView', {
-          item,
-          fullOriginalText: originalBodyText,
-          transformations: backendTransformations,
-        });
-      }
-      return;
-    }
     setViewMode(mode);
-  }, [navigation, item, originalBodyText, backendTransformations, transparencyLoading]);
+  }, []);
 
   // Debug logging for detail content
   useEffect(() => {
@@ -556,26 +545,44 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
           </Animated.View>
         )}
 
-        {/* Body - Brief or Full mode */}
+        {/* Body - Brief, Full, or Ntrl mode */}
         <View style={styles.bodySection}>
           {viewMode === 'brief' ? (
             // Brief mode: show detail_brief from API
             <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
-          ) : // Full mode: show detail_full from API (already neutralized)
-          item.detail.full ? (
-            <Text style={styles.bodyText}>{item.detail.full}</Text>
+          ) : viewMode === 'full' ? (
+            // Full mode: show detail_full from API (already neutralized)
+            item.detail.full ? (
+              <Text style={styles.bodyText}>{item.detail.full}</Text>
+            ) : (
+              <>
+                <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+                <Text style={styles.thinContentNotice}>
+                  Full text not available from this source.
+                </Text>
+              </>
+            )
           ) : (
-            <>
-              <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
-              <Text style={styles.thinContentNotice}>
-                Full text not available from this source.
-              </Text>
-            </>
+            // Ntrl mode — inline transparency content
+            transparencyLoading ? (
+              <View style={styles.loadingSection}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Text style={styles.loadingText}>Loading transparency data...</Text>
+              </View>
+            ) : (
+              <NtrlContent
+                item={item}
+                fullOriginalText={originalBodyText}
+                transformations={backendTransformations}
+              />
+            )
           )}
         </View>
 
         {/* Disclosure */}
-        {hasRemovedContent && <Text style={styles.disclosure}>Language adjusted for clarity.</Text>}
+        {hasRemovedContent && viewMode !== 'ntrl' && (
+          <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
+        )}
 
         {/* Breathing space before footer actions */}
         <View style={styles.footerSpacer} />

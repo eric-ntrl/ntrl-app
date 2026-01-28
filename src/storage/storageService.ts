@@ -16,6 +16,8 @@ const KEYS = {
   PREFERENCES: '@ntrl/preferences', // Legacy key for migration
   RECENT_SEARCHES: '@ntrl/recent_searches',
   CACHED_BRIEF: '@ntrl/cached_brief',
+  LAST_SESSION_COMPLETED_AT: '@ntrl/last_session_completed_at',
+  LAST_OPENED_AT: '@ntrl/last_opened_at',
 };
 
 // Secure storage keys (sensitive data)
@@ -285,6 +287,44 @@ export async function clearRecentSearches(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.RECENT_SEARCHES);
   } catch (error) {
     console.warn('[Storage] Failed to clear recent searches:', error);
+  }
+}
+
+// ============================================
+// Session Timestamps (for TodayScreen filtering)
+// ============================================
+
+export async function getLastSessionCompletedAt(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(KEYS.LAST_SESSION_COMPLETED_AT);
+  } catch (error) {
+    console.warn('[Storage] Failed to get last session completed at:', error);
+    return null;
+  }
+}
+
+export async function setLastSessionCompletedAt(iso: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.LAST_SESSION_COMPLETED_AT, iso);
+  } catch (error) {
+    console.warn('[Storage] Failed to set last session completed at:', error);
+  }
+}
+
+export async function getLastOpenedAt(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(KEYS.LAST_OPENED_AT);
+  } catch (error) {
+    console.warn('[Storage] Failed to get last opened at:', error);
+    return null;
+  }
+}
+
+export async function setLastOpenedAt(iso: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.LAST_OPENED_AT, iso);
+  } catch (error) {
+    console.warn('[Storage] Failed to set last opened at:', error);
   }
 }
 

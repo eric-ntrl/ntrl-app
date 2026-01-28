@@ -31,10 +31,10 @@ const baseColors = {
   // Category-specific highlights - MUTED for calm aesthetic
   // Design philosophy: "Reading with warm lamplight, not alarm signals"
   // All colors have similar saturation/brightness for harmony
-  highlightUrgency: 'rgba(200, 120, 120, 0.35)',    // Muted dusty rose - urgency inflation
-  highlightEmotional: 'rgba(130, 160, 200, 0.35)', // Muted slate blue - emotional triggers
-  highlightEditorial: 'rgba(160, 130, 180, 0.35)', // Muted lavender - editorial voice
-  highlightClickbait: 'rgba(200, 160, 100, 0.35)', // Muted amber/tan - clickbait
+  highlightUrgency: 'rgba(200, 120, 120, 0.30)',    // Muted dusty rose - urgency inflation
+  highlightEmotional: 'rgba(130, 160, 200, 0.30)', // Muted slate blue - emotional triggers
+  highlightEditorial: 'rgba(160, 130, 180, 0.30)', // Muted lavender - editorial voice
+  highlightClickbait: 'rgba(200, 160, 100, 0.30)', // Muted amber/tan - clickbait
 
   // Interactive
   link: '#5C7A8A', // Muted teal-gray for links
@@ -95,11 +95,11 @@ export const colorsV1Dark: ThemeColors = {
   highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
   highlightBorder: 'rgba(255, 200, 50, 0.60)',
 
-  // Category-specific highlights - slightly lower opacity for dark mode visibility
-  highlightUrgency: 'rgba(200, 120, 120, 0.30)',    // Muted dusty rose
-  highlightEmotional: 'rgba(130, 160, 200, 0.30)', // Muted slate blue
-  highlightEditorial: 'rgba(160, 130, 180, 0.30)', // Muted lavender
-  highlightClickbait: 'rgba(200, 160, 100, 0.30)', // Muted amber/tan
+  // Category-specific highlights - reduced opacity for dark mode
+  highlightUrgency: 'rgba(200, 120, 120, 0.25)',    // Muted dusty rose
+  highlightEmotional: 'rgba(130, 160, 200, 0.25)', // Muted slate blue
+  highlightEditorial: 'rgba(160, 130, 180, 0.25)', // Muted lavender
+  highlightClickbait: 'rgba(200, 160, 100, 0.25)', // Muted amber/tan
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
@@ -132,11 +132,11 @@ export const colorsV2Dark: ThemeColors = {
   highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
   highlightBorder: 'rgba(255, 200, 50, 0.60)',
 
-  // Category-specific highlights - slightly lower opacity for dark mode visibility
-  highlightUrgency: 'rgba(200, 120, 120, 0.30)',    // Muted dusty rose
-  highlightEmotional: 'rgba(130, 160, 200, 0.30)', // Muted slate blue
-  highlightEditorial: 'rgba(160, 130, 180, 0.30)', // Muted lavender
-  highlightClickbait: 'rgba(200, 160, 100, 0.30)', // Muted amber/tan
+  // Category-specific highlights - reduced opacity for dark mode
+  highlightUrgency: 'rgba(200, 120, 120, 0.25)',    // Muted dusty rose
+  highlightEmotional: 'rgba(130, 160, 200, 0.25)', // Muted slate blue
+  highlightEditorial: 'rgba(160, 130, 180, 0.25)', // Muted lavender
+  highlightClickbait: 'rgba(200, 160, 100, 0.25)', // Muted amber/tan
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',

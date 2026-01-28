@@ -50,6 +50,7 @@ export interface TypographyStyle {
   letterSpacing?: number;
   textTransform?: 'uppercase' | 'lowercase' | 'capitalize' | 'none';
   fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
   color?: string;
 }
 

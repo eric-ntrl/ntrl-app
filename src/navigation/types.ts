@@ -1,9 +1,11 @@
 /**
  * Navigation type definitions for type-safe routing.
- * Provides compile-time type checking for navigation params.
+ * Root stack + tab + nested stack architecture for bottom tab navigation.
  */
 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { Item } from '../types';
 
 /**
@@ -41,47 +43,111 @@ export type Transformation = {
   filtered: string;
 };
 
-/**
- * Root stack parameter list defining all screens and their params.
- */
+// ============================================
+// Root Stack Navigator
+// ============================================
+
 export type RootStackParamList = {
-  Feed: undefined;
-  ArticleDetail: {
-    item: Item;
-  };
+  MainTabs: NavigatorScreenParams<TabParamList>;
+  ArticleDetail: { item: Item };
+SourceTransparency: { sourceName: string; sourceUrl: string };
+  Settings: undefined;
   About: undefined;
+};
+
+// ============================================
+// Tab Navigator
+// ============================================
+
+export type TabParamList = {
+  TodayTab: NavigatorScreenParams<TodayStackParamList>;
+  SectionsTab: NavigatorScreenParams<SectionsStackParamList>;
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
+};
+
+// ============================================
+// Nested Stack Navigators (tab-internal only)
+// ============================================
+
+export type TodayStackParamList = {
+  Today: undefined;
+};
+
+export type SectionsStackParamList = {
+  Sections: undefined;
+  Search: undefined;
+};
+
+export type ProfileStackParamList = {
   Profile: undefined;
   SavedArticles: undefined;
   History: undefined;
-  Search: undefined;
-  NtrlView: {
-    item: Item;
-    fullOriginalText?: string | null;
-    fullFilteredText?: string | null;
-    transformations?: Transformation[];
-  };
-  SourceTransparency: {
-    sourceName: string;
-    sourceUrl: string;
-  };
 };
 
-/**
- * Screen-specific prop types for each screen.
- * Use these in screen components for full type safety.
- */
-export type FeedScreenProps = NativeStackScreenProps<RootStackParamList, 'Feed'>;
-export type ArticleDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'ArticleDetail'>;
-export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
-export type ProfileScreenProps = NativeStackScreenProps<RootStackParamList, 'Profile'>;
-export type SavedArticlesScreenProps = NativeStackScreenProps<RootStackParamList, 'SavedArticles'>;
-export type HistoryScreenProps = NativeStackScreenProps<RootStackParamList, 'History'>;
-export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Search'>;
-export type NtrlViewScreenProps = NativeStackScreenProps<RootStackParamList, 'NtrlView'>;
-export type SourceTransparencyScreenProps = NativeStackScreenProps<
-  RootStackParamList,
-  'SourceTransparency'
+// ============================================
+// Screen Prop Types — Tab screens (3 levels: RootStack > Tab > Stack)
+// ============================================
+
+export type TodayScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<TodayStackParamList, 'Today'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
 >;
+
+export type SectionsScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<SectionsStackParamList, 'Sections'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export type SearchScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<SectionsStackParamList, 'Search'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export type ProfileScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<ProfileStackParamList, 'Profile'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export type SavedArticlesScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<ProfileStackParamList, 'SavedArticles'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export type HistoryScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<ProfileStackParamList, 'History'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+// ============================================
+// Screen Prop Types — Root stack screens (direct children of RootStack)
+// ============================================
+
+export type ArticleDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'ArticleDetail'>;
+export type SourceTransparencyScreenProps = NativeStackScreenProps<RootStackParamList, 'SourceTransparency'>;
+export type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'Settings'>;
+export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
+
+// ============================================
+// Generic navigation prop type
+// ============================================
 
 /**
  * Generic navigation prop type for use in hooks or utility functions.

@@ -9,7 +9,18 @@
  * NOT scaled: section headers, meta, UI chrome
  */
 
+import { Platform } from 'react-native';
 import type { ThemeTypography, TextSizePreference, ThemeColors } from './types';
+
+/**
+ * Serif font family for article content (detail headline, body, captions).
+ * Georgia on iOS, serif on Android, Georgia with serif fallback on web.
+ */
+export const serifFamily = Platform.select({
+  ios: 'Georgia',
+  android: 'serif',
+  default: 'Georgia, serif',
+});
 
 // Text size multipliers
 const TEXT_SIZE_MULTIPLIERS: Record<TextSizePreference, number> = {
@@ -136,19 +147,21 @@ const typographyV2Base = {
     fontWeight: '400' as const,
     letterSpacing: 0.3,
   },
-  // Premium detail headlines
+  // Premium detail headlines — serif for article content
   detailHeadline: {
     fontSize: 24,
     fontWeight: '700' as const,
     lineHeight: 33,
     letterSpacing: -0.4,
+    fontFamily: serifFamily,
   },
-  // Refined body text
+  // Refined body text — serif for article content
   body: {
     fontSize: 17,
     fontWeight: '400' as const,
     lineHeight: 30,
     letterSpacing: 0.2,
+    fontFamily: serifFamily,
   },
   sectionTitle: {
     fontSize: 11,
@@ -160,6 +173,7 @@ const typographyV2Base = {
     fontSize: 13,
     fontWeight: '400' as const,
     fontStyle: 'italic' as const,
+    fontFamily: serifFamily,
   },
   link: {
     fontSize: 14,
@@ -215,18 +229,20 @@ export function createTypographyV2(
       ...typographyV2Base.meta,
       color: colors.textMuted,
     },
-    // Scale detail headlines
+    // Scale detail headlines (serif for article content)
     detailHeadline: {
       ...typographyV2Base.detailHeadline,
       fontSize: scale(typographyV2Base.detailHeadline.fontSize),
       lineHeight: scale(typographyV2Base.detailHeadline.lineHeight),
+      fontFamily: typographyV2Base.detailHeadline.fontFamily,
       color: colors.textPrimary,
     },
-    // Scale body text
+    // Scale body text (serif for article content)
     body: {
       ...typographyV2Base.body,
       fontSize: scale(typographyV2Base.body.fontSize),
       lineHeight: scale(typographyV2Base.body.lineHeight),
+      fontFamily: typographyV2Base.body.fontFamily,
       color: colors.textPrimary,
     },
     sectionTitle: {

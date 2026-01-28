@@ -62,6 +62,7 @@ function createStyles(theme: Theme) {
       fontWeight: typography.body.fontWeight,
       lineHeight: typography.body.lineHeight,
       letterSpacing: typography.body.letterSpacing,
+      fontFamily: typography.body.fontFamily,
       color: typography.body.color,
       marginBottom: typography.body.lineHeight, // Paragraph spacing = line-height for calm rhythm
     },

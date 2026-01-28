@@ -9,7 +9,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { FeedSkeleton } from '../components/skeletons';
+import { SkeletonSection } from '../components/SkeletonCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBriefWithCache } from '../api';
@@ -19,7 +19,7 @@ import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
 import { formatTimeAgo } from '../utils/dateFormatters';
 import type { Item, Section, Brief } from '../types';
-import type { FeedScreenProps } from '../navigation/types';
+import type { SectionsScreenProps } from '../navigation/types';
 
 type Row =
   | { type: 'section'; section: Section }
@@ -62,42 +62,34 @@ function formatHeaderDate(date: Date): string {
 function Header({
   date,
   onSearchPress,
-  onProfilePress,
   styles,
   colors,
 }: {
   date: string;
   onSearchPress: () => void;
-  onProfilePress: () => void;
   styles: ReturnType<typeof createStyles>;
   colors: Theme['colors'];
 }) {
   return (
     <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Text style={styles.brand}>NTRL</Text>
-        <Text style={styles.date}>{date}</Text>
+      <View style={styles.headerTop}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.brand}>NTRL</Text>
+          <Text style={styles.date}>{date}</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <Pressable
+            style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
+            onPress={onSearchPress}
+            hitSlop={8}
+            accessibilityLabel="Search"
+            accessibilityRole="button"
+          >
+            <Text style={styles.headerIconText}>⌕</Text>
+          </Pressable>
+        </View>
       </View>
-      <View style={styles.headerRight}>
-        <Pressable
-          style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
-          onPress={onSearchPress}
-          hitSlop={8}
-          accessibilityLabel="Search"
-          accessibilityRole="button"
-        >
-          <Text style={styles.headerIconText}>⌕</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
-          onPress={onProfilePress}
-          hitSlop={8}
-          accessibilityLabel="Profile"
-          accessibilityRole="button"
-        >
-          <Text style={styles.headerIconText}>○</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.headerSubtitle}>Here is your neutral news.</Text>
     </View>
   );
 }
@@ -168,7 +160,7 @@ function FeedIntro({
 function EndOfFeed({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
     <View style={styles.endOfFeed}>
-      <Text style={styles.endClosing}>End of today's brief.</Text>
+      <Text style={styles.endClosing}>You're up to date.</Text>
     </View>
   );
 }
@@ -176,7 +168,8 @@ function EndOfFeed({ styles }: { styles: ReturnType<typeof createStyles> }) {
 function LoadingState({ styles }: { styles: ReturnType<typeof createStyles> }) {
   return (
     <ScrollView style={styles.loadingContainer} showsVerticalScrollIndicator={false}>
-      <FeedSkeleton sections={2} articlesPerSection={3} />
+      <SkeletonSection />
+      <SkeletonSection />
     </ScrollView>
   );
 }
@@ -209,7 +202,7 @@ function ErrorState({
  * - Filters sections client-side based on user topic preferences
  * - Navigates to ArticleDetail, Search, or Profile on user interaction
  */
-export default function FeedScreen({ navigation }: FeedScreenProps) {
+export default function SectionsScreen({ navigation }: SectionsScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors, typography, spacing, layout } = theme;
@@ -313,7 +306,6 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
       <Header
         date={headerDate}
         onSearchPress={() => navigation.navigate('Search')}
-        onProfilePress={() => navigation.navigate('Profile')}
         styles={styles}
         colors={colors}
       />
@@ -325,12 +317,6 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
       ) : !hasContent ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyMessage}>No new updates right now.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
-            onPress={() => navigation.navigate('About')}
-          >
-            <Text style={styles.aboutLinkText}>About NTRL</Text>
-          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -343,7 +329,6 @@ export default function FeedScreen({ navigation }: FeedScreenProps) {
                 : `item-${r.item.id}`
           }
           renderItem={renderItem}
-          ListHeaderComponent={<FeedIntro date={headerDate} styles={styles} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -371,12 +356,14 @@ function createStyles(theme: Theme) {
 
     // Header
     header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
       paddingHorizontal: layout.screenPadding,
       paddingTop: spacing.lg,
       paddingBottom: spacing.lg,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
     },
     headerLeft: {
       flex: 1,
@@ -396,8 +383,14 @@ function createStyles(theme: Theme) {
       opacity: 0.5,
     },
     headerIconText: {
-      fontSize: 22,
+      fontSize: 26,
       color: colors.textMuted,
+    },
+    headerSubtitle: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginTop: spacing.sm,
     },
     brand: {
       fontSize: typography.brand.fontSize,
@@ -432,8 +425,8 @@ function createStyles(theme: Theme) {
 
     // Article card - with text wrapping fixes
     card: {
-      paddingTop: spacing.lg,
-      paddingBottom: 26, // +10px for editorial rhythm between items
+      paddingTop: spacing.xl,
+      paddingBottom: 30, // ~15% increase for breathing room
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -441,7 +434,7 @@ function createStyles(theme: Theme) {
       overflow: 'hidden',
     },
     cardPressed: {
-      opacity: 0.6,
+      opacity: 0.85,
     },
     textColumn: {
       flex: 1,
