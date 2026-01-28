@@ -3,6 +3,18 @@
 ## What is NTRL?
 A "neutral news" app that strips manipulative language from news articles and presents them in a calm, deterministic feed. No engagement metrics, no personalization, no urgency.
 
+## Documentation
+
+All project documentation lives in **ntrl-api** repo at `../ntrl-api/docs/`.
+
+| Document | Description |
+|----------|-------------|
+| `../ntrl-api/docs/README.md` | Master index of all 28 documents |
+| `../ntrl-api/docs/product/product-overview.md` | Product spec, 3-tab architecture |
+| `../ntrl-api/docs/technical/architecture-overview.md` | System-wide architecture |
+| `../ntrl-api/docs/team/onboarding-guide.md` | New team member setup |
+| `../ntrl-api/docs/team/engineering-standards.md` | Code conventions, dark mode rules |
+
 ## Tech Stack
 - **Framework:** React Native 0.81.5 with Expo 54
 - **Language:** TypeScript 5.9
@@ -367,6 +379,7 @@ const { chromium } = require('@playwright/test');
 Run with: `node capture-highlights.cjs`
 
 ## Related Files
-- API backend: `../ntrl-api/`
-- Design specs: `../../Screen Mocks/`
-- Brand guidelines: `../../Brand/`
+- **API backend**: `../ntrl-api/`
+- **Documentation**: `../ntrl-api/docs/` — all project docs live in ntrl-api repo
+- **Design specs**: `../../Screen Mocks/`
+- **Brand guidelines**: `../../Brand/`
