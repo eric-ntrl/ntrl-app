@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
+import { serifFamily } from '../theme/typography';
 import { decodeHtmlEntities } from '../utils/text';
 import { openExternalUrl } from '../utils/links';
 import type { NtrlViewScreenProps, TransformationType, Transformation, SpanReason } from '../navigation/types';
@@ -34,7 +35,7 @@ function getTypeLabel(type: TransformationType): string {
  */
 function getHighlightColor(reason: SpanReason | undefined, colors: ThemeColors): string {
   if (!reason) {
-    return colors.highlight; // Default gold/amber
+    return colors.highlight;
   }
 
   switch (reason) {
@@ -50,7 +51,7 @@ function getHighlightColor(reason: SpanReason | undefined, colors: ThemeColors):
       return colors.highlightClickbait;
     case 'rhetorical_framing':
     default:
-      return colors.highlight; // Default gold/amber for general framing
+      return colors.highlight;
   }
 }
 
@@ -95,25 +96,23 @@ function Header({
   return (
     <View style={styles.header}>
       <BackButton onPress={onBack} styles={styles} />
-      <Text style={styles.headerTitle}>ntrl view</Text>
+      <Text style={styles.headerTitle}>Ntrl</Text>
       <View style={styles.headerSpacer} />
     </View>
   );
 }
 
 /**
- * Render text with inline highlights for transformations
+ * Render text with inline highlights — always ON (no toggle).
  */
 function HighlightedText({
   text,
   transformations,
-  showHighlights,
   styles,
   colors,
 }: {
   text: string;
   transformations: Transformation[];
-  showHighlights: boolean;
   styles: ReturnType<typeof createStyles>;
   colors: ThemeColors;
 }) {
@@ -121,14 +120,12 @@ function HighlightedText({
     return null;
   }
 
-  if (!showHighlights || transformations.length === 0) {
+  if (transformations.length === 0) {
     return <Text style={styles.articleText}>{text}</Text>;
   }
 
-  // Sort transformations by start position
   const sorted = [...transformations].sort((a, b) => a.start - b.start);
 
-  // Build segments with highlights and color info
   const segments: Array<{
     text: string;
     highlighted: boolean;
@@ -137,12 +134,10 @@ function HighlightedText({
   let currentPos = 0;
 
   for (const transform of sorted) {
-    // Skip invalid ranges
     if (transform.start < currentPos || transform.start >= text.length) {
       continue;
     }
 
-    // Add non-highlighted segment before this transformation
     if (transform.start > currentPos) {
       segments.push({
         text: text.substring(currentPos, transform.start),
@@ -150,7 +145,6 @@ function HighlightedText({
       });
     }
 
-    // Add highlighted segment with category-specific color
     const endPos = Math.min(transform.end, text.length);
     segments.push({
       text: text.substring(transform.start, endPos),
@@ -160,7 +154,6 @@ function HighlightedText({
     currentPos = endPos;
   }
 
-  // Add remaining non-highlighted text
   if (currentPos < text.length) {
     segments.push({
       text: text.substring(currentPos),
@@ -273,12 +266,10 @@ function HighlightLegend({
 
 /**
  * Displays the original article text with inline manipulation highlights.
- * - Highlights flagged spans using category-specific colors (emotional, urgency, etc.)
- * - Provides a toggle to show/hide highlights and a collapsible color legend
- * - Shows a summary of changes by manipulation type
- * @param route.params.item - The feed Item for context (headline, source)
- * @param route.params.fullOriginalText - The original article body text
- * @param route.params.transformations - Array of detected manipulation spans
+ * Highlights are always ON — no toggle (simplified from v1).
+ * - Shows category-specific colored highlights
+ * - Collapsible color legend
+ * - Summary of changes by type
  */
 export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProps) {
   const insets = useSafeAreaInsets();
@@ -288,24 +279,20 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
 
   const { item, fullOriginalText, transformations = [] } = route.params;
 
-  // Debug logging
   if (__DEV__) {
     console.log('[NtrlView] Received data:', {
       itemId: item.id,
       fullOriginalTextLength: fullOriginalText?.length || 0,
       transformationsCount: transformations.length,
-      transformations: transformations.slice(0, 3).map(t => ({ start: t.start, end: t.end, original: t.original?.substring(0, 30) })),
     });
   }
 
-  const [showHighlights, setShowHighlights] = useState(true);
   const [showLegend, setShowLegend] = useState(false);
   const [showSourceError, setShowSourceError] = useState(false);
 
   const hasContent = !!fullOriginalText;
   const hasChanges = transformations.length > 0;
 
-  // Handle external source link with error fallback
   const handleViewSource = async () => {
     const success = await openExternalUrl(item.url, item.source_url);
     if (!success) {
@@ -336,58 +323,33 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
 
         {hasContent ? (
           <>
-            {/* Highlights toggle with count badge */}
+            {/* Badge + legend (always visible when changes exist) */}
             {hasChanges && (
               <>
-                <View style={styles.toggleRow} testID="highlight-toggle-row">
-                  <View style={styles.toggleLabelRow}>
-                    <Text style={styles.toggleLabel}>Show highlights</Text>
-                    {showHighlights && (
-                      <View style={styles.highlightBadge}>
-                        <Text style={styles.badgeText}>
-                          {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
-                        </Text>
-                      </View>
-                    )}
+                <View style={styles.badgeRow}>
+                  <View style={styles.highlightBadge}>
+                    <Text style={styles.badgeText}>
+                      {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
+                    </Text>
                   </View>
-                  <Switch
-                    testID="highlight-toggle"
-                    value={showHighlights}
-                    onValueChange={setShowHighlights}
-                    trackColor={{ false: colors.divider, true: colors.accent }}
-                    thumbColor={colors.background}
-                    ios_backgroundColor={colors.divider}
-                  />
                 </View>
-                {showHighlights && (
-                  <HighlightLegend
-                    expanded={showLegend}
-                    onToggle={() => setShowLegend(!showLegend)}
-                    styles={styles}
-                    colors={colors}
-                  />
-                )}
+                <HighlightLegend
+                  expanded={showLegend}
+                  onToggle={() => setShowLegend(!showLegend)}
+                  styles={styles}
+                  colors={colors}
+                />
               </>
             )}
 
-            {/* Full article text with highlights */}
-            <View style={[
-              styles.articleSection,
-              hasChanges && !showHighlights && styles.articleSectionDimmed
-            ]}>
+            {/* Full article text with highlights (always ON) */}
+            <View style={styles.articleSection}>
               <HighlightedText
                 text={fullOriginalText!}
                 transformations={transformations}
-                showHighlights={showHighlights}
                 styles={styles}
                 colors={colors}
               />
-              {/* Indicator when highlights are hidden */}
-              {hasChanges && !showHighlights && (
-                <Text style={styles.highlightsHiddenHint}>
-                  Toggle "Show highlights" to see what was flagged
-                </Text>
-              )}
             </View>
 
             {/* Change categories */}
@@ -404,7 +366,6 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
             )}
           </>
         ) : (
-          /* Original text unavailable */
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Original text unavailable</Text>
             <Text style={styles.emptySubtext}>
@@ -508,37 +469,24 @@ function createStyles(theme: Theme) {
       marginBottom: spacing.xl,
     },
 
-    // Article headline
+    // Article headline (serif)
     articleHeadline: {
       fontSize: 18,
       fontWeight: '600',
       lineHeight: 24,
+      fontFamily: serifFamily,
       color: colors.textPrimary,
       marginBottom: spacing.lg,
     },
 
-    // Toggle row
-    toggleRow: {
+    // Badge row (replaces toggle row)
+    badgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       paddingVertical: spacing.md,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.divider,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.divider,
-    },
-    toggleLabelRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flex: 1,
-    },
-    toggleLabel: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textSecondary,
     },
     highlightBadge: {
       backgroundColor: colors.highlight,
@@ -592,26 +540,16 @@ function createStyles(theme: Theme) {
     articleSection: {
       marginBottom: spacing.xxl,
     },
-    articleSectionDimmed: {
-      opacity: 0.7,
-    },
     articleText: {
       fontSize: 16,
       fontWeight: '400',
       lineHeight: 26,
+      fontFamily: serifFamily,
       color: colors.textPrimary,
     },
     highlightedSpan: {
       backgroundColor: colors.highlight,
       borderRadius: 2,
-    },
-    highlightsHiddenHint: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: colors.textMuted,
-      fontStyle: 'italic',
-      marginTop: spacing.md,
-      textAlign: 'center',
     },
 
     // Categories section
@@ -700,6 +638,7 @@ function createStyles(theme: Theme) {
     footerText: {
       fontSize: 13,
       fontWeight: '400',
+      fontFamily: serifFamily,
       color: colors.textSubtle,
       marginBottom: spacing.md,
     },

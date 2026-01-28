@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,13 @@ import {
   ActivityIndicator,
   Animated,
   Share,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
+import { serifFamily } from '../theme/typography';
 import { openExternalUrl } from '../utils/links';
 import { createFallbackSummary } from '../services/detailSummary';
 import { fetchTransparency } from '../api';
@@ -35,12 +37,13 @@ import {
   type ShareTarget,
   type ShareTargetConfig,
 } from '../utils/sharing';
+import { lightTap } from '../utils/haptics';
 import type { Item } from '../types';
 import type { ArticleDetailScreenProps } from '../navigation/types';
 import SegmentedControl from '../components/SegmentedControl';
 import ArticleBrief from '../components/ArticleBrief';
 
-type ViewMode = 'brief' | 'full';
+type ViewMode = 'brief' | 'full' | 'ntrl';
 
 /**
  * Map API reason to app TransformationType for display
@@ -92,17 +95,6 @@ function mapSpansToTransformations(spans: TransparencySpan[]): Transformation[] 
     original: span.original_text,
     filtered: span.replacement_text || '',
   }));
-}
-
-/**
- * Format date for header display
- */
-function formatHeaderDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 /**
@@ -227,11 +219,9 @@ function BackButton({
 
 function Header({
   onBack,
-  date,
   styles,
 }: {
   onBack: () => void;
-  date: string;
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
@@ -239,7 +229,6 @@ function Header({
       <BackButton onPress={onBack} styles={styles} />
       <View style={styles.headerCenter}>
         <Text style={styles.headerBrand}>NTRL</Text>
-        <Text style={styles.headerDate}>{date}</Text>
       </View>
       <View style={styles.headerSpacer} />
     </View>
@@ -292,8 +281,17 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const { item } = route.params;
-  const headerDate = formatHeaderDate();
   const timeLabel = formatRelativeTime(item.published_at);
+
+  // Reading progress bar state (Full article only)
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const scrollableHeight = contentSize.height - layoutMeasurement.height;
+    if (scrollableHeight > 0) {
+      setScrollProgress(Math.min(1, contentOffset.y / scrollableHeight));
+    }
+  }, []);
 
   const [showSourceError, setShowSourceError] = useState(false);
   // Initialize summary from item.detail immediately - no loading required
@@ -305,6 +303,23 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const [originalBodyText, setOriginalBodyText] = useState<string | null>(null);
   const [transparencyLoading, setTransparencyLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
+
+  // Handle segment selection — navigate to NtrlView on 'ntrl' tap
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    lightTap();
+    if (mode === 'ntrl') {
+      // Navigate to NtrlView screen instead of changing tab
+      if (!transparencyLoading) {
+        navigation.navigate('NtrlView', {
+          item,
+          fullOriginalText: originalBodyText,
+          transformations: backendTransformations,
+        });
+      }
+      return;
+    }
+    setViewMode(mode);
+  }, [navigation, item, originalBodyText, backendTransformations, transparencyLoading]);
 
   // Debug logging for detail content
   useEffect(() => {
@@ -422,7 +437,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     await copyStoryLink(item.id);
 
     // Haptic feedback - subtle success notification
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    lightTap();
 
     // Stop any existing animation
     if (toastAnimationRef.current) {
@@ -479,17 +494,26 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header onBack={() => navigation.goBack()} date={headerDate} styles={styles} />
+      <Header onBack={() => navigation.goBack()} styles={styles} />
+
+      {/* Reading progress bar (Full article only) */}
+      {viewMode === 'full' && item.detail.full && (
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${scrollProgress * 100}%` }]} />
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         {/* Headline */}
         <Text style={styles.headline}>{decodeHtmlEntities(item.headline)}</Text>
 
-        {/* Metadata band: Source · Time | Brief | Full | ntrl view */}
+        {/* Metadata band: Source · Time | Brief | Full | Ntrl */}
         <View style={styles.metadataBand}>
           {/* Left: Source + Timestamp */}
           <View style={styles.metadataLeft}>
@@ -510,46 +534,16 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
             <Text style={styles.metadataTime}>{timeLabel}</Text>
           </View>
 
-          {/* Center: Brief | Full toggle */}
+          {/* Right: Brief | Full | Ntrl segment control */}
           <SegmentedControl<ViewMode>
             segments={[
               { key: 'brief', label: 'Brief' },
               { key: 'full', label: 'Full' },
+              { key: 'ntrl', label: 'Ntrl' },
             ]}
             selected={viewMode}
-            onSelect={setViewMode}
+            onSelect={handleViewModeChange}
           />
-
-          {/* Right: ntrl view */}
-          <Pressable
-            onPress={() => {
-              // Only navigate if we have transparency data
-              if (transparencyLoading) return;
-
-              // Debug logging before navigation
-              if (__DEV__) {
-                console.log('[ArticleDetail] Navigating to NtrlView with:', {
-                  itemId: item.id,
-                  fullOriginalTextLength: originalBodyText?.length || 0,
-                  transformationsCount: backendTransformations.length,
-                });
-              }
-
-              navigation.navigate('NtrlView', {
-                item,
-                fullOriginalText: originalBodyText,
-                transformations: backendTransformations,
-              });
-            }}
-            style={({ pressed }) => [pressed && !transparencyLoading && styles.metadataPressed]}
-            accessibilityRole="link"
-            accessibilityLabel={transparencyLoading ? 'Loading ntrl view' : 'View ntrl transparency'}
-            disabled={transparencyLoading}
-          >
-            <Text style={[styles.metadataNtrlView, transparencyLoading && styles.metadataLoading]}>
-              {transparencyLoading ? 'loading...' : 'ntrl view'}
-            </Text>
-          </Pressable>
         </View>
 
         {/* Copied toast */}
@@ -728,12 +722,6 @@ function createStyles(theme: Theme) {
       letterSpacing: 0.5,
       color: colors.textPrimary,
     },
-    headerDate: {
-      fontSize: 11,
-      fontWeight: '400',
-      color: colors.textMuted,
-      marginTop: 2,
-    },
     headerSpacer: {
       width: 40,
     },
@@ -748,12 +736,25 @@ function createStyles(theme: Theme) {
       paddingBottom: spacing.xxxl,
     },
 
-    // Article content - uses refined typography
+    // Reading progress bar
+    progressBarContainer: {
+      height: 2,
+      backgroundColor: 'transparent',
+      width: '100%',
+    },
+    progressBar: {
+      height: 2,
+      backgroundColor: colors.textSubtle,
+      opacity: 0.3,
+    },
+
+    // Article content - uses refined serif typography
     headline: {
       fontSize: typography.detailHeadline.fontSize,
       fontWeight: typography.detailHeadline.fontWeight,
       lineHeight: typography.detailHeadline.lineHeight,
       letterSpacing: typography.detailHeadline.letterSpacing,
+      fontFamily: serifFamily,
       color: typography.detailHeadline.color,
       marginBottom: spacing.xl, // Chapter title breathing room (20px)
     },
@@ -773,6 +774,7 @@ function createStyles(theme: Theme) {
     metadataSource: {
       fontSize: typography.meta.fontSize,
       fontWeight: typography.meta.fontWeight,
+      fontFamily: serifFamily,
       color: colors.textSubtle,
     },
     metadataSeparator: {
@@ -786,28 +788,21 @@ function createStyles(theme: Theme) {
       fontWeight: typography.meta.fontWeight,
       color: colors.textSubtle,
     },
-    metadataNtrlView: {
-      fontSize: typography.meta.fontSize,
-      fontWeight: typography.meta.fontWeight,
-      color: colors.textSubtle,
-    },
     metadataPressed: {
       opacity: 0.5,
-    },
-    metadataLoading: {
-      opacity: 0.4,
     },
     // Body section: constrain measure for optimal reading
     bodySection: {
       marginBottom: spacing.lg,
       maxWidth: 600, // ~65-75 chars at 16px, optimal reading measure
     },
-    // Body text: book-like reading experience
+    // Body text: book-like reading experience (serif)
     bodyText: {
       fontSize: typography.body.fontSize,
       fontWeight: typography.body.fontWeight,
       lineHeight: typography.body.lineHeight,
       letterSpacing: typography.body.letterSpacing,
+      fontFamily: serifFamily,
       color: typography.body.color,
     },
     // Meta: tighter to body, slight breathing room above via bodySection margin
