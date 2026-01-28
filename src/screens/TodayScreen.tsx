@@ -365,7 +365,7 @@ function createStyles(theme: Theme) {
 
     // Section header
     sectionHeader: {
-      marginTop: 28,
+      marginTop: spacing.xxxl,
       marginBottom: spacing.lg,
     },
     sectionTitle: {
@@ -378,7 +378,7 @@ function createStyles(theme: Theme) {
     // Article card
     card: {
       paddingTop: spacing.xl,
-      paddingBottom: 30,
+      paddingBottom: spacing.xxxl,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -391,30 +391,31 @@ function createStyles(theme: Theme) {
       alignSelf: 'stretch',
     },
     articleText: {
-      fontSize: 16,
-      lineHeight: 24,
-      letterSpacing: -0.2,
+      fontSize: typography.headline.fontSize,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
       marginBottom: spacing.md,
     },
     headline: {
-      fontSize: 16,
-      fontWeight: '600',
-      lineHeight: 26,
-      letterSpacing: -0.2,
-      color: colors.textPrimary,
+      fontSize: typography.headline.fontSize,
+      fontWeight: typography.headline.fontWeight,
+      lineHeight: typography.headline.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
+      color: typography.headline.color,
     },
     summary: {
-      fontSize: 16,
-      fontWeight: '400',
-      lineHeight: 24,
-      letterSpacing: -0.2,
-      color: colors.textSecondary,
+      fontSize: typography.summary.fontSize,
+      fontWeight: typography.summary.fontWeight,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.summary.letterSpacing,
+      color: typography.summary.color,
     },
     meta: {
       fontSize: typography.meta.fontSize,
       fontWeight: typography.meta.fontWeight,
       letterSpacing: typography.meta.letterSpacing,
       color: typography.meta.color,
+      marginTop: spacing.sm,
     },
 
     // End of feed

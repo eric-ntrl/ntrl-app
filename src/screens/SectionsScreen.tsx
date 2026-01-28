@@ -413,8 +413,8 @@ function createStyles(theme: Theme) {
 
     // Section header - refined with more breathing room
     sectionHeader: {
-      marginTop: 28, // Increased from 24
-      marginBottom: spacing.lg, // Increased from md
+      marginTop: spacing.xxxl,
+      marginBottom: spacing.lg,
     },
     sectionTitle: {
       fontSize: typography.sectionHeader.fontSize,
@@ -426,7 +426,7 @@ function createStyles(theme: Theme) {
     // Article card - with text wrapping fixes
     card: {
       paddingTop: spacing.xl,
-      paddingBottom: 30, // ~15% increase for breathing room
+      paddingBottom: spacing.xxxl,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -443,32 +443,33 @@ function createStyles(theme: Theme) {
     },
     // Container for inline headline + summary text
     articleText: {
-      fontSize: 16,
-      lineHeight: 24,
-      letterSpacing: -0.2,
+      fontSize: typography.headline.fontSize,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
       marginBottom: spacing.md,
     },
     // Headline: bold, primary color (flows inline with summary)
     headline: {
-      fontSize: 16,
-      fontWeight: '600',
-      lineHeight: 26, // +8% for subtle title dominance
-      letterSpacing: -0.2,
-      color: colors.textPrimary,
+      fontSize: typography.headline.fontSize,
+      fontWeight: typography.headline.fontWeight,
+      lineHeight: typography.headline.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
+      color: typography.headline.color,
     },
     // Summary: regular weight, secondary color (continues inline after headline)
     summary: {
-      fontSize: 16,
-      fontWeight: '400',
-      lineHeight: 24,
-      letterSpacing: -0.2,
-      color: colors.textSecondary,
+      fontSize: typography.summary.fontSize,
+      fontWeight: typography.summary.fontWeight,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.summary.letterSpacing,
+      color: typography.summary.color,
     },
     meta: {
       fontSize: typography.meta.fontSize,
       fontWeight: typography.meta.fontWeight,
       letterSpacing: typography.meta.letterSpacing,
       color: typography.meta.color,
+      marginTop: spacing.sm,
     },
 
     // Feed intro (top of list)

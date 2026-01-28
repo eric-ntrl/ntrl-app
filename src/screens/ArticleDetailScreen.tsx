@@ -862,9 +862,9 @@ function createStyles(theme: Theme) {
       paddingVertical: spacing.lg,
     },
     footerActionText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '400',
-      color: colors.textSubtle,
+      color: colors.textMuted,
     },
     // Saved state uses sage accent color
     footerActionActive: {
@@ -874,9 +874,9 @@ function createStyles(theme: Theme) {
       opacity: 0.5,
     },
     footerSeparator: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '400',
-      color: colors.textSubtle,
+      color: colors.textMuted,
       marginHorizontal: spacing.sm,
     },
 

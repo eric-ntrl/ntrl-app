@@ -67,15 +67,15 @@ function createStyles(theme: Theme) {
       alignItems: 'center',
     },
     segment: {
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
     },
     segmentPressed: {
       opacity: 0.5,
     },
     segmentText: {
-      fontSize: 13,
-      fontWeight: '400',
+      fontSize: 14,
+      fontWeight: '500',
       color: colors.textSubtle,
     },
     segmentTextSelected: {
@@ -83,7 +83,7 @@ function createStyles(theme: Theme) {
       color: colors.textMuted,
     },
     separator: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '300',
       color: colors.textSubtle,
       marginHorizontal: spacing.xs,

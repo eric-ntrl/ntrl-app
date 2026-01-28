@@ -266,7 +266,7 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
 }
 
 function createStyles(theme: Theme) {
-  const { colors, spacing, layout } = theme;
+  const { colors, typography, spacing, layout } = theme;
 
   return StyleSheet.create({
     container: {
@@ -341,17 +341,19 @@ function createStyles(theme: Theme) {
       flex: 1,
     },
     headline: {
-      fontSize: 17,
-      fontWeight: '600',
-      lineHeight: 22,
-      color: colors.textPrimary,
+      fontSize: typography.headline.fontSize,
+      fontWeight: typography.headline.fontWeight,
+      lineHeight: typography.headline.lineHeight,
+      letterSpacing: typography.headline.letterSpacing,
+      color: typography.headline.color,
       marginBottom: spacing.sm,
     },
     summary: {
-      fontSize: 15,
-      fontWeight: '400',
-      lineHeight: 21,
-      color: colors.textSecondary,
+      fontSize: typography.summary.fontSize,
+      fontWeight: typography.summary.fontWeight,
+      lineHeight: typography.summary.lineHeight,
+      letterSpacing: typography.summary.letterSpacing,
+      color: typography.summary.color,
       marginBottom: spacing.md,
     },
     meta: {

@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '../theme';
 import type { Theme, ThemeColors } from '../theme/types';
 import { serifFamily } from '../theme/typography';
-import { decodeHtmlEntities } from '../utils/text';
-import { openExternalUrl } from '../utils/links';
 import type { TransformationType, Transformation, SpanReason } from '../navigation/types';
 import type { Item } from '../types';
 
@@ -235,8 +233,8 @@ type NtrlContentProps = {
 
 /**
  * NtrlContent — inline transparency content for ArticleDetailScreen.
- * Shows intro text, headline, badge row, legend, highlighted text,
- * change categories, clean article notice, empty state, footer, and source error modal.
+ * Shows badge row, legend, highlighted text, change categories,
+ * clean article notice, and empty state.
  */
 export default function NtrlContent({ item, fullOriginalText, transformations }: NtrlContentProps) {
   const { theme } = useTheme();
@@ -244,28 +242,12 @@ export default function NtrlContent({ item, fullOriginalText, transformations }:
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [showLegend, setShowLegend] = useState(false);
-  const [showSourceError, setShowSourceError] = useState(false);
 
   const hasContent = !!fullOriginalText;
   const hasChanges = transformations.length > 0;
 
-  const handleViewSource = async () => {
-    const success = await openExternalUrl(item.url, item.source_url);
-    if (!success) {
-      setShowSourceError(true);
-    }
-  };
-
   return (
     <View testID="ntrl-view-screen">
-      {/* Calm intro */}
-      <Text style={styles.intro}>
-        This shows how ntrl adjusted language while preserving the facts.
-      </Text>
-
-      {/* Article headline for context */}
-      <Text style={styles.articleHeadline}>{decodeHtmlEntities(item.headline)}</Text>
-
       {hasContent ? (
         <>
           {/* Badge + legend (always visible when changes exist) */}
@@ -319,61 +301,14 @@ export default function NtrlContent({ item, fullOriginalText, transformations }:
         </View>
       )}
 
-      {/* Source attribution with link */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Source: {item.source}</Text>
-        <Pressable
-          style={({ pressed }) => [styles.footerLink, pressed && styles.footerLinkPressed]}
-          onPress={handleViewSource}
-        >
-          <Text style={styles.footerLinkText}>View original article →</Text>
-        </Pressable>
-      </View>
-
-      {/* Source error modal */}
-      <Modal visible={showSourceError} transparent animationType="fade" onRequestClose={() => setShowSourceError(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Source unavailable</Text>
-            <Text style={styles.modalBody}>
-              This link couldn't be opened. You can try again later.
-            </Text>
-            <Pressable
-              style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
-              onPress={() => setShowSourceError(false)}
-            >
-              <Text style={styles.modalButtonText}>Go back</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 function createStyles(theme: Theme) {
-  const { colors, spacing, layout } = theme;
+  const { colors, typography, spacing, layout } = theme;
 
   return StyleSheet.create({
-    // Intro
-    intro: {
-      fontSize: 15,
-      fontWeight: '400',
-      lineHeight: 22,
-      color: colors.textMuted,
-      marginBottom: spacing.xl,
-    },
-
-    // Article headline (serif)
-    articleHeadline: {
-      fontSize: 18,
-      fontWeight: '600',
-      lineHeight: 24,
-      fontFamily: serifFamily,
-      color: colors.textPrimary,
-      marginBottom: spacing.lg,
-    },
-
     // Badge row
     badgeRow: {
       flexDirection: 'row',
@@ -436,11 +371,11 @@ function createStyles(theme: Theme) {
       marginBottom: spacing.xxl,
     },
     articleText: {
-      fontSize: 16,
-      fontWeight: '400',
-      lineHeight: 26,
+      fontSize: typography.body.fontSize,
+      fontWeight: typography.body.fontWeight,
+      lineHeight: typography.body.lineHeight,
       fontFamily: serifFamily,
-      color: colors.textPrimary,
+      color: typography.body.color,
     },
     highlightedSpan: {
       backgroundColor: colors.highlight,
@@ -522,74 +457,5 @@ function createStyles(theme: Theme) {
       textAlign: 'center',
     },
 
-    // Footer
-    footer: {
-      marginTop: spacing.xl,
-      paddingTop: spacing.lg,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.divider,
-      alignItems: 'center',
-    },
-    footerText: {
-      fontSize: 13,
-      fontWeight: '400',
-      fontFamily: serifFamily,
-      color: colors.textSubtle,
-      marginBottom: spacing.md,
-    },
-    footerLink: {
-      paddingVertical: spacing.sm,
-    },
-    footerLinkPressed: {
-      opacity: 0.5,
-    },
-    footerLinkText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textMuted,
-    },
-
-    // Modal
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.4)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: layout.screenPadding,
-    },
-    modalContent: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      padding: spacing.xxl,
-      width: '100%',
-      maxWidth: 320,
-    },
-    modalTitle: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: colors.textPrimary,
-      marginBottom: spacing.md,
-      textAlign: 'center',
-    },
-    modalBody: {
-      fontSize: 15,
-      fontWeight: '400',
-      lineHeight: 22,
-      color: colors.textSecondary,
-      marginBottom: spacing.xl,
-      textAlign: 'center',
-    },
-    modalButton: {
-      paddingVertical: spacing.md,
-      alignItems: 'center',
-    },
-    modalButtonPressed: {
-      opacity: 0.5,
-    },
-    modalButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
   });
 }

@@ -148,7 +148,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>Adjusts text in articles and headlines</Text>
+          <Text style={styles.cardHint}>Adjusts article text and headlines across the app</Text>
         </View>
 
         {/* Appearance */}
