@@ -272,6 +272,37 @@ type NtrlContentProps = {
 };
 
 /**
+ * Calculate integrity score using sigmoid curve.
+ *
+ * @param spanCount - Total number of manipulation spans
+ * @param paragraphCount - Number of paragraphs in content
+ * @returns Score from 0-100 (100 = clean, 0 = highly manipulative)
+ */
+function calculateIntegrityScore(spanCount: number, paragraphCount: number): number {
+  if (spanCount === 0) return 100;
+  if (paragraphCount === 0) return 100;
+
+  const phrasesPerParagraph = spanCount / paragraphCount;
+
+  // Sigmoid curve calibration:
+  // 0.0 phrases/para → 100 (perfect)
+  // 0.5 phrases/para → ~90 (clean)
+  // 1.0 phrases/para → ~78 (acceptable)
+  // 1.5 phrases/para → ~62 (concerning)
+  // 2.0 phrases/para → ~44 (problematic)
+  // 3.0+ phrases/para → <30 (highly manipulative)
+
+  const midpoint = 1.2;  // Density where score ≈ 70
+  const steepness = 1.8; // Curve sharpness
+  const floor = 15;      // Minimum score
+
+  const x = steepness * (phrasesPerParagraph - midpoint);
+  const sigmoidValue = 1 / (1 + Math.exp(x));
+
+  return Math.round(floor + sigmoidValue * (100 - floor));
+}
+
+/**
  * NtrlContent — inline transparency content for ArticleDetailScreen.
  * Shows original title with highlights, manipulation gauge, legend,
  * highlighted article text, change categories, and empty states.
@@ -293,44 +324,39 @@ export default function NtrlContent({
   const allTransformations = [...titleTransformations, ...transformations];
   const hasChanges = allTransformations.length > 0;
 
-  // Calculate manipulation score
-  const wordCount = useMemo(() => {
-    const titleWords = originalTitle ? originalTitle.split(/\s+/).length : 0;
-    const bodyWords = fullOriginalText ? fullOriginalText.split(/\s+/).length : 0;
-    return titleWords + bodyWords;
-  }, [originalTitle, fullOriginalText]);
+  // Calculate paragraph count from original text
+  const paragraphCount = useMemo(() => {
+    if (!fullOriginalText) return 1;
+    const paragraphs = fullOriginalText.split(/\n\n+/).filter(p => p.trim().length > 0);
+    return Math.max(1, paragraphs.length);
+  }, [fullOriginalText]);
 
-  const manipulationPercent = useMemo(() => {
-    if (wordCount === 0) return 0;
-    return (allTransformations.length / wordCount) * 100;
-  }, [allTransformations.length, wordCount]);
+  // Calculate integrity score using sigmoid curve
+  const integrityScore = useMemo(() => {
+    return calculateIntegrityScore(allTransformations.length, paragraphCount);
+  }, [allTransformations.length, paragraphCount]);
+
+  // Calculate phrases per paragraph for display
+  const phrasesPerParagraph = useMemo(() => {
+    if (paragraphCount === 0) return '0.0';
+    return (allTransformations.length / paragraphCount).toFixed(1);
+  }, [allTransformations.length, paragraphCount]);
 
   return (
     <View testID="ntrl-view-screen">
       {hasContent ? (
         <>
-          {/* Original title with highlights */}
-          {originalTitle && (
-            <OriginalTitleSection
-              title={originalTitle}
-              transformations={titleTransformations}
-              styles={styles}
-              colors={colors}
-            />
-          )}
-
-          {/* Manipulation gauge */}
+          {/* 1. Manipulation gauge */}
           {hasChanges && (
             <View style={styles.gaugeSection}>
               <ManipulationGauge
-                percent={manipulationPercent}
-                spanCount={allTransformations.length}
-                wordCount={wordCount}
+                score={integrityScore}
+                phrasesPerParagraph={phrasesPerParagraph}
               />
             </View>
           )}
 
-          {/* Legend (always visible when changes exist) */}
+          {/* 2. Legend */}
           {hasChanges && (
             <HighlightLegend
               expanded={showLegend}
@@ -340,7 +366,17 @@ export default function NtrlContent({
             />
           )}
 
-          {/* Divider before body */}
+          {/* 3. Original title with highlights */}
+          {originalTitle && (
+            <OriginalTitleSection
+              title={originalTitle}
+              transformations={titleTransformations}
+              styles={styles}
+              colors={colors}
+            />
+          )}
+
+          {/* 4. Divider before body */}
           <View style={styles.bodyDivider} />
 
           {/* Full article text with highlights (always ON) */}

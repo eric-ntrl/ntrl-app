@@ -1,120 +1,108 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop, G } from 'react-native-svg';
+import Svg, { Rect, Defs, LinearGradient, Stop, ClipPath } from 'react-native-svg';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 
 type ManipulationGaugeProps = {
-  /** Manipulation percentage (0-100) */
-  percent: number;
-  /** Number of flagged phrases */
-  spanCount: number;
-  /** Total word count in article */
-  wordCount: number;
+  /** Integrity score (0-100, where 100 = no manipulation) */
+  score: number;
+  /** Phrases per paragraph (e.g., "1.8") */
+  phrasesPerParagraph: string;
 };
 
 /**
- * Semi-circular gauge showing manipulation density.
+ * Horizontal bar gauge showing content integrity score.
  *
  * Visual design:
- * - Arc gradient: green (low) → yellow (moderate) → red (high)
- * - Needle indicator pointing to current score
- * - Score capped at 50% for full red (anything above is "heavy manipulation")
- * - Muted colors to maintain calm aesthetic
+ * - Horizontal pill-shaped bar (~280x10px)
+ * - Gradient: green (left/100) → yellow → orange → red (right/0)
+ * - Fill shows score position (higher score = more green visible)
+ * - Score number displayed prominently above bar
+ * - Subtext shows phrases per paragraph
  */
 export default function ManipulationGauge({
-  percent,
-  spanCount,
-  wordCount,
+  score,
+  phrasesPerParagraph,
 }: ManipulationGaugeProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { colors } = theme;
 
-  // Clamp percent: 0-50 range for visual (50%+ is all "heavy")
-  const clampedPercent = Math.min(Math.max(percent, 0), 50);
+  // Clamp score to 0-100
+  const clampedScore = Math.max(0, Math.min(100, score));
 
-  // Convert to needle angle: -90° (left, 0%) to 90° (right, 50%)
-  const needleAngle = (clampedPercent / 50) * 180 - 90;
+  // Fill percentage (score of 100 = full bar, score of 0 = empty)
+  const fillPercent = clampedScore;
 
-  // Determine label based on percentage
+  // Determine label based on score
   const getLabel = () => {
-    if (percent < 5) return 'Minimal';
-    if (percent < 15) return 'Low';
-    if (percent < 30) return 'Moderate';
-    return 'High';
+    if (clampedScore >= 90) return 'Clean';
+    if (clampedScore >= 75) return 'Mostly clean';
+    if (clampedScore >= 60) return 'Some concerns';
+    if (clampedScore >= 45) return 'Problematic';
+    return 'Highly manipulative';
   };
 
   // SVG dimensions
-  const width = 140;
-  const height = 80;
-  const centerX = width / 2;
-  const centerY = 70;
-  const radius = 55;
-  const strokeWidth = 8;
+  const width = 280;
+  const height = 10;
+  const borderRadius = 5;
 
-  // Arc path: semi-circle from left to right
-  // M = move to start point, A = arc
-  const arcPath = `M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`;
+  // Calculate fill width based on score
+  const fillWidth = (fillPercent / 100) * width;
 
   return (
     <View style={styles.container}>
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Defs>
-          {/* Gradient: green → yellow → red */}
-          <LinearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <Stop offset="0%" stopColor="#7CB342" stopOpacity="0.8" />
-            <Stop offset="35%" stopColor="#C0CA33" stopOpacity="0.8" />
-            <Stop offset="60%" stopColor="#FFB300" stopOpacity="0.8" />
-            <Stop offset="80%" stopColor="#FB8C00" stopOpacity="0.8" />
-            <Stop offset="100%" stopColor="#E64A19" stopOpacity="0.8" />
-          </LinearGradient>
-        </Defs>
+      {/* Score number */}
+      <Text style={styles.scoreText}>{clampedScore}</Text>
+      <Text style={styles.label}>{getLabel()}</Text>
 
-        {/* Background arc (subtle) */}
-        <Path
-          d={arcPath}
-          stroke={colors.divider}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          fill="none"
-        />
+      {/* Horizontal bar */}
+      <View style={styles.barContainer}>
+        <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+          <Defs>
+            {/* Gradient: red (left/0) → orange → yellow → green (right/100) */}
+            <LinearGradient id="integrityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor="#D32F2F" />
+              <Stop offset="30%" stopColor="#FF9800" />
+              <Stop offset="60%" stopColor="#FFEB3B" />
+              <Stop offset="80%" stopColor="#8BC34A" />
+              <Stop offset="100%" stopColor="#4CAF50" />
+            </LinearGradient>
 
-        {/* Gradient arc */}
-        <Path
-          d={arcPath}
-          stroke="url(#arcGradient)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          fill="none"
-        />
+            {/* Clip path for rounded rectangle */}
+            <ClipPath id="barClip">
+              <Rect x={0} y={0} width={width} height={height} rx={borderRadius} ry={borderRadius} />
+            </ClipPath>
+          </Defs>
 
-        {/* Needle group - rotates around center point */}
-        <G rotation={needleAngle} origin={`${centerX}, ${centerY}`}>
-          {/* Needle line */}
-          <Line
-            x1={centerX}
-            y1={centerY}
-            x2={centerX}
-            y2={centerY - radius + 15}
-            stroke={colors.textPrimary}
-            strokeWidth={2}
-            strokeLinecap="round"
+          {/* Background bar (subtle) */}
+          <Rect
+            x={0}
+            y={0}
+            width={width}
+            height={height}
+            rx={borderRadius}
+            ry={borderRadius}
+            fill={colors.divider}
           />
-          {/* Center dot */}
-          <Circle
-            cx={centerX}
-            cy={centerY}
-            r={4}
-            fill={colors.textPrimary}
-          />
-        </G>
-      </Svg>
 
-      {/* Labels below gauge */}
-      <Text style={styles.label}>{getLabel()} manipulation</Text>
+          {/* Gradient fill - clipped to bar shape */}
+          <Rect
+            x={0}
+            y={0}
+            width={fillWidth}
+            height={height}
+            fill="url(#integrityGradient)"
+            clipPath="url(#barClip)"
+          />
+        </Svg>
+      </View>
+
+      {/* Subtext */}
       <Text style={styles.subtext}>
-        {spanCount} phrase{spanCount !== 1 ? 's' : ''} in {wordCount} words
+        {phrasesPerParagraph} phrases per paragraph
       </Text>
     </View>
   );
@@ -126,19 +114,28 @@ function createStyles(theme: Theme) {
   return StyleSheet.create({
     container: {
       alignItems: 'center',
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    scoreText: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 2,
     },
     label: {
       fontSize: 14,
-      fontWeight: '600',
-      color: colors.textPrimary,
-      marginTop: spacing.xs,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    barContainer: {
+      marginVertical: spacing.xs,
     },
     subtext: {
       fontSize: 12,
       fontWeight: '400',
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xs,
     },
   });
 }
