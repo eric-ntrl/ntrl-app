@@ -200,34 +200,47 @@ function HighlightLegend({
 }
 
 /**
- * Original title section with highlights
+ * Unified Original Article section with title and body
  */
-function OriginalTitleSection({
+function OriginalArticleSection({
   title,
-  transformations,
+  body,
+  titleTransformations,
+  bodyTransformations,
   styles,
   colors,
 }: {
   title: string;
-  transformations: Transformation[];
+  body: string;
+  titleTransformations: Transformation[];
+  bodyTransformations: Transformation[];
   styles: ReturnType<typeof createStyles>;
   colors: ThemeColors;
 }) {
-  const hasTitleChanges = transformations.length > 0;
-
   return (
-    <View style={styles.originalTitleContainer}>
-      <Text style={styles.originalTitleLabel}>ORIGINAL HEADLINE</Text>
+    <View style={styles.originalArticleContainer}>
+      <Text style={styles.originalArticleLabel}>ORIGINAL ARTICLE</Text>
+
+      {/* Title - prominent styling */}
       <HighlightedText
         text={title}
-        transformations={transformations}
+        transformations={titleTransformations}
         styles={styles}
         colors={colors}
         textStyle={styles.originalTitleText}
       />
-      {!hasTitleChanges && (
-        <Text style={styles.originalTitleClean}>No manipulation detected in headline</Text>
-      )}
+
+      {/* Spacer between title and body */}
+      <View style={styles.titleBodySpacer} />
+
+      {/* Body - normal styling */}
+      <HighlightedText
+        text={body}
+        transformations={bodyTransformations}
+        styles={styles}
+        colors={colors}
+        textStyle={styles.articleText}
+      />
     </View>
   );
 }
@@ -342,6 +355,9 @@ export default function NtrlContent({
     return (allTransformations.length / paragraphCount).toFixed(1);
   }, [allTransformations.length, paragraphCount]);
 
+  // Show clean message only when score is exactly 100
+  const showCleanMessage = integrityScore === 100;
+
   return (
     <View testID="ntrl-view-screen">
       {hasContent ? (
@@ -366,41 +382,47 @@ export default function NtrlContent({
             />
           )}
 
-          {/* 3. Original title with highlights */}
-          {originalTitle && (
-            <OriginalTitleSection
-              title={originalTitle}
-              transformations={titleTransformations}
-              styles={styles}
-              colors={colors}
-            />
-          )}
-
-          {/* 4. Divider before body */}
-          <View style={styles.bodyDivider} />
-
-          {/* Full article text with highlights (always ON) */}
-          <View style={styles.articleSection}>
-            <HighlightedText
-              text={fullOriginalText!}
-              transformations={transformations}
-              styles={styles}
-              colors={colors}
-            />
-          </View>
-
-          {/* Change categories */}
-          {hasChanges && <ChangeCategories transformations={allTransformations} styles={styles} />}
-
-          {/* Clean article notice */}
-          {!hasChanges && (
-            <View style={styles.cleanArticle}>
-              <Text style={styles.cleanText}>No manipulation detected</Text>
-              <Text style={styles.cleanSubtext}>
-                This article appears to be written in neutral language.
-              </Text>
+          {/* 3. Clean message BEFORE article (only when score = 100) */}
+          {showCleanMessage && (
+            <View style={styles.cleanMessageContainer}>
+              <Text style={styles.cleanMessage}>No manipulation detected</Text>
             </View>
           )}
+
+          {/* 4. Unified Original Article section with title and body */}
+          {originalTitle && fullOriginalText && (
+            <OriginalArticleSection
+              title={originalTitle}
+              body={fullOriginalText}
+              titleTransformations={titleTransformations}
+              bodyTransformations={transformations}
+              styles={styles}
+              colors={colors}
+            />
+          )}
+
+          {/* Fallback: body only if no title */}
+          {!originalTitle && fullOriginalText && (
+            <View style={styles.originalArticleContainer}>
+              <Text style={styles.originalArticleLabel}>ORIGINAL ARTICLE</Text>
+              <HighlightedText
+                text={fullOriginalText}
+                transformations={transformations}
+                styles={styles}
+                colors={colors}
+              />
+            </View>
+          )}
+
+          {/* 5. Clean message AFTER article (only when score = 100) */}
+          {showCleanMessage && (
+            <View style={styles.cleanMessageContainer}>
+              <Text style={styles.cleanMessage}>No manipulation detected</Text>
+            </View>
+          )}
+
+          {/* 6. Change categories (only when there are changes) */}
+          {hasChanges && <ChangeCategories transformations={allTransformations} styles={styles} />}
         </>
       ) : (
         <View style={styles.emptyState}>
@@ -419,21 +441,21 @@ function createStyles(theme: Theme) {
   const { colors, typography, spacing, layout } = theme;
 
   return StyleSheet.create({
-    // Original title section
-    originalTitleContainer: {
+    // Original Article section (unified title + body)
+    originalArticleContainer: {
       backgroundColor: colors.surface,
       borderRadius: 8,
       padding: spacing.md,
-      marginBottom: spacing.lg,
+      marginVertical: spacing.md,
       borderLeftWidth: 3,
       borderLeftColor: colors.highlight,
     },
-    originalTitleLabel: {
+    originalArticleLabel: {
       fontSize: 11,
       fontWeight: '600',
       letterSpacing: 1,
       color: colors.textMuted,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
     },
     originalTitleText: {
       fontSize: 18,
@@ -442,24 +464,25 @@ function createStyles(theme: Theme) {
       color: colors.textPrimary,
       lineHeight: 26,
     },
-    originalTitleClean: {
-      fontSize: 12,
-      fontWeight: '400',
-      color: colors.textMuted,
-      fontStyle: 'italic',
-      marginTop: spacing.xs,
+    titleBodySpacer: {
+      height: spacing.lg,
+    },
+
+    // Clean message (shown before/after article when score = 100)
+    cleanMessageContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      marginVertical: spacing.sm,
+    },
+    cleanMessage: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
     },
 
     // Gauge section
     gaugeSection: {
       alignItems: 'center',
-      marginBottom: spacing.lg,
-    },
-
-    // Body divider
-    bodyDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.divider,
       marginBottom: spacing.lg,
     },
 
@@ -499,10 +522,6 @@ function createStyles(theme: Theme) {
       color: colors.textSecondary,
     },
 
-    // Article section
-    articleSection: {
-      marginBottom: spacing.xxl,
-    },
     articleText: {
       fontSize: typography.body.fontSize,
       fontWeight: typography.body.fontWeight,
@@ -548,28 +567,6 @@ function createStyles(theme: Theme) {
       fontSize: 14,
       fontWeight: '500',
       color: colors.textMuted,
-    },
-
-    // Clean article notice
-    cleanArticle: {
-      backgroundColor: colors.surface,
-      borderRadius: 8,
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.xl,
-      alignItems: 'center',
-    },
-    cleanText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    cleanSubtext: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: colors.textMuted,
-      textAlign: 'center',
     },
 
     // Empty state
