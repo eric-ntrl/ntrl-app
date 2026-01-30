@@ -37,6 +37,7 @@ src/
 │   ├── SourceTransparencyScreen.tsx  # Source info
 │   └── AboutScreen.tsx          # App info
 ├── components/       # Reusable components
+│   ├── CustomTabBar.tsx         # Bottom tab bar with haptics, fixed-height icon containers
 │   ├── NtrlContent.tsx          # Inline transparency view (highlights, legend, categories)
 │   ├── ManipulationGauge.tsx    # Semi-circular manipulation density gauge (react-native-svg)
 │   ├── ArticleBrief.tsx         # Brief article paragraphs (serif)
@@ -369,6 +370,15 @@ Always test UI after:
 | Article Detail (Brief) | `detail_brief` - coherent summary, factual |
 | Article Detail (Full) | `detail_full` - readable, not garbled, neutralized |
 | Article Detail (Ntrl tab) | `original_body` with category-colored highlights, legend, badge |
+| Tab Bar | Labels horizontally aligned, icons centered, consistent across text sizes |
+
+### Tab Bar / Navigation Changes
+
+After modifying tab bar or navigation components, verify:
+1. **Horizontal alignment**: All tab labels should sit on the same baseline
+2. **Icon consistency**: Icons should be vertically centered within fixed-height containers
+3. **Text size scaling**: Test with small/medium/large text size preferences
+4. **Active state**: Verify active tab styling doesn't affect alignment
 
 ## Console Logging (Debug)
 
