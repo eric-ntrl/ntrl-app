@@ -35,7 +35,8 @@ src/
 │   ├── SavedArticlesScreen.tsx  # Saved articles list
 │   ├── HistoryScreen.tsx        # Reading history
 │   ├── SourceTransparencyScreen.tsx  # Source info
-│   └── AboutScreen.tsx          # App info
+│   ├── AboutScreen.tsx          # App info
+│   └── WhatNtrlIsScreen.tsx     # First-run onboarding manifesto
 ├── components/       # Reusable components
 │   ├── CustomTabBar.tsx         # Bottom tab bar with haptics, fixed-height icon containers
 │   ├── NtrlContent.tsx          # Inline transparency view (highlights, legend, categories)
@@ -167,6 +168,35 @@ Users can toggle categories on/off in ProfileScreen. Filtering is **client-side*
 **Preference migration:** Existing users who had the old 5-topic format (`tech` key) are auto-migrated: `tech` → `technology`, and 5 new categories are auto-enabled. See `migrateTopics()` in `storageService.ts`.
 
 **Important:** `migrateTopics()` only runs when the `tech` key is detected (actual old-format data). It does NOT re-add topics on every `getPreferences()` call — this was a bug that was fixed. If you modify migration logic, ensure it doesn't override user deselections.
+
+## First-Run Onboarding (Jan 2026)
+
+New users see a manifesto screen (`WhatNtrlIsScreen.tsx`) on first app launch, explaining NTRL's mission before entering the main app.
+
+**Flow:**
+1. `App.js` checks `hasSeenIntro` preference via `hasSeenIntro()` helper
+2. If false/undefined, renders `WhatNtrlIsScreen` instead of main navigation
+3. User reads manifesto and taps "Begin"
+4. `markIntroSeen()` sets `hasSeenIntro: true` in preferences
+5. App transitions to main feed
+
+**Storage:**
+- Preference key: `hasSeenIntro` (boolean) in `UserPreferences`
+- Helpers in `storageService.ts`: `hasSeenIntro()`, `markIntroSeen()`
+
+**Testing the intro screen:**
+```javascript
+// Reset to show intro again (run in browser console or via Playwright)
+localStorage.clear();
+location.reload();
+```
+
+**Design:**
+- Georgia serif font for manifesto text
+- Scrollable content area
+- Fixed "Begin" button at bottom
+- Supports light/dark mode
+- Fade-in animation on mount
 
 ## Commands
 ```bash
@@ -366,6 +396,7 @@ Always test UI after:
 
 | Screen | What to Check |
 |--------|---------------|
+| Intro (first-run) | Manifesto text displays, scrollable, "Begin" button works |
 | Feed | Titles are neutralized (no clickbait, urgency) |
 | Article Detail (Brief) | `detail_brief` - coherent summary, factual |
 | Article Detail (Full) | `detail_full` - readable, not garbled, neutralized |
