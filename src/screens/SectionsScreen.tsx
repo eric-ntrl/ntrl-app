@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StatusBar,
   RefreshControl,
   ScrollView,
+  ViewToken,
 } from 'react-native';
 import { SkeletonSection } from '../components/SkeletonCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import { decodeHtmlEntities } from '../utils/text';
 import { formatTimeAgo } from '../utils/dateFormatters';
 import type { Item, Section, Brief } from '../types';
 import type { SectionsScreenProps } from '../navigation/types';
+import { CategoryPills } from '../components/CategoryPills';
 
 type Row =
   | { type: 'section'; section: Section }
@@ -63,12 +65,10 @@ function Header({
   date,
   onSearchPress,
   styles,
-  colors,
 }: {
   date: string;
   onSearchPress: () => void;
   styles: ReturnType<typeof createStyles>;
-  colors: Theme['colors'];
 }) {
   return (
     <View style={styles.header}>
@@ -89,7 +89,6 @@ function Header({
           </Pressable>
         </View>
       </View>
-      <Text style={styles.headerSubtitle}>Here is your neutral news.</Text>
     </View>
   );
 }
@@ -205,17 +204,24 @@ function ErrorState({
 export default function SectionsScreen({ navigation }: SectionsScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
-  const { colors, typography, spacing, layout } = theme;
+  const { colors } = theme;
 
   // Memoize styles to avoid recreation on every render
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const flatListRef = useRef<FlatList<Row>>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const scrollLockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50, // Item is "visible" when 50% on screen
+  }).current;
   const [brief, setBrief] = useState<Brief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Triggers timestamp recalculation
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
 
   const loadBrief = useCallback(async (isRefresh = false) => {
     try {
@@ -274,7 +280,83 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
   // Note: 24h filtering is now done server-side via ?hours=24 parameter
   const rows = useMemo(() => (filteredBrief ? flatten(filteredBrief) : []), [filteredBrief]);
 
-  const renderItem = ({ item, index }: { item: Row; index: number }) => {
+  // Build category list for pills from sections that have content
+  const categories = useMemo(() => {
+    if (!filteredBrief) return [];
+    return filteredBrief.sections
+      .filter((s) => s.items.length > 0)
+      .map((s) => ({ key: s.key, title: s.title }));
+  }, [filteredBrief]);
+
+  // Map section keys to their row indices for scrollToIndex
+  const sectionIndexMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    rows.forEach((row, index) => {
+      if (row.type === 'section') {
+        map[row.section.key] = index;
+      }
+    });
+    return map;
+  }, [rows]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollLockTimeoutRef.current) {
+        clearTimeout(scrollLockTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle pill press to scroll to section using scrollToIndex
+  const handlePillPress = useCallback((key: string) => {
+    // Clear any pending unlock
+    if (scrollLockTimeoutRef.current) {
+      clearTimeout(scrollLockTimeoutRef.current);
+    }
+
+    // Lock scroll-based updates during programmatic scroll
+    isProgrammaticScrollRef.current = true;
+
+    // Immediately highlight the pressed pill
+    setActiveSectionKey(key);
+
+    const index = sectionIndexMap[key];
+    if (index !== undefined && flatListRef.current) {
+      flatListRef.current.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0,
+      });
+    }
+
+    // Unlock after animation completes (~500ms)
+    scrollLockTimeoutRef.current = setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 500);
+  }, [sectionIndexMap]);
+
+  // Track which section is visible using FlatList's native viewport tracking
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken<Row>[] }) => {
+    // Skip during programmatic scroll (pill press animation)
+    if (isProgrammaticScrollRef.current) {
+      return;
+    }
+
+    // Find the first visible section header
+    const visibleSections = viewableItems
+      .filter(v => v.isViewable && v.item.type === 'section')
+      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+
+    if (visibleSections.length > 0) {
+      const firstSection = visibleSections[0].item;
+      if (firstSection.type === 'section') {
+        setActiveSectionKey(firstSection.section.key);
+      }
+    }
+  }).current;
+
+  const renderItem = ({ item }: { item: Row }) => {
     if (item.type === 'section') {
       return <SectionHeader title={item.section.title} styles={styles} />;
     }
@@ -307,8 +389,14 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
         date={headerDate}
         onSearchPress={() => navigation.navigate('Search')}
         styles={styles}
-        colors={colors}
       />
+      {categories.length > 0 && (
+        <CategoryPills
+          categories={categories}
+          onPillPress={handlePillPress}
+          activeKey={activeSectionKey}
+        />
+      )}
 
       {loading && !brief ? (
         <LoadingState styles={styles} />
@@ -320,6 +408,7 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={rows}
           keyExtractor={(r, idx) =>
             r.type === 'section'
@@ -331,6 +420,8 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -338,6 +429,21 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
               tintColor={colors.textMuted}
             />
           }
+          onScrollToIndexFailed={(info) => {
+            // First, jump to approximate position to trigger item rendering
+            flatListRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: false,
+            });
+            // Then retry scrollToIndex after layout completes
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({
+                index: info.index,
+                animated: true,
+                viewPosition: 0,
+              });
+            }, 100);
+          }}
         />
       )}
     </View>
@@ -385,12 +491,6 @@ function createStyles(theme: Theme) {
     headerIconText: {
       fontSize: 26,
       color: colors.textMuted,
-    },
-    headerSubtitle: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: colors.textMuted,
-      marginTop: spacing.sm,
     },
     brand: {
       fontSize: typography.brand.fontSize,
