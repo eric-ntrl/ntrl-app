@@ -65,6 +65,7 @@ type ApiStoryDetail = {
 };
 
 type ApiTransparencySpan = {
+  field: 'title' | 'body';
   start_char: number;
   end_char: number;
   original_text: string;
@@ -361,13 +362,19 @@ export async function fetchStoryDetail(storyId: string): Promise<Detail> {
  * Result from fetching transparency data.
  */
 export type TransparencyFetchResult = {
+  /** Original article title (for headline manipulation highlighting) */
+  originalTitle: string;
   /** Original article body text (for highlighting spans) */
   originalBody: string | null;
   /** Whether original body is available */
   originalBodyAvailable: boolean;
   /** Whether original body has expired */
   originalBodyExpired: boolean;
-  /** Transparency spans showing what was changed */
+  /** Transparency spans for title */
+  titleSpans: TransparencySpan[];
+  /** Transparency spans for body */
+  bodySpans: TransparencySpan[];
+  /** All transparency spans (combined) */
   spans: TransparencySpan[];
   /** Original source URL */
   sourceUrl: string;
@@ -406,11 +413,19 @@ export async function fetchTransparency(storyId: string): Promise<TransparencyFe
       setTimeout(() => reject(new Error('Body parse timeout')), 10000)
     ),
   ]);
+
+  const allSpans = data.spans || [];
+  const titleSpans = allSpans.filter((s) => s.field === 'title');
+  const bodySpans = allSpans.filter((s) => s.field === 'body' || !s.field);
+
   return {
+    originalTitle: data.original_title,
     originalBody: data.original_body,
     originalBodyAvailable: data.original_body_available,
     originalBodyExpired: data.original_body_expired,
-    spans: data.spans || [],
+    titleSpans,
+    bodySpans,
+    spans: allSpans,
     sourceUrl: data.source_url,
   };
 }

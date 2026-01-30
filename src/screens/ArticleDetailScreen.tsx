@@ -300,8 +300,10 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     const fallback = createFallbackSummary(item.detail);
     return fallback.length > 0 ? fallback : composeBodyText(item.detail);
   });
-  const [backendTransformations, setBackendTransformations] = useState<Transformation[]>([]);
+  const [bodyTransformations, setBodyTransformations] = useState<Transformation[]>([]);
+  const [titleTransformations, setTitleTransformations] = useState<Transformation[]>([]);
   const [originalBodyText, setOriginalBodyText] = useState<string | null>(null);
+  const [originalTitleText, setOriginalTitleText] = useState<string>('');
   const [transparencyLoading, setTransparencyLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('brief');
 
@@ -356,20 +358,23 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         if (__DEV__) {
           console.log('[ArticleDetail] Transparency data received:', {
             itemId: item.id,
+            originalTitle: result.originalTitle,
             originalBodyLength: result.originalBody?.length || 0,
             originalBodyPreview: result.originalBody?.substring(0, 100) || '(none)',
-            spanCount: result.spans.length,
-            spans: result.spans.slice(0, 3).map(s => ({
-              start: s.start_char,
-              end: s.end_char,
-              text: s.original_text?.substring(0, 30),
-            })),
+            titleSpanCount: result.titleSpans.length,
+            bodySpanCount: result.bodySpans.length,
+            totalSpanCount: result.spans.length,
           });
         }
 
-        const transformations = mapSpansToTransformations(result.spans);
-        setBackendTransformations(transformations);
-        // Store original body for correct span highlighting
+        // Map title and body spans separately
+        const titleTransforms = mapSpansToTransformations(result.titleSpans);
+        const bodyTransforms = mapSpansToTransformations(result.bodySpans);
+
+        setTitleTransformations(titleTransforms);
+        setBodyTransformations(bodyTransforms);
+        // Store original title and body for highlighting
+        setOriginalTitleText(result.originalTitle);
         setOriginalBodyText(result.originalBody);
       })
       .catch((error) => {
@@ -392,7 +397,8 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   }, []);
 
   // Determine if content was modified
-  const hasRemovedContent = item.has_manipulative_content || backendTransformations.length > 0 || !!item.detail.disclosure;
+  const allTransformations = [...titleTransformations, ...bodyTransformations];
+  const hasRemovedContent = item.has_manipulative_content || allTransformations.length > 0 || !!item.detail.disclosure;
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -573,7 +579,9 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
               <NtrlContent
                 item={item}
                 fullOriginalText={originalBodyText}
-                transformations={backendTransformations}
+                originalTitle={originalTitleText}
+                transformations={bodyTransformations}
+                titleTransformations={titleTransformations}
               />
             )
           )}

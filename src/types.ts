@@ -6,6 +6,7 @@ export type Detail = {
 };
 
 export type TransparencySpan = {
+  field: 'title' | 'body';
   start_char: number;
   end_char: number;
   original_text: string;

@@ -5,6 +5,7 @@ import type { Theme, ThemeColors } from '../theme/types';
 import { serifFamily } from '../theme/typography';
 import type { TransformationType, Transformation, SpanReason } from '../navigation/types';
 import type { Item } from '../types';
+import ManipulationGauge from './ManipulationGauge';
 
 /**
  * Get human-readable label for transformation type
@@ -81,18 +82,22 @@ function HighlightedText({
   transformations,
   styles,
   colors,
+  textStyle,
 }: {
   text: string;
   transformations: Transformation[];
   styles: ReturnType<typeof createStyles>;
   colors: ThemeColors;
+  textStyle?: object;
 }) {
   if (!text) {
     return null;
   }
 
+  const baseStyle = textStyle || styles.articleText;
+
   if (transformations.length === 0) {
-    return <Text style={styles.articleText}>{text}</Text>;
+    return <Text style={baseStyle}>{text}</Text>;
   }
 
   const sorted = [...transformations].sort((a, b) => a.start - b.start);
@@ -133,7 +138,7 @@ function HighlightedText({
   }
 
   return (
-    <Text style={styles.articleText} testID="ntrl-view-text">
+    <Text style={baseStyle} testID="ntrl-view-text">
       {segments.map((segment, index) =>
         segment.highlighted ? (
           <Text
@@ -195,6 +200,39 @@ function HighlightLegend({
 }
 
 /**
+ * Original title section with highlights
+ */
+function OriginalTitleSection({
+  title,
+  transformations,
+  styles,
+  colors,
+}: {
+  title: string;
+  transformations: Transformation[];
+  styles: ReturnType<typeof createStyles>;
+  colors: ThemeColors;
+}) {
+  const hasTitleChanges = transformations.length > 0;
+
+  return (
+    <View style={styles.originalTitleContainer}>
+      <Text style={styles.originalTitleLabel}>ORIGINAL HEADLINE</Text>
+      <HighlightedText
+        text={title}
+        transformations={transformations}
+        styles={styles}
+        colors={colors}
+        textStyle={styles.originalTitleText}
+      />
+      {!hasTitleChanges && (
+        <Text style={styles.originalTitleClean}>No manipulation detected in headline</Text>
+      )}
+    </View>
+  );
+}
+
+/**
  * Change categories list
  */
 function ChangeCategories({
@@ -228,15 +266,23 @@ function ChangeCategories({
 type NtrlContentProps = {
   item: Item;
   fullOriginalText: string | null | undefined;
+  originalTitle?: string;
   transformations: Transformation[];
+  titleTransformations?: Transformation[];
 };
 
 /**
  * NtrlContent — inline transparency content for ArticleDetailScreen.
- * Shows badge row, legend, highlighted text, change categories,
- * clean article notice, and empty state.
+ * Shows original title with highlights, manipulation gauge, legend,
+ * highlighted article text, change categories, and empty states.
  */
-export default function NtrlContent({ item, fullOriginalText, transformations }: NtrlContentProps) {
+export default function NtrlContent({
+  item,
+  fullOriginalText,
+  originalTitle,
+  transformations,
+  titleTransformations = [],
+}: NtrlContentProps) {
   const { theme } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -244,30 +290,58 @@ export default function NtrlContent({ item, fullOriginalText, transformations }:
   const [showLegend, setShowLegend] = useState(false);
 
   const hasContent = !!fullOriginalText;
-  const hasChanges = transformations.length > 0;
+  const allTransformations = [...titleTransformations, ...transformations];
+  const hasChanges = allTransformations.length > 0;
+
+  // Calculate manipulation score
+  const wordCount = useMemo(() => {
+    const titleWords = originalTitle ? originalTitle.split(/\s+/).length : 0;
+    const bodyWords = fullOriginalText ? fullOriginalText.split(/\s+/).length : 0;
+    return titleWords + bodyWords;
+  }, [originalTitle, fullOriginalText]);
+
+  const manipulationPercent = useMemo(() => {
+    if (wordCount === 0) return 0;
+    return (allTransformations.length / wordCount) * 100;
+  }, [allTransformations.length, wordCount]);
 
   return (
     <View testID="ntrl-view-screen">
       {hasContent ? (
         <>
-          {/* Badge + legend (always visible when changes exist) */}
-          {hasChanges && (
-            <>
-              <View style={styles.badgeRow}>
-                <View style={styles.highlightBadge}>
-                  <Text style={styles.badgeText}>
-                    {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
-                  </Text>
-                </View>
-              </View>
-              <HighlightLegend
-                expanded={showLegend}
-                onToggle={() => setShowLegend(!showLegend)}
-                styles={styles}
-                colors={colors}
-              />
-            </>
+          {/* Original title with highlights */}
+          {originalTitle && (
+            <OriginalTitleSection
+              title={originalTitle}
+              transformations={titleTransformations}
+              styles={styles}
+              colors={colors}
+            />
           )}
+
+          {/* Manipulation gauge */}
+          {hasChanges && (
+            <View style={styles.gaugeSection}>
+              <ManipulationGauge
+                percent={manipulationPercent}
+                spanCount={allTransformations.length}
+                wordCount={wordCount}
+              />
+            </View>
+          )}
+
+          {/* Legend (always visible when changes exist) */}
+          {hasChanges && (
+            <HighlightLegend
+              expanded={showLegend}
+              onToggle={() => setShowLegend(!showLegend)}
+              styles={styles}
+              colors={colors}
+            />
+          )}
+
+          {/* Divider before body */}
+          <View style={styles.bodyDivider} />
 
           {/* Full article text with highlights (always ON) */}
           <View style={styles.articleSection}>
@@ -280,7 +354,7 @@ export default function NtrlContent({ item, fullOriginalText, transformations }:
           </View>
 
           {/* Change categories */}
-          {hasChanges && <ChangeCategories transformations={transformations} styles={styles} />}
+          {hasChanges && <ChangeCategories transformations={allTransformations} styles={styles} />}
 
           {/* Clean article notice */}
           {!hasChanges && (
@@ -309,25 +383,48 @@ function createStyles(theme: Theme) {
   const { colors, typography, spacing, layout } = theme;
 
   return StyleSheet.create({
-    // Badge row
-    badgeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      marginBottom: spacing.sm,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.divider,
+    // Original title section
+    originalTitleContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.highlight,
     },
-    highlightBadge: {
-      backgroundColor: colors.highlight,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: 4,
+    originalTitleLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1,
+      color: colors.textMuted,
+      marginBottom: spacing.xs,
     },
-    badgeText: {
-      fontSize: 12,
-      fontWeight: '500',
+    originalTitleText: {
+      fontSize: 18,
+      fontFamily: serifFamily,
+      fontWeight: '600',
       color: colors.textPrimary,
+      lineHeight: 26,
+    },
+    originalTitleClean: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textMuted,
+      fontStyle: 'italic',
+      marginTop: spacing.xs,
+    },
+
+    // Gauge section
+    gaugeSection: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+
+    // Body divider
+    bodyDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.divider,
+      marginBottom: spacing.lg,
     },
 
     // Highlight legend
