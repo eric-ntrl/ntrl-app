@@ -38,6 +38,7 @@ src/
 │   └── AboutScreen.tsx          # App info
 ├── components/       # Reusable components
 │   ├── NtrlContent.tsx          # Inline transparency view (highlights, legend, categories)
+│   ├── ManipulationGauge.tsx    # Semi-circular manipulation density gauge (react-native-svg)
 │   ├── ArticleBrief.tsx         # Brief article paragraphs (serif)
 │   ├── SegmentedControl.tsx     # Brief/Full/Ntrl tab switcher
 │   ├── SkeletonCard.tsx         # Loading skeleton placeholders
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({ /* static colors */ });
 Backend: `ntrl-api` (FastAPI/Python)
 - `GET /v1/brief` - Daily brief with sections
 - `GET /v1/stories/{id}` - Story detail
-- `GET /v1/stories/{id}/transparency` - What was neutralized
+- `GET /v1/stories/{id}/transparency` - What was neutralized (includes `field` on spans: `title` or `body`)
 
 ## Core Principles (MUST FOLLOW)
 1. **No engagement** - No likes, saves, shares, comments, ever
@@ -184,7 +185,57 @@ ArticleDetailScreen has three view modes, all rendered inline (no navigation tra
 | **Full** | `detail_full` | LLM-neutralized full article (serif) |
 | **Ntrl** | `original_body` + `spans` | Original text with highlighted manipulation spans (via NtrlContent component) |
 
-**Key insight**: Spans reference positions in `original_body`, not `detail_full`. The Ntrl tab shows the original text with category-colored inline highlights. All three tabs swap content in-place with no page transitions.
+**Key insight**: Spans reference positions in `original_body` (for body spans) or `original_title` (for title spans), not `detail_full`. The Ntrl tab shows the original text with category-colored inline highlights. All three tabs swap content in-place with no page transitions.
+
+### Title Span Detection (Jan 2026)
+
+Headlines are now analyzed for manipulation alongside the article body. The transparency API returns spans with a `field` attribute:
+
+| Field | Content | Example Manipulation |
+|-------|---------|---------------------|
+| `title` | Original headline | "Trump SLAMS critics" |
+| `body` | Original article body | "shocking", "slammed" |
+
+**NtrlContent props:**
+```typescript
+type NtrlContentProps = {
+  item: Item;
+  fullOriginalText: string | null | undefined;
+  originalTitle?: string;                    // Original headline for display
+  transformations: Transformation[];         // Body spans
+  titleTransformations?: Transformation[];   // Title spans (new)
+};
+```
+
+**ArticleDetailScreen state:**
+- `originalTitleText` - Original headline text
+- `bodyTransformations` - Spans where `field === 'body'`
+- `titleTransformations` - Spans where `field === 'title'`
+
+### Manipulation Gauge (Jan 2026)
+
+The ntrl-view displays a semi-circular gauge showing manipulation density:
+
+```
+        ╭─────────────────╮
+       ╱   🟢  🟡  🔴      ╲
+      │        ↑            │
+      ╰─────────────────────╯
+         12% manipulation
+      15 phrases in 125 words
+```
+
+**Component:** `ManipulationGauge.tsx`
+- Uses `react-native-svg` for smooth arc rendering
+- Gradient: green (0%) → yellow (25%) → red (50%+)
+- Props: `percent`, `spanCount`, `wordCount`
+- Labels: Minimal (<5%), Low (<15%), Moderate (<30%), High (30%+)
+- Capped at 50% visually (anything above is "heavy manipulation")
+
+**Calculation:**
+```typescript
+const manipulationPercent = (allTransformations.length / wordCount) * 100;
+```
 
 ### Category-Specific Highlight Colors (Jan 2026)
 
