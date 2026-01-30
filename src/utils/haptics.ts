@@ -10,3 +10,13 @@ export function lightTap() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 }
+
+/**
+ * Selection haptic — native iOS tab/picker selection feel.
+ * Lighter than impactAsync, matches standard tab bar behavior.
+ */
+export function selectionTap() {
+  if (Platform.OS === 'ios') {
+    Haptics.selectionAsync();
+  }
+}

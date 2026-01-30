@@ -41,6 +41,9 @@ export interface ThemeColors {
   // Interactive
   link: string;
   linkPressed: string;
+
+  // Tab bar
+  tabBarActiveBackground: string;
 }
 
 export interface TypographyStyle {

@@ -48,6 +48,7 @@ export const colorsV1: ThemeColors = {
   accentSecondary: '#7A8B99', // Same as primary in v1
   accentSecondaryMuted: '#7A8B99',
   accentSecondarySubtle: 'rgba(122, 139, 153, 0.1)',
+  tabBarActiveBackground: 'rgba(122, 139, 153, 0.12)', // accent at 12% opacity
 };
 
 // V2 Colors - Refresh (adds sage accent)
@@ -57,6 +58,7 @@ export const colorsV2: ThemeColors = {
   accentSecondary: '#8B9A7A', // NEW: Sage - positive states (Saved)
   accentSecondaryMuted: '#A3B094', // Light sage - hover states
   accentSecondarySubtle: 'rgba(139, 154, 122, 0.15)', // Chip selected backgrounds
+  tabBarActiveBackground: 'rgba(122, 139, 153, 0.12)', // accent at 12% opacity
 };
 
 /**
@@ -104,6 +106,9 @@ export const colorsV1Dark: ThemeColors = {
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
   linkPressed: '#B3C4A5',
+
+  // Tab bar
+  tabBarActiveBackground: 'rgba(143, 160, 173, 0.15)', // lightened accent at 15%
 };
 
 // V2 Dark - Sage accent in dark mode (current refresh)
@@ -141,4 +146,7 @@ export const colorsV2Dark: ThemeColors = {
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
   linkPressed: '#B3C4A5',
+
+  // Tab bar
+  tabBarActiveBackground: 'rgba(143, 160, 173, 0.15)', // lightened accent at 15%
 };

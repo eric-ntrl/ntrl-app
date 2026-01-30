@@ -10,6 +10,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import CustomTabBar from './src/components/CustomTabBar';
 import {
   setLastSessionCompletedAt,
   setLastOpenedAt,
@@ -123,27 +124,14 @@ function ProfileStackScreen() {
 }
 
 /**
- * Tab navigator with theme-aware styling
+ * Tab navigator with custom tab bar for enhanced haptics and visual feedback
  */
 function AppTabs() {
-  const { theme } = useTheme();
-  const { colors } = theme;
-
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.divider,
-          borderTopWidth: StyleSheet.hairlineWidth,
-        },
       }}
     >
       <Tab.Screen
