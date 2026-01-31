@@ -334,62 +334,34 @@ The badge ("N phrases flagged") is always visible when changes exist.
 
 **Claude MUST test UI changes visually before asking the user to verify.**
 
-### RECOMMENDED: Playwright Custom Script (Most Reliable)
+### RECOMMENDED: Use `/ntrl-ui-test` Skill
 
-This method captures all views reliably and can navigate through the app:
+The simplest way to capture screenshots is the `/ntrl-ui-test` skill, which runs the comprehensive capture script:
+
+```
+/ntrl-ui-test
+```
+
+This invokes `e2e/capture-all-screens.cjs` which:
+- Captures all major screens (Today, Sections, Profile, Settings, Search, Saved, History)
+- Navigates to article detail and captures Brief/Full/Ntrl tabs
+- **Auto-detects scrollable screens** and captures both `-top.png` and `-bottom.png` variants
+- **Non-scrollable screens** (like Settings) get a single `.png` file
+- Handles tab switching with retry logic for reliability
+- Saves screenshots to `/Users/ericrbrown/Documents/NTRL/Screen Shots/`
+
+### Manual Script Execution
+
+Alternatively, run the script directly:
 
 ```bash
 cd /Users/ericrbrown/Documents/NTRL/code/ntrl-app
-
-# Start Expo if not running
-npm start -- --web &
-sleep 5
-
-# Create capture script
-cat > capture-screens.cjs << 'EOF'
-const { chromium } = require('playwright');
-(async () => {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  const page = await context.newPage();
-
-  await page.goto('http://localhost:8081');
-  await page.waitForTimeout(4000);
-  await page.screenshot({ path: '/tmp/web-feed.png' });
-  console.log('Feed captured');
-
-  try {
-    // Click first article (adjust text to match)
-    await page.click('text=<first-article-title>');
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: '/tmp/web-brief.png' });
-    console.log('Brief captured');
-
-    await page.click('text=Full');
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: '/tmp/web-full.png' });
-    console.log('Full captured');
-
-    await page.click('text=Ntrl');
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: '/tmp/web-ntrl.png' });
-    console.log('Ntrl tab captured');
-  } catch (e) {
-    console.log('Error:', e.message);
-    await page.screenshot({ path: '/tmp/web-error.png' });
-  }
-  await browser.close();
-})();
-EOF
-
-# Run it
-node capture-screens.cjs
-
-# Clean up
-rm capture-screens.cjs
+node e2e/capture-all-screens.cjs
 ```
 
-Then use the Read tool on `/tmp/web-feed.png`, `/tmp/web-brief.png`, `/tmp/web-full.png`, `/tmp/web-ntrl.png` to view.
+**Requirements:** Expo web must be running on `localhost:8081` (`npm start -- --web`)
+
+**Output:** 23 screenshots covering all app screens, saved to `/Users/ericrbrown/Documents/NTRL/Screen Shots/`
 
 ### Alternative: Playwright Test Suite
 
