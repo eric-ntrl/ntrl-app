@@ -226,6 +226,18 @@ npm run android    # Run on Android emulator
 npm run web        # Run in browser
 ```
 
+## Claude Skills
+
+Available slash commands for development:
+
+| Skill | Description |
+|-------|-------------|
+| `/ntrl-ui` | UI component guidance with correct dark mode patterns (`useTheme()`, `createStyles`) |
+| `/ntrl-ui-test` | Capture screenshots via Playwright for visual verification |
+| `/ntrl-typecheck` | Run TypeScript checking filtered to `src/` files |
+
+**Usage:** Type the skill name (e.g., `/ntrl-ui`) to invoke.
+
 ## The 3-Tab Content Architecture
 
 ArticleDetailScreen has three view modes, all rendered inline (no navigation transitions):
