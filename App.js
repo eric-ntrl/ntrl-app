@@ -14,8 +14,6 @@ import CustomTabBar from './src/components/CustomTabBar';
 import {
   setLastSessionCompletedAt,
   setLastOpenedAt,
-  hasSeenIntro,
-  markIntroSeen,
 } from './src/storage/storageService';
 
 // Screens
@@ -31,6 +29,7 @@ import SavedArticlesScreen from './src/screens/SavedArticlesScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import ManipulationAvoidedScreen from './src/screens/ManipulationAvoidedScreen';
 import WhatNtrlIsScreen from './src/screens/WhatNtrlIsScreen';
+import ManifestoScreen from './src/screens/ManifestoScreen';
 
 // Navigators
 const RootStack = createNativeStackNavigator();
@@ -184,11 +183,11 @@ function AppNavigator() {
   const [showIntro, setShowIntro] = useState(null); // null = loading
 
   useEffect(() => {
-    hasSeenIntro().then(seen => setShowIntro(!seen));
+    // Always show splash - it's a brief brand intro on every launch
+    setShowIntro(true);
   }, []);
 
-  const handleIntroComplete = useCallback(async () => {
-    await markIntroSeen();
+  const handleIntroComplete = useCallback(() => {
     setShowIntro(false);
   }, []);
 
@@ -245,6 +244,13 @@ function AppNavigator() {
           {(props) => (
             <ErrorBoundary>
               <AboutScreen {...props} />
+            </ErrorBoundary>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen name="Manifesto">
+          {(props) => (
+            <ErrorBoundary>
+              <ManifestoScreen {...props} />
             </ErrorBoundary>
           )}
         </RootStack.Screen>

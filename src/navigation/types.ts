@@ -65,6 +65,7 @@ export type RootStackParamList = {
 SourceTransparency: { sourceName: string; sourceUrl: string };
   Settings: undefined;
   About: undefined;
+  Manifesto: undefined;
 };
 
 // ============================================
@@ -165,6 +166,7 @@ export type ArticleDetailScreenProps = NativeStackScreenProps<RootStackParamList
 export type SourceTransparencyScreenProps = NativeStackScreenProps<RootStackParamList, 'SourceTransparency'>;
 export type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
+export type ManifestoScreenProps = NativeStackScreenProps<RootStackParamList, 'Manifesto'>;
 
 // ============================================
 // Generic navigation prop type

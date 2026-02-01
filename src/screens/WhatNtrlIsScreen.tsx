@@ -3,58 +3,25 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  Pressable,
   StatusBar,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import type { Theme } from '../theme/types';
+import type { Theme, ColorMode } from '../theme/types';
 
 interface WhatNtrlIsScreenProps {
   onComplete: () => void;
 }
 
-const MANIFESTO_COPY = `You know the feeling.
-The tightness after a headline.
-The scroll that won't stop.
-
-The news doesn't start this way.
-It becomes this way—
-compressed, sharpened, pushed toward reaction,
-toward a click, toward an agenda.
-
-News was meant to inform you.
-Now it's optimized to inflame you.
-
-Every trigger.
-Every surge of dread.
-That isn't the story.
-It's the business model.
-
-ntrl removes what was added.
-
-Same facts.
-Same events.
-
-No hype.
-No manufactured urgency.
-No agenda.
-
-No emotional toll just to stay informed.
-
-ntrl.news
-The news, unaltered.`;
-
 /**
- * First-run onboarding screen displaying NTRL's manifesto.
- * Shown only once on first app launch, before user enters the main app.
+ * First-run splash screen — minimalist "book title page" design.
+ * Shown only once on first app launch, auto-transitions after 1.5 seconds.
  */
 export default function WhatNtrlIsScreen({ onComplete }: WhatNtrlIsScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
-  const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Fade-in animation
@@ -68,35 +35,54 @@ export default function WhatNtrlIsScreen({ onComplete }: WhatNtrlIsScreenProps) 
     }).start();
   }, [fadeAnim]);
 
+  // Auto-transition timer (600ms fade-in + 1900ms hold = 2500ms total)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  // Gradient colors based on color mode
+  const gradientColors = useMemo(
+    () => getGradientColors(colorMode),
+    [colorMode]
+  );
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <LinearGradient colors={gradientColors} style={styles.container}>
       <StatusBar
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
+        backgroundColor="transparent"
+        translucent
       />
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.manifesto}>{MANIFESTO_COPY}</Text>
-        </ScrollView>
-
-        <View style={[styles.buttonContainer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-          <Pressable
-            onPress={onComplete}
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            accessibilityLabel="Begin using NTRL"
-            accessibilityRole="button"
-          >
-            <Text style={styles.buttonText}>Begin</Text>
-          </Pressable>
+      <Animated.View
+        style={[
+          styles.content,
+          { opacity: fadeAnim, paddingTop: insets.top, paddingBottom: insets.bottom },
+        ]}
+      >
+        <View style={styles.centerContent}>
+          <Text style={styles.headline}>Welcome to NTRL</Text>
+          <Text style={styles.subheadline}>News, unaltered and free of spin.</Text>
         </View>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
+}
+
+/**
+ * Gradient colors for light and dark modes.
+ * Very subtle shift — barely perceptible for calm aesthetic.
+ */
+function getGradientColors(colorMode: ColorMode): readonly [string, string] {
+  if (colorMode === 'dark') {
+    // Subtle darkening toward base
+    return ['#1A1816', '#161412'] as const;
+  }
+  // Subtle warm shift for light mode
+  return ['#FAF9F6', '#F5F3EF'] as const;
 }
 
 function createStyles(theme: Theme) {
@@ -105,54 +91,36 @@ function createStyles(theme: Theme) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
     },
 
     content: {
       flex: 1,
-    },
-
-    scrollView: {
-      flex: 1,
-    },
-
-    scrollContent: {
-      paddingHorizontal: layout.screenPadding,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxxl,
-    },
-
-    manifesto: {
-      fontFamily: 'Georgia',
-      fontSize: 17,
-      lineHeight: 28,
-      color: colors.textPrimary,
-      letterSpacing: 0.2,
-    },
-
-    buttonContainer: {
-      paddingHorizontal: layout.screenPadding,
-      paddingTop: spacing.lg,
-      backgroundColor: colors.background,
-    },
-
-    button: {
-      backgroundColor: colors.textPrimary,
-      paddingVertical: spacing.lg,
-      borderRadius: 8,
-      alignItems: 'center',
       justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: layout.screenPadding,
     },
 
-    buttonPressed: {
-      opacity: 0.8,
+    centerContent: {
+      maxWidth: 300,
+      alignItems: 'center',
     },
 
-    buttonText: {
-      color: colors.background,
-      fontSize: 16,
+    headline: {
+      fontFamily: 'Georgia',
+      fontSize: 30,
       fontWeight: '600',
-      letterSpacing: 0.5,
+      letterSpacing: -0.3,
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+
+    subheadline: {
+      fontSize: 17,
+      fontWeight: '400',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 24,
     },
   });
 }

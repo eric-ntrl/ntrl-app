@@ -83,53 +83,65 @@ export default function AboutScreen({ navigation }: AboutScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.intro}>
-          NTRL removes manipulative language from information so you can understand what matters
-          without being sold to, provoked, or worked up for someone else's agenda.
+          <Text style={styles.introBold}>NTRL removes manipulative language from information.</Text>
+          {'\n\n'}
+          <Text style={styles.introBold}>Understand what matters without being sold to, provoked, or worked up.</Text>
         </Text>
 
         <Section title="What this is" styles={styles}>
           <Text style={styles.body}>
-            A reading layer that shortens, de-triggers, and structures information into neutral
-            summaries. Every article shows what happened, why it matters, what is known, and what
-            remains uncertain.
+            A reading layer that shortens, de-triggers and structures information into neutral
+            summaries, while also offering full articles with manipulative language removed. Each
+            piece shows what happened, why it matters, what is known, and what remains uncertain —
+            and includes a transparency view so you can see what was removed and why.
           </Text>
         </Section>
 
         <Section title="What this is not" styles={styles}>
           <Text style={styles.body}>
-            A truth engine. NTRL removes tone and manipulation, not factual claims. It can be wrong.
-            When information is uncertain, we say so explicitly instead of guessing.
+            A truth engine. NTRL removes tone and manipulation, not factual claims. It can still be
+            wrong; when information is uncertain, we say so explicitly instead of guessing.
           </Text>
         </Section>
 
         <Section title="What we remove" styles={styles}>
           <View style={styles.list}>
-            <Text style={styles.listItem}>• Clickbait and sensationalism</Text>
-            <Text style={styles.listItem}>• Urgency inflation</Text>
-            <Text style={styles.listItem}>• Emotional triggers</Text>
-            <Text style={styles.listItem}>• Selling language</Text>
-            <Text style={styles.listItem}>• Agenda signaling</Text>
-            <Text style={styles.listItem}>• Rhetorical framing</Text>
+            <Text style={styles.listItem}>• Clickbait, sensationalism, and urgency inflation</Text>
+            <Text style={styles.listItem}>• Emotional triggers and selling language</Text>
+            <Text style={styles.listItem}>• Agenda signaling and rhetorical framing</Text>
           </View>
         </Section>
 
         <Section title="What we preserve" styles={styles}>
           <Text style={styles.body}>
-            Facts, quotes, context, and nuance. We strip the manipulation, not the information.
+            Facts, quotes, context and nuance. We strip the manipulation, not the information.
           </Text>
         </Section>
 
         <Section title="How it works" styles={styles}>
           <Text style={styles.body}>
-            Sources are ingested, content is extracted, manipulative language is identified and
-            removed, and summaries are generated. You can view transparency and redlines from any
-            article.
+            Sources are ingested, content is extracted, and manipulative language is identified and
+            removed. We then generate both neutral summaries and full articles. For every story, you
+            can view a redline showing exactly what we removed.
           </Text>
         </Section>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Filtered for clarity. Signal preserved.</Text>
         </View>
+
+        <Pressable
+          onPress={() => navigation.navigate('Manifesto')}
+          hitSlop={12}
+          accessibilityLabel="Read why we built NTRL"
+          accessibilityRole="button"
+        >
+          {({ pressed }) => (
+            <Text style={[styles.manifestoLink, pressed && styles.manifestoLinkPressed]}>
+              Why NTRL?
+            </Text>
+          )}
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -184,8 +196,8 @@ function createStyles(theme: Theme) {
     },
     scrollContent: {
       paddingHorizontal: layout.screenPadding,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxxl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xxl,
     },
 
     intro: {
@@ -193,12 +205,15 @@ function createStyles(theme: Theme) {
       fontWeight: '400',
       lineHeight: 24,
       color: colors.textPrimary,
-      marginBottom: spacing.xxl,
+      marginBottom: spacing.xl,
+    },
+    introBold: {
+      fontWeight: '600',
     },
 
     // Sections
     section: {
-      marginBottom: spacing.xxl,
+      marginBottom: spacing.lg,
     },
     sectionTitle: {
       fontSize: 11,
@@ -210,7 +225,7 @@ function createStyles(theme: Theme) {
     body: {
       fontSize: 15,
       fontWeight: '400',
-      lineHeight: 22,
+      lineHeight: 21,
       color: colors.textSecondary,
     },
 
@@ -221,7 +236,7 @@ function createStyles(theme: Theme) {
     listItem: {
       fontSize: 15,
       fontWeight: '400',
-      lineHeight: 22,
+      lineHeight: 21,
       color: colors.textSecondary,
     },
 
@@ -238,6 +253,20 @@ function createStyles(theme: Theme) {
       fontWeight: '400',
       fontStyle: 'italic',
       color: colors.textMuted,
+    },
+
+    // Manifesto link
+    manifestoLink: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+      textDecorationLine: 'underline',
+      textDecorationColor: colors.dividerSubtle,
+      marginTop: spacing.xl,
+      textAlign: 'center',
+    },
+    manifestoLinkPressed: {
+      opacity: 0.6,
     },
   });
 }
