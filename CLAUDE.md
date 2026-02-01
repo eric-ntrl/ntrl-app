@@ -34,6 +34,7 @@ src/
 │   ├── SearchScreen.tsx         # Article search
 │   ├── SavedArticlesScreen.tsx  # Saved articles list
 │   ├── HistoryScreen.tsx        # Reading history
+│   ├── ManipulationAvoidedScreen.tsx # Stats detail: phrases avoided breakdown
 │   ├── SourceTransparencyScreen.tsx  # Source info
 │   ├── AboutScreen.tsx          # App info
 │   └── WhatNtrlIsScreen.tsx     # First-run onboarding manifesto
@@ -45,13 +46,20 @@ src/
 │   ├── ArticleBrief.tsx         # Brief article paragraphs (serif)
 │   ├── SegmentedControl.tsx     # Brief/Full/Ntrl tab switcher
 │   ├── SkeletonCard.tsx         # Loading skeleton placeholders
-│   └── ErrorBoundary.tsx        # Error boundary wrapper
+│   ├── ErrorBoundary.tsx        # Error boundary wrapper
+│   └── stats/                   # Reading stats components
+│       ├── MyStatsCard.tsx      # Hero stats card for ProfileScreen
+│       ├── StatBucket.tsx       # Reusable metric display
+│       ├── BarChart.tsx         # Simple bar chart (react-native-svg)
+│       ├── CategoryBreakdownList.tsx # Span counts by reason
+│       └── RangeSwitcher.tsx    # Time range selector
 ├── storage/          # Local storage
 │   ├── storageService.ts        # AsyncStorage + SecureStore helpers
 │   ├── secureStorage.ts         # Expo SecureStore wrapper
-│   └── types.ts                 # Storage type definitions
+│   └── types.ts                 # Storage type definitions (includes stats types)
 ├── services/         # Business logic
-│   └── detailSummary.ts         # Summary composition helpers
+│   ├── detailSummary.ts         # Summary composition helpers
+│   └── statsService.ts          # Reading session tracking and stats aggregation
 ├── navigation/       # Navigation types
 │   └── types.ts                 # Type-safe route definitions
 ├── api.ts            # API client (calls ntrl-api backend)
@@ -59,6 +67,7 @@ src/
 ├── theme/            # Design system (colors, typography, spacing)
 ├── types.ts          # TypeScript interfaces
 └── utils/            # Helper functions
+    └── dateHelpers.ts           # Date utilities for stats (local date, ranges)
 ```
 
 ## Design System
@@ -218,6 +227,66 @@ location.reload();
 - Supports light/dark mode
 - Fade-in animation on mount
 
+## My Stats / Reading Stats (Jan 2026)
+
+ProfileScreen includes a "MY STATS" section showing reading activity. Users can tap "Phrases Avoided" to see a detailed breakdown.
+
+### Session Tracking
+
+Reading sessions are tracked in `ArticleDetailScreen.tsx`:
+- **Completion criteria**: Dwell time ≥30s OR scroll depth ≥75% (whichever first)
+- Sessions recorded on component unmount via `recordReadingSession()`
+- Transparency data fetched for completed sessions to count manipulation spans
+
+### Storage Types (`storage/types.ts`)
+
+| Type | Purpose | Limit |
+|------|---------|-------|
+| `ReadingSession` | Individual article reading sessions | 200 entries (rolling) |
+| `ArticleSpanCache` | Cached span counts per article | 100 entries (LRU) |
+| `UserStats` | Aggregated all-time totals | 1 entry (indefinite) |
+| `StatsTimeRange` | Time filter: 'day' \| 'week' \| 'month' \| 'all' | — |
+
+### Stats Service (`services/statsService.ts`)
+
+| Function | Description |
+|----------|-------------|
+| `recordReadingSession(session)` | Store session, fetch spans if completed, update aggregates |
+| `getUserStatsOverview()` | Returns `{ ntrlDays, totalSessions, ntrlMinutes, phrasesAvoided }` |
+| `getStatsBreakdown(range, anchorDate)` | Returns `{ total, series[], categories[] }` for charts |
+
+### UI Components (`components/stats/`)
+
+| Component | Description |
+|-----------|-------------|
+| `MyStatsCard` | Hero "NTRL Days" + grid of Sessions/Minutes/Phrases Avoided |
+| `StatBucket` | Reusable metric display (value + label), optionally tappable |
+| `BarChart` | Simple vertical bars using react-native-svg, single neutral color |
+| `CategoryBreakdownList` | Span counts by SpanReason with color swatches |
+| `RangeSwitcher` | Day/Week/Month/All time selector wrapping SegmentedControl |
+
+### Screens
+
+- **ProfileScreen**: "MY STATS" section between "How NTRL Works" and "Your Content"
+- **ManipulationAvoidedScreen**: Detail view with range switcher, bar chart, category breakdown
+
+### Red-Line Compliance (CRITICAL)
+
+The stats feature follows NTRL's calm UX principles:
+- **No gamification**: No badges, levels, streaks, confetti
+- **No urgency**: No "check back" prompts, no streak pressure
+- **No good/bad colors**: Uses neutral accent color only
+- **Calm copy**: "Start reading to see your stats.", "No reading activity in this period."
+- **No social comparison**: No leaderboards
+
+### Empty States
+
+| Scenario | Display |
+|----------|---------|
+| New user (0 sessions) | All zeros + "Start reading to see your stats." |
+| No data for selected range | "No reading activity in this period." |
+| Sessions but 0 spans | Shows "0 phrases avoided" (not an error) |
+
 ## Commands
 ```bash
 npm start          # Start Expo dev server
@@ -235,6 +304,8 @@ Available slash commands for development:
 | `/ntrl-ui` | UI component guidance with correct dark mode patterns (`useTheme()`, `createStyles`) |
 | `/ntrl-ui-test` | Capture screenshots via Playwright for visual verification |
 | `/ntrl-typecheck` | Run TypeScript checking filtered to `src/` files |
+| `/ntrl-ios-capture` | Capture screenshot from iOS Simulator via Expo |
+| `/ntrl-validate-highlights` | Validate manipulation highlights are rendering correctly |
 
 **Usage:** Type the skill name (e.g., `/ntrl-ui`) to invoke.
 
@@ -373,18 +444,7 @@ Screenshots saved to `e2e/snapshots/`. Note: Some tests may fail if Safari/WebKi
 
 ### Alternative: iOS Simulator (Manual)
 
-```bash
-# Boot simulator
-xcrun simctl boot "iPhone 17 Pro"
-open -a Simulator
-
-# Open app via Expo
-xcrun simctl openurl booted "exp://127.0.0.1:8081"
-sleep 10
-
-# Capture screenshot
-xcrun simctl io booted screenshot /tmp/sim-screenshot.png
-```
+Use `/ntrl-ios-capture` skill for iOS Simulator screenshots.
 
 **Note**: Maestro often has driver timeout issues. Playwright custom scripts are more reliable.
 
@@ -434,45 +494,9 @@ The following `testID` attributes exist for testing:
 await page.getByText('Article Title', { exact: false }).first().click();
 ```
 
-## Highlight Validation Script
+## Highlight Validation
 
-Quick script to capture ntrl tab and verify highlights:
-
-```javascript
-// capture-highlights.cjs
-const { chromium } = require('@playwright/test');
-(async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto('http://localhost:8081');
-  await page.waitForTimeout(4000);
-
-  // Navigate to article by text
-  await page.getByText('Harry Styles', { exact: false }).first().click();
-  await page.waitForTimeout(2000);
-
-  // Switch to Ntrl tab (inline in ArticleDetailScreen)
-  await page.getByText('Ntrl').click();
-  await page.waitForTimeout(3000);
-
-  // Capture screenshot
-  await page.screenshot({ path: '/tmp/ntrl-view.png' });
-
-  // Count and log highlights
-  const highlights = page.locator('[data-testid^="highlight-span-"]');
-  const count = await highlights.count();
-  console.log(`Highlights found: ${count}`);
-
-  for (let i = 0; i < count; i++) {
-    const text = await highlights.nth(i).textContent();
-    console.log(`  ${i}: "${text}"`);
-  }
-
-  await browser.close();
-})();
-```
-
-Run with: `node capture-highlights.cjs`
+Use `/ntrl-validate-highlights` skill to capture the Ntrl tab and verify highlights are rendering correctly.
 
 ## Related Files
 - **API backend**: `../ntrl-api/`

@@ -6,6 +6,9 @@ import type {
   UserPreferences,
   RecentSearch,
   CachedBrief,
+  ReadingSession,
+  ArticleSpanCache,
+  UserStats,
 } from './types';
 import { getSecureJSON, setSecureJSON, getSecureItem } from './secureStorage';
 
@@ -18,6 +21,10 @@ const KEYS = {
   CACHED_BRIEF: '@ntrl/cached_brief',
   LAST_SESSION_COMPLETED_AT: '@ntrl/last_session_completed_at',
   LAST_OPENED_AT: '@ntrl/last_opened_at',
+  // Reading stats
+  READING_SESSIONS: '@ntrl/reading_sessions',
+  ARTICLE_SPAN_CACHE: '@ntrl/article_span_cache',
+  USER_STATS: '@ntrl/user_stats',
 };
 
 // Secure storage keys (sensitive data)
@@ -29,6 +36,8 @@ const SECURE_KEYS = {
 // Limits
 const HISTORY_MAX_ENTRIES = 50;
 const RECENT_SEARCHES_MAX = 10;
+const READING_SESSIONS_MAX = 200;
+const ARTICLE_SPAN_CACHE_MAX = 100;
 
 // ============================================
 // Saved Articles
@@ -383,4 +392,134 @@ export function isBriefCacheStale(cached: CachedBrief): boolean {
   }
 
   return false;
+}
+
+// ============================================
+// Intro Screen (First-Run Onboarding)
+// ============================================
+
+export async function hasSeenIntro(): Promise<boolean> {
+  const prefs = await getPreferences();
+  return prefs.hasSeenIntro === true;
+}
+
+export async function markIntroSeen(): Promise<void> {
+  await updatePreferences({ hasSeenIntro: true });
+}
+
+// ============================================
+// Reading Sessions (Stats Tracking)
+// ============================================
+
+export async function getReadingSessions(): Promise<ReadingSession[]> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.READING_SESSIONS);
+    if (!json) return [];
+    return JSON.parse(json) as ReadingSession[];
+  } catch (error) {
+    console.warn('[Storage] Failed to get reading sessions:', error);
+    return [];
+  }
+}
+
+export async function addReadingSession(session: ReadingSession): Promise<void> {
+  try {
+    let sessions = await getReadingSessions();
+    // Add to beginning (newest first)
+    sessions.unshift(session);
+    // Cap at max entries (rolling window)
+    if (sessions.length > READING_SESSIONS_MAX) {
+      sessions = sessions.slice(0, READING_SESSIONS_MAX);
+    }
+    await AsyncStorage.setItem(KEYS.READING_SESSIONS, JSON.stringify(sessions));
+  } catch (error) {
+    console.warn('[Storage] Failed to add reading session:', error);
+  }
+}
+
+export async function clearReadingSessions(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.READING_SESSIONS);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear reading sessions:', error);
+  }
+}
+
+// ============================================
+// Article Span Cache (for stats aggregation)
+// ============================================
+
+export async function getArticleSpanCache(): Promise<ArticleSpanCache[]> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.ARTICLE_SPAN_CACHE);
+    if (!json) return [];
+    return JSON.parse(json) as ArticleSpanCache[];
+  } catch (error) {
+    console.warn('[Storage] Failed to get article span cache:', error);
+    return [];
+  }
+}
+
+export async function getArticleSpanCacheEntry(storyId: string): Promise<ArticleSpanCache | null> {
+  const cache = await getArticleSpanCache();
+  return cache.find((e) => e.storyId === storyId) || null;
+}
+
+export async function setArticleSpanCacheEntry(entry: ArticleSpanCache): Promise<void> {
+  try {
+    let cache = await getArticleSpanCache();
+    // Remove existing entry for this story if present
+    cache = cache.filter((e) => e.storyId !== entry.storyId);
+    // Add new entry at beginning
+    cache.unshift(entry);
+    // LRU eviction - keep only most recent entries
+    if (cache.length > ARTICLE_SPAN_CACHE_MAX) {
+      cache = cache.slice(0, ARTICLE_SPAN_CACHE_MAX);
+    }
+    await AsyncStorage.setItem(KEYS.ARTICLE_SPAN_CACHE, JSON.stringify(cache));
+  } catch (error) {
+    console.warn('[Storage] Failed to set article span cache entry:', error);
+  }
+}
+
+// ============================================
+// User Stats (Aggregated Totals)
+// ============================================
+
+const DEFAULT_USER_STATS: UserStats = {
+  version: 1,
+  ntrlDays: [],
+  totalSessions: 0,
+  totalDurationSeconds: 0,
+  totalSpans: 0,
+  totalByReason: {},
+  firstSessionDate: null,
+  lastUpdatedAt: new Date().toISOString(),
+};
+
+export async function getUserStats(): Promise<UserStats> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.USER_STATS);
+    if (!json) return { ...DEFAULT_USER_STATS };
+    return JSON.parse(json) as UserStats;
+  } catch (error) {
+    console.warn('[Storage] Failed to get user stats:', error);
+    return { ...DEFAULT_USER_STATS };
+  }
+}
+
+export async function setUserStats(stats: UserStats): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.USER_STATS, JSON.stringify(stats));
+  } catch (error) {
+    console.warn('[Storage] Failed to set user stats:', error);
+  }
+}
+
+export async function clearUserStats(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.USER_STATS);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear user stats:', error);
+  }
 }

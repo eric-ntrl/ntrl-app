@@ -28,6 +28,8 @@ import {
   removeSavedArticle,
   addToHistory,
 } from '../storage/storageService';
+import { recordReadingSession } from '../services/statsService';
+import { getLocalDateString } from '../utils/dateHelpers';
 import { decodeHtmlEntities } from '../utils/text';
 import {
   copyStoryLink,
@@ -290,7 +292,13 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const scrollableHeight = contentSize.height - layoutMeasurement.height;
     if (scrollableHeight > 0) {
-      setScrollProgress(Math.min(1, contentOffset.y / scrollableHeight));
+      const depth = Math.min(1, contentOffset.y / scrollableHeight);
+      setScrollProgress(depth);
+      // Track max scroll depth for session completion
+      sessionRef.current.maxScrollDepth = Math.max(
+        sessionRef.current.maxScrollDepth,
+        depth
+      );
     }
   }, []);
 
@@ -334,6 +342,13 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const toastAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMountedRef = useRef(true);
 
+  // Reading session tracking
+  const sessionRef = useRef({
+    startTime: Date.now(),
+    maxScrollDepth: 0,
+    storyId: item.id,
+  });
+
   // Check saved status and add to history on mount
   useEffect(() => {
     async function initArticle() {
@@ -342,6 +357,33 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
       await addToHistory(item);
     }
     initArticle();
+  }, [item.id]);
+
+  // Record reading session on unmount
+  useEffect(() => {
+    // Reset session tracking when item changes
+    sessionRef.current = {
+      startTime: Date.now(),
+      maxScrollDepth: 0,
+      storyId: item.id,
+    };
+
+    return () => {
+      const duration = (Date.now() - sessionRef.current.startTime) / 1000;
+      const maxDepth = sessionRef.current.maxScrollDepth;
+      // Completion: dwell time >= 30s OR scroll depth >= 75%
+      const completed = duration >= 30 || maxDepth >= 0.75;
+
+      recordReadingSession({
+        storyId: sessionRef.current.storyId,
+        startedAt: new Date(sessionRef.current.startTime).toISOString(),
+        endedAt: new Date().toISOString(),
+        durationSeconds: Math.round(duration),
+        maxScrollDepth: maxDepth,
+        completed,
+        localDate: getLocalDateString(),
+      });
+    };
   }, [item.id]);
 
   // Load available share targets on mount

@@ -32,6 +32,18 @@ export type SpanReason =
   | 'editorial_voice';
 
 /**
+ * Level 1 manipulation categories from NTRL canonical taxonomy.
+ * Used for grouping SpanReasons into higher-level categories for display.
+ */
+export type L1Category =
+  | 'attention_engagement'      // A - Attention & Engagement
+  | 'emotional_affective'       // B - Emotional & Affective
+  | 'cognitive_epistemic'       // C - Cognitive & Epistemic
+  | 'linguistic_framing'        // D - Linguistic & Framing
+  | 'structural_editorial'      // E - Structural & Editorial
+  | 'incentive_meta';           // F - Incentive & Meta
+
+/**
  * Transformation record showing what was changed.
  */
 export type Transformation = {
@@ -82,6 +94,7 @@ export type ProfileStackParamList = {
   Profile: undefined;
   SavedArticles: undefined;
   History: undefined;
+  ManipulationAvoided: undefined;
 };
 
 // ============================================
@@ -130,6 +143,14 @@ export type SavedArticlesScreenProps = CompositeScreenProps<
 
 export type HistoryScreenProps = CompositeScreenProps<
   NativeStackScreenProps<ProfileStackParamList, 'History'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<TabParamList>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export type ManipulationAvoidedScreenProps = CompositeScreenProps<
+  NativeStackScreenProps<ProfileStackParamList, 'ManipulationAvoided'>,
   CompositeScreenProps<
     BottomTabScreenProps<TabParamList>,
     NativeStackScreenProps<RootStackParamList>

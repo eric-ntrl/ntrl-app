@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Share } from 'react-native';
 
 function SettingsIcon({ color }: { color: string }) {
@@ -17,6 +17,8 @@ import type { Theme } from '../theme/types';
 import { getPreferences, updatePreferences } from '../storage/storageService';
 import { lightTap } from '../utils/haptics';
 import type { ProfileScreenProps } from '../navigation/types';
+import { getUserStatsOverview, type StatsOverview } from '../services/statsService';
+import { MyStatsCard } from '../components/stats';
 
 // Topic options matching API feed categories
 const TOPICS = [
@@ -147,15 +149,25 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [stats, setStats] = useState<StatsOverview>({
+    ntrlDays: 0,
+    totalSessions: 0,
+    ntrlMinutes: 0,
+    phrasesAvoided: 0,
+  });
 
-  // Load preferences when screen comes into focus
+  // Load preferences and stats when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      async function loadPrefs() {
-        const prefs = await getPreferences();
+      async function loadData() {
+        const [prefs, statsData] = await Promise.all([
+          getPreferences(),
+          getUserStatsOverview(),
+        ]);
         setSelectedTopics(prefs.topics);
+        setStats(statsData);
       }
-      loadPrefs();
+      loadData();
     }, [])
   );
 
@@ -177,6 +189,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         message:
           'Check out NTRL - news without the manipulation. It removes clickbait, urgency, and emotional triggers so you can understand what actually matters.',
       });
+    } catch (error) {
+      // User cancelled or share failed - no action needed
+    }
+  };
+
+  const handleShareStats = async () => {
+    try {
+      const message = `My NTRL Stats\n\n${stats.ntrlDays} NTRL Days\n${stats.totalSessions} Reading Sessions\n${stats.ntrlMinutes} NTRL Minutes\n${stats.phrasesAvoided} Phrases Avoided\n\nNTRL removes manipulative language from news so you can read what actually happened.`;
+      await Share.share({ message });
     } catch (error) {
       // User cancelled or share failed - no action needed
     }
@@ -209,7 +230,18 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </Text>
         </View>
 
-        {/* 2. Reading History */}
+        {/* 2. My Stats */}
+        <SectionHeader title="My Stats" styles={styles} />
+        <MyStatsCard
+          ntrlDays={stats.ntrlDays}
+          totalSessions={stats.totalSessions}
+          ntrlMinutes={stats.ntrlMinutes}
+          phrasesAvoided={stats.phrasesAvoided}
+          onPhrasesPress={() => navigation.navigate('ManipulationAvoided')}
+          onSharePress={handleShareStats}
+        />
+
+        {/* 3. Your Content */}
         <SectionHeader title="Your Content" styles={styles} />
         <View style={styles.navCard}>
           <NavigationRow

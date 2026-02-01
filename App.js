@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import {
   NavigationContainer,
@@ -14,6 +14,8 @@ import CustomTabBar from './src/components/CustomTabBar';
 import {
   setLastSessionCompletedAt,
   setLastOpenedAt,
+  hasSeenIntro,
+  markIntroSeen,
 } from './src/storage/storageService';
 
 // Screens
@@ -27,6 +29,8 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import SavedArticlesScreen from './src/screens/SavedArticlesScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import ManipulationAvoidedScreen from './src/screens/ManipulationAvoidedScreen';
+import WhatNtrlIsScreen from './src/screens/WhatNtrlIsScreen';
 
 // Navigators
 const RootStack = createNativeStackNavigator();
@@ -119,6 +123,13 @@ function ProfileStackScreen() {
           </ErrorBoundary>
         )}
       </ProfileStackNav.Screen>
+      <ProfileStackNav.Screen name="ManipulationAvoided">
+        {(props) => (
+          <ErrorBoundary>
+            <ManipulationAvoidedScreen {...props} />
+          </ErrorBoundary>
+        )}
+      </ProfileStackNav.Screen>
     </ProfileStackNav.Navigator>
   );
 }
@@ -170,6 +181,16 @@ function AppTabs() {
 function AppNavigator() {
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
+  const [showIntro, setShowIntro] = useState(null); // null = loading
+
+  useEffect(() => {
+    hasSeenIntro().then(seen => setShowIntro(!seen));
+  }, []);
+
+  const handleIntroComplete = useCallback(async () => {
+    await markIntroSeen();
+    setShowIntro(false);
+  }, []);
 
   const navigationTheme = useMemo(() => {
     const base = colorMode === 'dark' ? DarkTheme : DefaultTheme;
@@ -184,6 +205,16 @@ function AppNavigator() {
       },
     };
   }, [colorMode, colors]);
+
+  // Show nothing while checking (brief flash avoided by ThemeProvider)
+  if (showIntro === null) {
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+  }
+
+  // Show intro if not seen
+  if (showIntro) {
+    return <WhatNtrlIsScreen onComplete={handleIntroComplete} />;
+  }
 
   return (
     <NavigationContainer theme={navigationTheme}>
