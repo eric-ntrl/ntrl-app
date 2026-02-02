@@ -150,6 +150,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   topics: [...ALL_TOPICS], // All 10 categories enabled by default
   textSize: 'medium', // Default reading text size
   colorMode: 'system', // Follow device appearance by default
+  todayArticleCap: 7, // Default articles shown in Today feed
 };
 
 /**

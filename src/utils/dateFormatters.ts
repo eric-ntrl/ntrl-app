@@ -24,6 +24,31 @@ function ensureUtcParsing(dateString: string): Date {
 }
 
 /**
+ * Format timestamp for Today feed - calm, non-urgent style.
+ * Returns time-of-day grouping instead of countdown-style timestamps.
+ *
+ * @param dateString - ISO date string (with or without trailing 'Z')
+ * @returns Formatted string like "This morning", "This afternoon", "This evening", "Earlier today"
+ *          Returns empty string for null/undefined input.
+ *          Returns "Published earlier" for dates not from today.
+ */
+export function formatTodayTimestamp(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+
+  const date = ensureUtcParsing(dateString);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  if (!isToday) return 'Published earlier';
+
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return 'This morning';
+  if (hour >= 12 && hour < 17) return 'This afternoon';
+  if (hour >= 17 && hour < 21) return 'This evening';
+  return 'Earlier today';
+}
+
+/**
  * Unified relative time formatter used across all screens.
  * Handles seconds, minutes, hours, days, and falls back to a short date.
  *

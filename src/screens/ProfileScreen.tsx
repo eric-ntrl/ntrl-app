@@ -19,6 +19,7 @@ import { lightTap } from '../utils/haptics';
 import type { ProfileScreenProps } from '../navigation/types';
 import { getUserStatsOverview, type StatsOverview } from '../services/statsService';
 import { MyStatsCard } from '../components/stats';
+import Stepper from '../components/Stepper';
 
 // Topic options matching API feed categories
 const TOPICS = [
@@ -149,6 +150,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [articleCap, setArticleCap] = useState(7);
   const [stats, setStats] = useState<StatsOverview>({
     ntrlDays: 0,
     totalSessions: 0,
@@ -165,6 +167,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           getUserStatsOverview(),
         ]);
         setSelectedTopics(prefs.topics);
+        setArticleCap(prefs.todayArticleCap ?? 7);
         setStats(statsData);
       }
       loadData();
@@ -181,6 +184,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
     setSelectedTopics(newTopics);
     await updatePreferences({ topics: newTopics });
+  };
+
+  const handleArticleCapChange = async (value: number) => {
+    setArticleCap(value);
+    await updatePreferences({ todayArticleCap: value });
   };
 
   const handleInviteFriends = async () => {
@@ -276,7 +284,21 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Text style={styles.cardHint}>Select topics to customize your feed</Text>
         </View>
 
-        {/* 5. Share NTRL */}
+        {/* 5. Today Feed */}
+        <SectionHeader title="Today Feed" styles={styles} />
+        <View style={styles.card}>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Stories shown</Text>
+            <Stepper
+              value={articleCap}
+              min={3}
+              max={15}
+              onChange={handleArticleCapChange}
+            />
+          </View>
+        </View>
+
+        {/* 6. Share NTRL */}
         <SectionHeader title="Share NTRL" styles={styles} />
         <View style={styles.navCard}>
           <NavigationRow
@@ -287,7 +309,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           />
         </View>
 
-        {/* 6. About NTRL */}
+        {/* 7. About NTRL */}
         <Pressable
           style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
           onPress={() => navigation.navigate('About')}
@@ -386,6 +408,18 @@ function createStyles(theme: Theme) {
       color: colors.textSubtle,
       marginTop: spacing.md,
       fontStyle: 'italic',
+    },
+
+    // Settings Row
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    settingLabel: {
+      fontSize: 15,
+      fontWeight: '400',
+      color: colors.textPrimary,
     },
 
     // Navigation Card

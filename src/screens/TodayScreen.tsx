@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StatusBar,
   RefreshControl,
   ScrollView,
+  ViewToken,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,26 +17,46 @@ import { getPreferences, getLastSessionCompletedAt } from '../storage/storageSer
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
-import { formatTimeAgo } from '../utils/dateFormatters';
+import { formatTodayTimestamp } from '../utils/dateFormatters';
 import { SkeletonSection } from '../components/SkeletonCard';
-import type { Item, Section, Brief } from '../types';
+import type { Item, Brief } from '../types';
 import type { TodayScreenProps } from '../navigation/types';
 
-const MAX_ITEMS_PER_SECTION = 3;
 const DEFAULT_HOURS_BACK = 12;
+const DEFAULT_ARTICLE_CAP = 7;
 
 type Row =
-  | { type: 'section'; section: Section }
   | { type: 'item'; item: Item }
   | { type: 'endOfFeed' };
 
+// Map section keys to display names for header
+const TOPIC_DISPLAY_NAMES: Record<string, string> = {
+  world: 'World',
+  us: 'U.S.',
+  local: 'Local',
+  business: 'Business',
+  technology: 'Technology',
+  science: 'Science',
+  health: 'Health',
+  environment: 'Environment',
+  sports: 'Sports',
+  culture: 'Culture',
+};
+
 /**
  * Filter brief items to those published after the cutoff timestamp.
- * Max 3 items per section; omit empty sections.
+ * Returns up to maxItems articles (user's article cap) and tracks if there are more.
  */
-function filterForToday(brief: Brief, cutoff: Date, selectedTopics: string[]): Row[] {
+function filterForToday(
+  brief: Brief,
+  cutoff: Date,
+  selectedTopics: string[],
+  maxItems: number
+): { rows: Row[]; hasMore: boolean } {
   const rows: Row[] = [];
   const cutoffMs = cutoff.getTime();
+  let totalItems = 0;
+  let itemsAdded = 0;
 
   for (const section of brief.sections) {
     // Filter by user's selected topics
@@ -43,20 +64,22 @@ function filterForToday(brief: Brief, cutoff: Date, selectedTopics: string[]): R
       continue;
     }
 
-    const recentItems = section.items
-      .filter((item) => new Date(item.published_at).getTime() > cutoffMs)
-      .slice(0, MAX_ITEMS_PER_SECTION);
+    const recentItems = section.items.filter(
+      (item) => new Date(item.published_at).getTime() > cutoffMs
+    );
 
-    if (recentItems.length > 0) {
-      rows.push({ type: 'section', section: { ...section, items: recentItems } });
-      for (const item of recentItems) {
+    totalItems += recentItems.length;
+
+    for (const item of recentItems) {
+      if (itemsAdded < maxItems) {
         rows.push({ type: 'item', item });
+        itemsAdded++;
       }
     }
   }
 
   rows.push({ type: 'endOfFeed' });
-  return rows;
+  return { rows, hasMore: totalItems > maxItems };
 }
 
 /**
@@ -70,32 +93,41 @@ function formatHeaderDate(date: Date): string {
   });
 }
 
+/**
+ * Get time-aware greeting based on hour of day.
+ * 0am–5am: "Hello" (late night)
+ * 5am–12pm: "Good morning"
+ * 12pm–5pm: "Good afternoon"
+ * 5pm+: "Good evening"
+ */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 0 && hour < 5) return 'Hello';
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function Header({
   date,
+  sections,
   styles,
 }: {
   date: string;
+  sections: string[]; // Display names: ['World', 'Business', 'Sports']
   styles: ReturnType<typeof createStyles>;
 }) {
+  const greeting = getGreeting();
+
   return (
     <View style={styles.header}>
-      <Text style={styles.brand}>NTRL</Text>
+      <Text style={styles.todayLabel}>TODAY</Text>
+      <Text style={styles.greeting}>{greeting}</Text>
       <Text style={styles.date}>{date}</Text>
-      <Text style={styles.headerSubtitle}>Here are your latest articles from today.</Text>
-    </View>
-  );
-}
-
-function SectionHeader({
-  title,
-  styles,
-}: {
-  title: string;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
+      <Text style={styles.tagline}>Today's highlights from your sections</Text>
+      {sections.length > 0 && (
+        <Text style={styles.sectionsText}>{sections.join(' · ')}</Text>
+      )}
     </View>
   );
 }
@@ -125,19 +157,56 @@ function ArticleCard({
           {'  '}
           <Text style={styles.summary}>{summary}</Text>
         </Text>
-        <Text style={styles.meta}>
-          {item.source} · {timeLabel}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.source}>{item.source}</Text>
+          <Text style={styles.metaSeparator}> · </Text>
+          <Text style={styles.timestamp}>{timeLabel}</Text>
+        </View>
       </View>
     </Pressable>
   );
 }
 
-function EndOfFeed({ styles }: { styles: ReturnType<typeof createStyles> }) {
+function EndOfFeed({
+  hasMore,
+  onSeeEarlier,
+  styles,
+}: {
+  hasMore: boolean;
+  onSeeEarlier: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.endOfFeed}>
-      <Text style={styles.endClosing}>You're up to date.</Text>
+      <Text style={styles.endMessage}>You're up to date</Text>
+      {hasMore && (
+        <Pressable onPress={onSeeEarlier} hitSlop={12}>
+          {({ pressed }) => (
+            <Text style={[styles.seeEarlierText, pressed && { opacity: 0.6 }]}>
+              See earlier stories
+            </Text>
+          )}
+        </Pressable>
+      )}
     </View>
+  );
+}
+
+function ProgressHint({
+  current,
+  total,
+  styles,
+}: {
+  current: number;
+  total: number;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  // Only show near end of list
+  if (current < total - 2) return null;
+  return (
+    <Text style={styles.progressHint}>
+      {current + 1} of {total} stories
+    </Text>
   );
 }
 
@@ -179,8 +248,8 @@ function ErrorState({
  * - Loads last_session_completed_at from storage
  * - Fetches brief, filters items newer than that timestamp
  * - Also filters by user's selected topics
- * - Max 3 items per section; omit empty sections
- * - "You're up to date." end sentinel
+ * - Respects user's article cap setting (default 7, range 3-15)
+ * - "You're up to date" end sentinel with "See earlier stories" if more available
  */
 export default function TodayScreen({ navigation }: TodayScreenProps) {
   const insets = useSafeAreaInsets();
@@ -194,7 +263,9 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [articleCap, setArticleCap] = useState(DEFAULT_ARTICLE_CAP);
   const [sessionCutoff, setSessionCutoff] = useState<Date | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Load session cutoff on mount
   useEffect(() => {
@@ -241,10 +312,13 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
     loadBrief();
   }, [loadBrief]);
 
-  // Reload topic preferences when screen gains focus
+  // Reload preferences when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      getPreferences().then((prefs) => setSelectedTopics(prefs.topics));
+      getPreferences().then((prefs) => {
+        setSelectedTopics(prefs.topics);
+        setArticleCap(prefs.todayArticleCap ?? DEFAULT_ARTICLE_CAP);
+      });
     }, [])
   );
 
@@ -255,21 +329,55 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
   const now = useMemo(() => new Date(), [refreshKey]);
   const headerDate = formatHeaderDate(now);
 
-  const rows = useMemo(() => {
-    if (!brief || !sessionCutoff) return [];
-    return filterForToday(brief, sessionCutoff, selectedTopics);
-  }, [brief, sessionCutoff, selectedTopics]);
+  const { rows, hasMore } = useMemo(() => {
+    if (!brief || !sessionCutoff) return { rows: [], hasMore: false };
+    return filterForToday(brief, sessionCutoff, selectedTopics, articleCap);
+  }, [brief, sessionCutoff, selectedTopics, articleCap]);
 
-  const hasContent = rows.some((r) => r.type === 'item');
+  const articleCount = useMemo(() => {
+    return rows.filter((r) => r.type === 'item').length;
+  }, [rows]);
+
+  const hasContent = articleCount > 0;
+
+  // Get display names for selected topics that have content
+  const sectionNames = useMemo(() => {
+    if (!brief || selectedTopics.length === 0) return [];
+    return selectedTopics
+      .filter((key) => {
+        const section = brief.sections.find((s) => s.key === key);
+        return section && section.items.length > 0;
+      })
+      .map((key) => TOPIC_DISPLAY_NAMES[key] || key);
+  }, [brief, selectedTopics]);
+
+  const handleSeeEarlier = useCallback(() => {
+    navigation.navigate('SectionsTab', { screen: 'Sections' });
+  }, [navigation]);
+
+  // Viewability tracking for progress indicator
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const lastItem = viewableItems[viewableItems.length - 1];
+      if (lastItem?.item?.type === 'item') {
+        const idx = rows.findIndex((r) => r === lastItem.item);
+        if (idx >= 0) setCurrentIndex(idx);
+      }
+    },
+    [rows]
+  );
 
   const renderItem = ({ item }: { item: Row }) => {
-    if (item.type === 'section') {
-      return null;
-    }
     if (item.type === 'endOfFeed') {
-      return <EndOfFeed styles={styles} />;
+      return (
+        <>
+          <ProgressHint current={currentIndex} total={articleCount} styles={styles} />
+          <EndOfFeed hasMore={hasMore} onSeeEarlier={handleSeeEarlier} styles={styles} />
+        </>
+      );
     }
-    const timeLabel = formatTimeAgo(item.item.published_at, now);
+    const timeLabel = formatTodayTimestamp(item.item.published_at);
     return (
       <ArticleCard
         item={item.item}
@@ -286,7 +394,7 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header date={headerDate} styles={styles} />
+      <Header date={headerDate} sections={sectionNames} styles={styles} />
 
       {loading && !brief ? (
         <LoadingState />
@@ -300,16 +408,14 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
       ) : (
         <FlatList
           data={rows}
-          keyExtractor={(r, idx) =>
-            r.type === 'section'
-              ? `section-${r.section.key}`
-              : r.type === 'endOfFeed'
-                ? 'end-of-feed'
-                : `item-${r.item.id}`
+          keyExtractor={(r) =>
+            r.type === 'endOfFeed' ? 'end-of-feed' : `item-${r.item.id}`
           }
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -335,10 +441,17 @@ function createStyles(theme: Theme) {
     // Header
     header: {
       paddingHorizontal: layout.screenPadding,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxl,
     },
-    brand: {
+    todayLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 2,
+      color: colors.textSubtle,
+      marginBottom: spacing.lg,
+    },
+    greeting: {
       fontSize: typography.brand.fontSize,
       fontWeight: typography.brand.fontWeight,
       letterSpacing: typography.brand.letterSpacing,
@@ -347,13 +460,19 @@ function createStyles(theme: Theme) {
     date: {
       fontSize: typography.date.fontSize,
       fontWeight: typography.date.fontWeight,
-      color: typography.date.color,
-      marginTop: spacing.xs,
+      color: colors.textMuted,
+      marginTop: spacing.md,
     },
-    headerSubtitle: {
+    tagline: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textSecondary,
+      marginTop: spacing.xl,
+    },
+    sectionsText: {
       fontSize: 13,
       fontWeight: '400',
-      color: colors.textMuted,
+      color: colors.textSubtle,
       marginTop: spacing.sm,
     },
 
@@ -363,22 +482,10 @@ function createStyles(theme: Theme) {
       paddingBottom: spacing.xxxl,
     },
 
-    // Section header
-    sectionHeader: {
-      marginTop: spacing.xxxl,
-      marginBottom: spacing.lg,
-    },
-    sectionTitle: {
-      fontSize: typography.sectionHeader.fontSize,
-      fontWeight: typography.sectionHeader.fontWeight,
-      letterSpacing: typography.sectionHeader.letterSpacing,
-      color: typography.sectionHeader.color,
-    },
-
     // Article card
     card: {
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxxl,
+      paddingTop: spacing.xxl,
+      paddingBottom: spacing.xxl,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -410,25 +517,51 @@ function createStyles(theme: Theme) {
       letterSpacing: typography.summary.letterSpacing,
       color: typography.summary.color,
     },
-    meta: {
-      fontSize: typography.meta.fontSize,
-      fontWeight: typography.meta.fontWeight,
-      letterSpacing: typography.meta.letterSpacing,
-      color: typography.meta.color,
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginTop: spacing.sm,
+    },
+    source: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    metaSeparator: {
+      fontSize: typography.meta.fontSize,
+      color: colors.textSubtle,
+    },
+    timestamp: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: '400',
+      color: colors.textSubtle,
     },
 
     // End of feed
     endOfFeed: {
       alignItems: 'center',
-      paddingTop: spacing.xxl,
-      paddingBottom: spacing.xxl,
+      paddingVertical: spacing.xxxl,
     },
-    endClosing: {
-      fontSize: 13,
-      fontWeight: '400',
+    endMessage: {
+      fontSize: 14,
+      fontWeight: '500',
       color: colors.textMuted,
+    },
+    seeEarlierText: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.accent,
+      marginTop: spacing.lg,
+      textDecorationLine: 'underline',
+    },
+
+    // Progress hint
+    progressHint: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
       textAlign: 'center',
+      paddingVertical: spacing.md,
     },
 
     // Empty state

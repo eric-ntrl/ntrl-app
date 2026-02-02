@@ -24,6 +24,7 @@ export type UserPreferences = {
   textSize: TextSizePreference; // Reading text size preference
   colorMode: ColorModePreference; // Light/dark/system appearance
   hasSeenIntro?: boolean; // Whether user has seen the first-run onboarding screen
+  todayArticleCap?: number; // Max articles shown in Today feed (3-15, default 7)
 };
 
 export type RecentSearch = {
