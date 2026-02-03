@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../config';
 import type {
   SearchResponse,
   SearchFilters,
+  SearchFiltersV2,
   DateRangePreset,
 } from '../types/search';
 
@@ -133,7 +134,7 @@ export function getDateRangeTimestamps(preset: DateRangePreset): {
 }
 
 /**
- * Build query string from search parameters.
+ * Build query string from search parameters (legacy single-value).
  */
 function buildSearchUrl(
   query: string,
@@ -158,6 +159,44 @@ function buildSearchUrl(
   if (filters.publishedBefore) {
     params.set('published_before', filters.publishedBefore);
   }
+  if (filters.sort && filters.sort !== 'relevance') {
+    params.set('sort', filters.sort);
+  }
+
+  return `${API_BASE_URL}/v1/search?${params.toString()}`;
+}
+
+/**
+ * Build query string from V2 search parameters (multi-value support).
+ */
+function buildSearchUrlV2(
+  query: string,
+  filters: Partial<SearchFiltersV2> = {},
+  limit: number = 20,
+  offset: number = 0
+): string {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  params.set('limit', String(limit));
+  params.set('offset', String(offset));
+
+  // Multi-value filters (comma-separated)
+  if (filters.categories && filters.categories.length > 0) {
+    params.set('categories', filters.categories.join(','));
+  }
+  if (filters.sources && filters.sources.length > 0) {
+    params.set('sources', filters.sources.join(','));
+  }
+
+  // Date range
+  if (filters.dateRange && filters.dateRange !== 'all') {
+    const { after } = getDateRangeTimestamps(filters.dateRange);
+    if (after) {
+      params.set('published_after', after);
+    }
+  }
+
+  // Sort
   if (filters.sort && filters.sort !== 'relevance') {
     params.set('sort', filters.sort);
   }
@@ -207,6 +246,60 @@ export async function searchArticles(
   }
 
   const url = buildSearchUrl(query, filters, limit, offset);
+
+  const response = await fetchWithRetry(url);
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  const data: SearchResponse = await response.json();
+  return data;
+}
+
+/**
+ * Search articles with V2 multi-value filters.
+ *
+ * Returns matching articles sorted by relevance or recency,
+ * with facet counts for filtering and suggestions for auto-complete.
+ *
+ * @param query - Search query string (min 2 characters)
+ * @param filters - V2 filters (categories[], sources[], dateRange, sort)
+ * @param limit - Results per page (default 20, max 50)
+ * @param offset - Pagination offset (default 0)
+ * @returns Promise resolving to SearchResponse with items, facets, and suggestions
+ * @throws Error if the request fails
+ *
+ * @example
+ * ```typescript
+ * const results = await searchArticlesV2('climate change', {
+ *   categories: ['environment', 'science'],
+ *   sort: 'recency',
+ * });
+ * console.log(`Found ${results.total} results`);
+ * ```
+ */
+export async function searchArticlesV2(
+  query: string,
+  filters: Partial<SearchFiltersV2> = {},
+  limit: number = 20,
+  offset: number = 0
+): Promise<SearchResponse> {
+  // Validate query length
+  if (query.trim().length < 2) {
+    return {
+      query,
+      total: 0,
+      limit,
+      offset,
+      items: [],
+      facets: { categories: [], sources: [] },
+      suggestions: [],
+    };
+  }
+
+  const url = buildSearchUrlV2(query, filters, limit, offset);
 
   const response = await fetchWithRetry(url);
 

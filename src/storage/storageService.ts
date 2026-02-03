@@ -10,7 +10,9 @@ import type {
   ReadingSession,
   ArticleSpanCache,
   UserStats,
+  PersistedSearchFilters,
 } from './types';
+import type { SearchFiltersV2 } from '../types/search';
 import { getSecureJSON, setSecureJSON, getSecureItem } from './secureStorage';
 
 // Storage keys - AsyncStorage (non-sensitive, larger data)
@@ -27,6 +29,8 @@ const KEYS = {
   READING_SESSIONS: '@ntrl/reading_sessions',
   ARTICLE_SPAN_CACHE: '@ntrl/article_span_cache',
   USER_STATS: '@ntrl/user_stats',
+  // Search filters
+  SEARCH_FILTERS: '@ntrl/search_filters',
 };
 
 // Secure storage keys (sensitive data)
@@ -677,5 +681,70 @@ export async function clearUserStats(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.USER_STATS);
   } catch (error) {
     console.warn('[Storage] Failed to clear user stats:', error);
+  }
+}
+
+// ============================================
+// Search Filters Persistence
+// ============================================
+
+const DEFAULT_SEARCH_FILTERS: SearchFiltersV2 = {
+  mode: null,
+  selectedTopic: null,
+  categories: [],
+  sources: [],
+  dateRange: 'all',
+  sort: 'relevance',
+};
+
+/**
+ * Get persisted search filters.
+ * Returns default filters if none are saved.
+ */
+export async function getSearchFilters(): Promise<SearchFiltersV2> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.SEARCH_FILTERS);
+    if (!json) return { ...DEFAULT_SEARCH_FILTERS };
+    const persisted = JSON.parse(json) as PersistedSearchFilters;
+    // Convert to SearchFiltersV2 (strip savedAt)
+    return {
+      mode: persisted.mode,
+      selectedTopic: persisted.selectedTopic,
+      categories: persisted.categories,
+      sources: persisted.sources,
+      dateRange: persisted.dateRange,
+      sort: persisted.sort,
+    };
+  } catch (error) {
+    console.warn('[Storage] Failed to get search filters:', error);
+    return { ...DEFAULT_SEARCH_FILTERS };
+  }
+}
+
+/**
+ * Save search filters to persistent storage.
+ * Called when user applies filters.
+ */
+export async function saveSearchFilters(filters: SearchFiltersV2): Promise<void> {
+  try {
+    const persisted: PersistedSearchFilters = {
+      ...filters,
+      savedAt: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(KEYS.SEARCH_FILTERS, JSON.stringify(persisted));
+  } catch (error) {
+    console.warn('[Storage] Failed to save search filters:', error);
+  }
+}
+
+/**
+ * Clear persisted search filters.
+ * Called when user taps "Clear all".
+ */
+export async function clearSearchFilters(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.SEARCH_FILTERS);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear search filters:', error);
   }
 }

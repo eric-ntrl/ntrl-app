@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-import { searchArticles, getDateRangeTimestamps } from '../api/search';
+import { searchArticlesV2, getDateRangeTimestamps } from '../api/search';
 import { decodeHtmlEntities } from '../utils/text';
 import {
   getRecentSearches,
@@ -25,13 +25,17 @@ import {
   getSavedSearches,
   addSavedSearch,
   removeSavedSearch,
+  clearSavedSearches,
   isSearchSaved,
+  getSearchFilters,
+  saveSearchFilters,
+  clearSearchFilters,
 } from '../storage/storageService';
 import type { RecentSearch, SavedSearch } from '../storage/types';
 import type {
   SearchResultItem,
   SearchResponse,
-  SearchFilters,
+  SearchFiltersV2,
   DateRangePreset,
   SearchSuggestion,
 } from '../types/search';
@@ -46,7 +50,7 @@ import {
 } from '../components/search';
 
 // Debounce delay for search
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 200;
 // Minimum characters before searching
 const MIN_QUERY_LENGTH = 2;
 
@@ -195,6 +199,100 @@ function FilterBar({
           </View>
         )}
       </Pressable>
+    </View>
+  );
+}
+
+// Category key to label mapping
+const CATEGORY_LABELS: Record<string, string> = {
+  world: 'World',
+  us: 'U.S.',
+  local: 'Local',
+  business: 'Business',
+  technology: 'Technology',
+  science: 'Science',
+  health: 'Health',
+  environment: 'Environment',
+  sports: 'Sports',
+  culture: 'Culture',
+};
+
+function ActiveFilterTags({
+  filters,
+  onRemoveCategory,
+  onRemoveSource,
+  onRemoveTopic,
+  onClearDateRange,
+  styles,
+}: {
+  filters: SearchFiltersV2;
+  onRemoveCategory: (cat: string) => void;
+  onRemoveSource: (src: string) => void;
+  onRemoveTopic: () => void;
+  onClearDateRange: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const tags: { key: string; label: string; onRemove: () => void }[] = [];
+
+  // Topic
+  if (filters.selectedTopic) {
+    tags.push({
+      key: `topic-${filters.selectedTopic}`,
+      label: `Topic: ${filters.selectedTopic}`,
+      onRemove: onRemoveTopic,
+    });
+  }
+
+  // Categories
+  for (const cat of filters.categories) {
+    tags.push({
+      key: `cat-${cat}`,
+      label: CATEGORY_LABELS[cat] || cat,
+      onRemove: () => onRemoveCategory(cat),
+    });
+  }
+
+  // Sources
+  for (const src of filters.sources) {
+    tags.push({
+      key: `src-${src}`,
+      label: src.toUpperCase(),
+      onRemove: () => onRemoveSource(src),
+    });
+  }
+
+  // Date range
+  if (filters.dateRange !== 'all') {
+    const dateLabels = { '24h': 'Past 24h', week: 'Past week', month: 'Past month' };
+    tags.push({
+      key: 'dateRange',
+      label: dateLabels[filters.dateRange] || filters.dateRange,
+      onRemove: onClearDateRange,
+    });
+  }
+
+  if (tags.length === 0) return null;
+
+  return (
+    <View style={styles.activeFiltersContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.activeFiltersScroll}
+      >
+        {tags.map((tag) => (
+          <View key={tag.key} style={styles.filterTag}>
+            <Text style={styles.filterTagText}>{tag.label}</Text>
+            <Pressable
+              onPress={tag.onRemove}
+              hitSlop={8}
+              accessibilityLabel={`Remove ${tag.label} filter`}
+            >
+              <Text style={styles.filterTagRemove}>×</Text>
+            </Pressable>
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -477,31 +575,48 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Saved/recent searches
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [isCurrentQuerySaved, setIsCurrentQuerySaved] = useState(false);
 
-  // Filter state
-  const [sort, setSort] = useState<'relevance' | 'recency'>('relevance');
-  const [dateRange, setDateRange] = useState<DateRangePreset>('all');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  // Unified filter state (V2)
+  const [filters, setFilters] = useState<SearchFiltersV2>({
+    mode: null,
+    selectedTopic: null,
+    categories: [],
+    sources: [],
+    dateRange: 'all',
+    sort: 'relevance',
+  });
 
   // Refs
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchCache = useRef<Map<string, SearchResponse>>(new Map());
 
-  // Load saved/recent searches on mount
+  // Load saved/recent searches and persisted filters on mount
   useFocusEffect(
     useCallback(() => {
-      async function loadSearches() {
-        const [recent, saved] = await Promise.all([getRecentSearches(), getSavedSearches()]);
+      async function loadData() {
+        const [recent, saved, persistedFilters] = await Promise.all([
+          getRecentSearches(),
+          getSavedSearches(),
+          getSearchFilters(),
+        ]);
         setRecentSearches(recent);
         setSavedSearches(saved);
+        setFilters(persistedFilters);
       }
-      loadSearches();
+      loadData();
     }, [])
   );
+
+  // Prefetch to warm server cache on mount
+  useEffect(() => {
+    searchArticlesV2('a', {}, 1, 0).catch(() => {});
+  }, []);
 
   // Check if current query is saved
   useEffect(() => {
@@ -516,11 +631,30 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     checkSaved();
   }, [query]);
 
-  // Execute search
+  // Execute search using V2 API with multi-value filters
   const executeSearch = useCallback(
-    async (searchQuery: string, newOffset: number = 0, append: boolean = false) => {
+    async (searchQuery: string, newOffset: number = 0, append: boolean = false, currentFilters?: SearchFiltersV2) => {
       if (searchQuery.trim().length < MIN_QUERY_LENGTH) {
         setSearchResponse(null);
+        setIsTyping(false);
+        return;
+      }
+
+      // Use passed filters or current state
+      const activeFilters = currentFilters || filters;
+
+      // Build cache key
+      const cacheKey = `${searchQuery.toLowerCase()}|${activeFilters.sort}|${activeFilters.dateRange}|${activeFilters.categories.join(',')}|${activeFilters.sources.join(',')}|${newOffset}`;
+
+      // Check cache for non-paginated requests
+      if (newOffset === 0 && !append && searchCache.current.has(cacheKey)) {
+        const cachedResponse = searchCache.current.get(cacheKey)!;
+        setSearchResponse(cachedResponse);
+        setOffset(0);
+        setIsTyping(false);
+        AccessibilityInfo.announceForAccessibility(
+          `${cachedResponse.total} ${cachedResponse.total === 1 ? 'result' : 'results'} found`
+        );
         return;
       }
 
@@ -532,20 +666,28 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
       setError(null);
 
       try {
-        // Build filters
-        const dateTimestamps = getDateRangeTimestamps(dateRange);
-        const filters: Partial<SearchFilters> = {
-          sort,
-          publishedAfter: dateTimestamps.after,
-          publishedBefore: dateTimestamps.before,
-        };
+        // Use V2 search with multi-value filters
+        const response = await searchArticlesV2(
+          searchQuery,
+          {
+            categories: activeFilters.categories,
+            sources: activeFilters.sources,
+            dateRange: activeFilters.dateRange,
+            sort: activeFilters.sort,
+          },
+          20,
+          newOffset
+        );
 
-        // If only one category selected, filter by it
-        if (selectedCategories.length === 1) {
-          filters.category = selectedCategories[0];
+        // Cache the response (limit cache size to 10 entries)
+        if (newOffset === 0 && !append) {
+          if (searchCache.current.size >= 10) {
+            // Remove oldest entry
+            const firstKey = searchCache.current.keys().next().value;
+            if (firstKey) searchCache.current.delete(firstKey);
+          }
+          searchCache.current.set(cacheKey, response);
         }
-
-        const response = await searchArticles(searchQuery, filters, 20, newOffset);
 
         if (append && searchResponse) {
           // Append to existing results
@@ -571,9 +713,10 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
+        setIsTyping(false);
       }
     },
-    [sort, dateRange, selectedCategories, searchResponse]
+    [filters, searchResponse]
   );
 
   // Debounced search
@@ -584,8 +727,10 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
       // Show suggestions dropdown when typing
       if (text.trim().length >= MIN_QUERY_LENGTH) {
         setShowSuggestions(true);
+        setIsTyping(true);
       } else {
         setShowSuggestions(false);
+        setIsTyping(false);
       }
 
       // Clear existing timeout
@@ -644,6 +789,12 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     setRecentSearches([]);
   }, []);
 
+  const handleClearSavedSearches = useCallback(async () => {
+    await clearSavedSearches();
+    setSavedSearches([]);
+    setIsCurrentQuerySaved(false);
+  }, []);
+
   const handleSavedSearchPress = useCallback(
     (searchQuery: string) => {
       setQuery(searchQuery);
@@ -685,30 +836,39 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     (suggestion: SearchSuggestion) => {
       setShowSuggestions(false);
       if (suggestion.type === 'section') {
-        // Filter by this section
-        setSelectedCategories([suggestion.value]);
-        executeSearch(query);
+        // Filter by this section using new filter system
+        const newFilters: SearchFiltersV2 = {
+          ...filters,
+          mode: 'categories',
+          categories: [suggestion.value],
+        };
+        setFilters(newFilters);
+        saveSearchFilters(newFilters);
+        executeSearch(query, 0, false, newFilters);
       } else if (suggestion.type === 'publisher') {
         // For publishers, add to query
         setQuery(suggestion.label);
         executeSearch(suggestion.label);
       }
     },
-    [query, executeSearch]
+    [query, filters, executeSearch]
   );
 
   const handleFilterApply = useCallback(
-    (filters: { sort: 'relevance' | 'recency'; dateRange: DateRangePreset; categories: string[] }) => {
-      setSort(filters.sort);
-      setDateRange(filters.dateRange);
-      setSelectedCategories(filters.categories);
+    async (newFilters: SearchFiltersV2) => {
+      // Update local state
+      setFilters(newFilters);
 
-      // Re-execute search with new filters
-      if (query.trim().length >= MIN_QUERY_LENGTH) {
-        // Need to re-execute with updated filters - they'll be used in executeSearch
-        setTimeout(() => {
-          executeSearch(query);
-        }, 0);
+      // Persist filters
+      await saveSearchFilters(newFilters);
+
+      // Handle topic mode: use topic as search query
+      if (newFilters.mode === 'topics' && newFilters.selectedTopic) {
+        setQuery(newFilters.selectedTopic);
+        executeSearch(newFilters.selectedTopic, 0, false, newFilters);
+      } else if (query.trim().length >= MIN_QUERY_LENGTH) {
+        // Re-execute search with new filters
+        executeSearch(query, 0, false, newFilters);
       }
     },
     [query, executeSearch]
@@ -723,13 +883,19 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
   const handleSectionPress = useCallback(
     (categoryKey: string) => {
-      setSelectedCategories([categoryKey]);
+      const newFilters: SearchFiltersV2 = {
+        ...filters,
+        mode: 'categories',
+        categories: [categoryKey],
+      };
+      setFilters(newFilters);
+      saveSearchFilters(newFilters);
       setShowSuggestions(false);
       if (query.trim().length >= MIN_QUERY_LENGTH) {
-        executeSearch(query);
+        executeSearch(query, 0, false, newFilters);
       }
     },
-    [query, executeSearch]
+    [query, filters, executeSearch]
   );
 
   const handlePublisherPress = useCallback(
@@ -747,6 +913,59 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     }
   }, [query, executeSearch]);
 
+  // Handlers for removing individual filters from active filter tags
+  const handleRemoveCategory = useCallback(
+    (cat: string) => {
+      const newFilters = {
+        ...filters,
+        categories: filters.categories.filter((c) => c !== cat),
+      };
+      setFilters(newFilters);
+      saveSearchFilters(newFilters);
+      if (query.trim().length >= MIN_QUERY_LENGTH) {
+        executeSearch(query, 0, false, newFilters);
+      }
+    },
+    [filters, query, executeSearch]
+  );
+
+  const handleRemoveSource = useCallback(
+    (src: string) => {
+      const newFilters = {
+        ...filters,
+        sources: filters.sources.filter((s) => s !== src),
+      };
+      setFilters(newFilters);
+      saveSearchFilters(newFilters);
+      if (query.trim().length >= MIN_QUERY_LENGTH) {
+        executeSearch(query, 0, false, newFilters);
+      }
+    },
+    [filters, query, executeSearch]
+  );
+
+  const handleRemoveTopic = useCallback(() => {
+    const newFilters: SearchFiltersV2 = {
+      ...filters,
+      mode: null,
+      selectedTopic: null,
+    };
+    setFilters(newFilters);
+    saveSearchFilters(newFilters);
+  }, [filters]);
+
+  const handleClearDateRange = useCallback(() => {
+    const newFilters: SearchFiltersV2 = {
+      ...filters,
+      dateRange: 'all',
+    };
+    setFilters(newFilters);
+    saveSearchFilters(newFilters);
+    if (query.trim().length >= MIN_QUERY_LENGTH) {
+      executeSearch(query, 0, false, newFilters);
+    }
+  }, [filters, query, executeSearch]);
+
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
@@ -756,14 +975,30 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     };
   }, []);
 
+  // Handle clear all filters
+  const handleClearFilters = useCallback(async () => {
+    const defaultFilters: SearchFiltersV2 = {
+      mode: null,
+      selectedTopic: null,
+      categories: [],
+      sources: [],
+      dateRange: 'all',
+      sort: 'relevance',
+    };
+    setFilters(defaultFilters);
+    await clearSearchFilters();
+  }, []);
+
   // Compute filter count for badge
   const filterCount = useMemo(() => {
     let count = 0;
-    if (sort !== 'relevance') count++;
-    if (dateRange !== 'all') count++;
-    if (selectedCategories.length > 0) count += selectedCategories.length;
+    if (filters.sort !== 'relevance') count++;
+    if (filters.dateRange !== 'all') count++;
+    if (filters.categories.length > 0) count += filters.categories.length;
+    if (filters.sources.length > 0) count += filters.sources.length;
+    if (filters.selectedTopic) count++;
     return count;
-  }, [sort, dateRange, selectedCategories]);
+  }, [filters]);
 
   const hasFilters = filterCount > 0;
   const showPreSearchUI = !searchResponse && !isLoading && query.trim().length < MIN_QUERY_LENGTH;
@@ -869,12 +1104,24 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
         {/* Filter bar - show when there's a query */}
         {query.trim().length >= MIN_QUERY_LENGTH && (
-          <FilterBar
-            hasFilters={hasFilters}
-            filterCount={filterCount}
-            onFilterPress={() => setShowFilterSheet(true)}
-            styles={styles}
-          />
+          <>
+            <FilterBar
+              hasFilters={hasFilters}
+              filterCount={filterCount}
+              onFilterPress={() => setShowFilterSheet(true)}
+              styles={styles}
+            />
+
+            {/* Active filter tags */}
+            <ActiveFilterTags
+              filters={filters}
+              onRemoveCategory={handleRemoveCategory}
+              onRemoveSource={handleRemoveSource}
+              onRemoveTopic={handleRemoveTopic}
+              onClearDateRange={handleClearDateRange}
+              styles={styles}
+            />
+          </>
         )}
 
         {/* Save search button when searching and not already saved */}
@@ -891,6 +1138,13 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
         {/* Error state */}
         {error && !isLoading && <ConnectionError onRetry={handleRetry} styles={styles} />}
 
+        {/* Typing feedback - show before debounce completes */}
+        {isTyping && !isLoading && (
+          <View style={styles.typingFeedback}>
+            <Text style={styles.typingFeedbackText}>Searching...</Text>
+          </View>
+        )}
+
         {/* Loading state */}
         {isLoading && <LoadingState styles={styles} />}
 
@@ -906,7 +1160,7 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={styles.sectionTitle}>SAVED SEARCHES</Text>
-                  <Pressable onPress={() => { /* TODO: clear saved */ }}>
+                  <Pressable onPress={handleClearSavedSearches}>
                     <Text style={styles.clearAllText}>Clear all</Text>
                   </Pressable>
                 </View>
@@ -987,9 +1241,8 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
         visible={showFilterSheet}
         onClose={() => setShowFilterSheet(false)}
         onApply={handleFilterApply}
-        sort={sort}
-        dateRange={dateRange}
-        selectedCategories={selectedCategories}
+        filters={filters}
+        publisherFacets={searchResponse?.facets.sources || []}
       />
     </View>
   );
@@ -1238,6 +1491,35 @@ function createStyles(theme: Theme) {
       color: colors.textSecondary,
     },
 
+    // Active filter tags
+    activeFiltersContainer: {
+      marginBottom: spacing.sm,
+    },
+    activeFiltersScroll: {
+      gap: spacing.xs,
+    },
+    filterTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.accentSecondarySubtle,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    filterTagText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
+    filterTagRemove: {
+      fontSize: 16,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginLeft: spacing.xs,
+    },
+
     // Results
     resultsList: {
       paddingBottom: spacing.xxxl,
@@ -1289,6 +1571,17 @@ function createStyles(theme: Theme) {
     // Highlight text
     highlightText: {
       backgroundColor: colors.accentSecondarySubtle,
+    },
+
+    // Typing feedback
+    typingFeedback: {
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    typingFeedbackText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
     },
 
     // Loading state

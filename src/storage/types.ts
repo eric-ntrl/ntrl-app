@@ -83,3 +83,23 @@ export type UserStats = {
 };
 
 export type StatsTimeRange = 'day' | 'week' | 'month' | 'all';
+
+// ============================================
+// Persisted Search Filters
+// ============================================
+
+import type { DateRangePreset, FilterMode } from '../types/search';
+
+/**
+ * Persisted search filter state for the filter sheet.
+ * Matches SearchFiltersV2 but stored as a separate type for persistence.
+ */
+export type PersistedSearchFilters = {
+  mode: FilterMode;
+  selectedTopic: string | null;
+  categories: string[];
+  sources: string[];
+  dateRange: DateRangePreset;
+  sort: 'relevance' | 'recency';
+  savedAt: string; // ISO timestamp
+};

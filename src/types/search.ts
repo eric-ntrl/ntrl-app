@@ -48,6 +48,9 @@ export type SearchResponse = {
   suggestions: SearchSuggestion[];
 };
 
+/**
+ * Legacy single-value filters (deprecated, kept for backward compatibility)
+ */
 export type SearchFilters = {
   category: string | null;
   source: string | null;
@@ -57,6 +60,45 @@ export type SearchFilters = {
 };
 
 export type DateRangePreset = '24h' | 'week' | 'month' | 'all';
+
+/**
+ * Filter mode for the redesigned filter sheet.
+ * - 'topics': Show trending topics (single-select, acts as search query)
+ * - 'categories': Show categories and publishers (multi-select)
+ * - null: No mode selected (default state)
+ */
+export type FilterMode = 'topics' | 'categories' | null;
+
+/**
+ * V2 search filters with multi-value support and mode switching.
+ */
+export type SearchFiltersV2 = {
+  mode: FilterMode;
+  selectedTopic: string | null;
+  categories: string[];
+  sources: string[];
+  dateRange: DateRangePreset;
+  sort: 'relevance' | 'recency';
+};
+
+/**
+ * A single trending topic.
+ */
+export type TrendingTopic = {
+  term: string;
+  label: string;
+  count: number;
+  sample_headline: string | null;
+};
+
+/**
+ * Response from the trending topics endpoint.
+ */
+export type TrendingTopicsResponse = {
+  topics: TrendingTopic[];
+  generated_at: string; // ISO timestamp
+  window_hours: number;
+};
 
 /**
  * Extended saved search with badge count tracking.
