@@ -10,12 +10,14 @@ import {
   Keyboard,
   ScrollView,
   AccessibilityInfo,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { searchArticlesV2, getDateRangeTimestamps } from '../api/search';
+import { getTrendingTopics } from '../api/topics';
 import { decodeHtmlEntities } from '../utils/text';
 import {
   getRecentSearches,
@@ -38,6 +40,7 @@ import type {
   SearchFiltersV2,
   DateRangePreset,
   SearchSuggestion,
+  TrendingTopic,
 } from '../types/search';
 import type { Item } from '../types';
 import type { SearchScreenProps } from '../navigation/types';
@@ -53,9 +56,6 @@ import {
 const SEARCH_DEBOUNCE_MS = 200;
 // Minimum characters before searching
 const MIN_QUERY_LENGTH = 2;
-
-// Suggested topics for discoverability
-const SUGGESTED_TOPICS = ['Technology', 'Climate', 'Economy', 'Politics', 'Health', 'Science'];
 
 /**
  * Format relative time for search results
@@ -221,27 +221,16 @@ function ActiveFilterTags({
   filters,
   onRemoveCategory,
   onRemoveSource,
-  onRemoveTopic,
   onClearDateRange,
   styles,
 }: {
   filters: SearchFiltersV2;
   onRemoveCategory: (cat: string) => void;
   onRemoveSource: (src: string) => void;
-  onRemoveTopic: () => void;
   onClearDateRange: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
   const tags: { key: string; label: string; onRemove: () => void }[] = [];
-
-  // Topic
-  if (filters.selectedTopic) {
-    tags.push({
-      key: `topic-${filters.selectedTopic}`,
-      label: `Topic: ${filters.selectedTopic}`,
-      onRemove: onRemoveTopic,
-    });
-  }
 
   // Categories
   for (const cat of filters.categories) {
@@ -392,28 +381,51 @@ function RecentSearchItem({
   );
 }
 
-function SuggestedTopics({
+function TrendingTopics({
+  topics,
+  loading,
   onTopicPress,
   styles,
+  colors,
 }: {
+  topics: TrendingTopic[];
+  loading: boolean;
   onTopicPress: (topic: string) => void;
   styles: ReturnType<typeof createStyles>;
+  colors: Theme['colors'];
 }) {
+  if (loading) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>TRENDING TOPICS</Text>
+        <View style={styles.trendingLoadingContainer}>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={styles.trendingLoadingText}>Loading topics...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (topics.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>SUGGESTED TOPICS</Text>
+      <Text style={styles.sectionTitle}>TRENDING TOPICS</Text>
       <View style={styles.suggestionPillsContainer}>
-        {SUGGESTED_TOPICS.map((topic) => (
+        {topics.map((topic) => (
           <Pressable
-            key={topic}
-            onPress={() => onTopicPress(topic)}
+            key={topic.term}
+            onPress={() => onTopicPress(topic.term)}
             style={({ pressed }) => [
               styles.suggestionPill,
               pressed && styles.suggestionPillPressed,
             ]}
-            accessibilityLabel={`Search for ${topic}`}
+            accessibilityLabel={`Search for ${topic.label}`}
           >
-            <Text style={styles.suggestionPillText}>{topic}</Text>
+            <Text style={styles.suggestionPillText}>{topic.label}</Text>
+            <Text style={styles.suggestionPillCount}>({topic.count})</Text>
           </Pressable>
         ))}
       </View>
@@ -584,13 +596,15 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
   // Unified filter state (V2)
   const [filters, setFilters] = useState<SearchFiltersV2>({
-    mode: null,
-    selectedTopic: null,
     categories: [],
     sources: [],
     dateRange: 'all',
     sort: 'relevance',
   });
+
+  // Trending topics state
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
 
   // Refs
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -616,6 +630,22 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
   // Prefetch to warm server cache on mount
   useEffect(() => {
     searchArticlesV2('a', {}, 1, 0).catch(() => {});
+  }, []);
+
+  // Fetch trending topics on mount
+  useEffect(() => {
+    async function fetchTrendingTopics() {
+      setLoadingTopics(true);
+      try {
+        const response = await getTrendingTopics();
+        setTrendingTopics(response.topics);
+      } catch (error) {
+        console.log('[Search] Failed to fetch trending topics:', error);
+      } finally {
+        setLoadingTopics(false);
+      }
+    }
+    fetchTrendingTopics();
   }, []);
 
   // Check if current query is saved
@@ -836,10 +866,9 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     (suggestion: SearchSuggestion) => {
       setShowSuggestions(false);
       if (suggestion.type === 'section') {
-        // Filter by this section using new filter system
+        // Filter by this section
         const newFilters: SearchFiltersV2 = {
           ...filters,
-          mode: 'categories',
           categories: [suggestion.value],
         };
         setFilters(newFilters);
@@ -862,12 +891,8 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
       // Persist filters
       await saveSearchFilters(newFilters);
 
-      // Handle topic mode: use topic as search query
-      if (newFilters.mode === 'topics' && newFilters.selectedTopic) {
-        setQuery(newFilters.selectedTopic);
-        executeSearch(newFilters.selectedTopic, 0, false, newFilters);
-      } else if (query.trim().length >= MIN_QUERY_LENGTH) {
-        // Re-execute search with new filters
+      // Re-execute search with new filters if we have a query
+      if (query.trim().length >= MIN_QUERY_LENGTH) {
         executeSearch(query, 0, false, newFilters);
       }
     },
@@ -885,7 +910,6 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     (categoryKey: string) => {
       const newFilters: SearchFiltersV2 = {
         ...filters,
-        mode: 'categories',
         categories: [categoryKey],
       };
       setFilters(newFilters);
@@ -944,16 +968,6 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     [filters, query, executeSearch]
   );
 
-  const handleRemoveTopic = useCallback(() => {
-    const newFilters: SearchFiltersV2 = {
-      ...filters,
-      mode: null,
-      selectedTopic: null,
-    };
-    setFilters(newFilters);
-    saveSearchFilters(newFilters);
-  }, [filters]);
-
   const handleClearDateRange = useCallback(() => {
     const newFilters: SearchFiltersV2 = {
       ...filters,
@@ -978,8 +992,6 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
   // Handle clear all filters
   const handleClearFilters = useCallback(async () => {
     const defaultFilters: SearchFiltersV2 = {
-      mode: null,
-      selectedTopic: null,
       categories: [],
       sources: [],
       dateRange: 'all',
@@ -996,7 +1008,6 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     if (filters.dateRange !== 'all') count++;
     if (filters.categories.length > 0) count += filters.categories.length;
     if (filters.sources.length > 0) count += filters.sources.length;
-    if (filters.selectedTopic) count++;
     return count;
   }, [filters]);
 
@@ -1117,7 +1128,6 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
               filters={filters}
               onRemoveCategory={handleRemoveCategory}
               onRemoveSource={handleRemoveSource}
-              onRemoveTopic={handleRemoveTopic}
               onClearDateRange={handleClearDateRange}
               styles={styles}
             />
@@ -1197,8 +1207,14 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
               </View>
             )}
 
-            {/* Suggested Topics */}
-            <SuggestedTopics onTopicPress={handleSuggestionTap} styles={styles} />
+            {/* Trending Topics */}
+            <TrendingTopics
+              topics={trendingTopics}
+              loading={loadingTopics}
+              onTopicPress={handleSuggestionTap}
+              styles={styles}
+              colors={colors}
+            />
           </ScrollView>
         )}
 
@@ -1475,6 +1491,8 @@ function createStyles(theme: Theme) {
       gap: spacing.sm,
     },
     suggestionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: colors.surface,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
@@ -1489,6 +1507,25 @@ function createStyles(theme: Theme) {
       fontSize: 14,
       fontWeight: '500',
       color: colors.textSecondary,
+    },
+    suggestionPillCount: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginLeft: spacing.xs,
+    },
+
+    // Trending topics loading
+    trendingLoadingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    trendingLoadingText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
+      marginLeft: spacing.sm,
     },
 
     // Active filter tags

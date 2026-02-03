@@ -689,8 +689,6 @@ export async function clearUserStats(): Promise<void> {
 // ============================================
 
 const DEFAULT_SEARCH_FILTERS: SearchFiltersV2 = {
-  mode: null,
-  selectedTopic: null,
   categories: [],
   sources: [],
   dateRange: 'all',
@@ -700,20 +698,19 @@ const DEFAULT_SEARCH_FILTERS: SearchFiltersV2 = {
 /**
  * Get persisted search filters.
  * Returns default filters if none are saved.
+ * Handles migration from old format that had mode/selectedTopic fields.
  */
 export async function getSearchFilters(): Promise<SearchFiltersV2> {
   try {
     const json = await AsyncStorage.getItem(KEYS.SEARCH_FILTERS);
     if (!json) return { ...DEFAULT_SEARCH_FILTERS };
-    const persisted = JSON.parse(json) as PersistedSearchFilters;
-    // Convert to SearchFiltersV2 (strip savedAt)
+    const persisted = JSON.parse(json);
+    // Convert to SearchFiltersV2 (strip savedAt and legacy mode/selectedTopic fields)
     return {
-      mode: persisted.mode,
-      selectedTopic: persisted.selectedTopic,
-      categories: persisted.categories,
-      sources: persisted.sources,
-      dateRange: persisted.dateRange,
-      sort: persisted.sort,
+      categories: persisted.categories || [],
+      sources: persisted.sources || [],
+      dateRange: persisted.dateRange || 'all',
+      sort: persisted.sort || 'relevance',
     };
   } catch (error) {
     console.warn('[Storage] Failed to get search filters:', error);

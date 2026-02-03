@@ -62,19 +62,9 @@ export type SearchFilters = {
 export type DateRangePreset = '24h' | 'week' | 'month' | 'all';
 
 /**
- * Filter mode for the redesigned filter sheet.
- * - 'topics': Show trending topics (single-select, acts as search query)
- * - 'categories': Show categories and publishers (multi-select)
- * - null: No mode selected (default state)
- */
-export type FilterMode = 'topics' | 'categories' | null;
-
-/**
- * V2 search filters with multi-value support and mode switching.
+ * V2 search filters with multi-value support.
  */
 export type SearchFiltersV2 = {
-  mode: FilterMode;
-  selectedTopic: string | null;
   categories: string[];
   sources: string[];
   dateRange: DateRangePreset;
