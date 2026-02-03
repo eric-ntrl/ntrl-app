@@ -25,11 +25,27 @@ export type UserPreferences = {
   colorMode: ColorModePreference; // Light/dark/system appearance
   hasSeenIntro?: boolean; // Whether user has seen the first-run onboarding screen
   todayArticleCap?: number; // Max articles shown in Today feed (3-15, default 7)
+  sectionsArticleCap?: number; // Max articles shown per section in Sections feed (3-15, default 7)
 };
 
 export type RecentSearch = {
   query: string;
   searchedAt: string; // ISO timestamp
+};
+
+export type SavedSearch = {
+  query: string;
+  savedAt: string; // ISO timestamp
+};
+
+/**
+ * Saved search with badge count tracking for showing new article counts.
+ */
+export type SavedSearchWithCount = {
+  query: string;
+  savedAt: string; // ISO timestamp
+  lastCount: number; // Last known result count
+  lastCountedAt: string; // ISO timestamp when count was fetched
 };
 
 // ============================================

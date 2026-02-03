@@ -5,6 +5,7 @@ import type {
   HistoryEntry,
   UserPreferences,
   RecentSearch,
+  SavedSearch,
   CachedBrief,
   ReadingSession,
   ArticleSpanCache,
@@ -18,6 +19,7 @@ const KEYS = {
   HISTORY: '@ntrl/history',
   PREFERENCES: '@ntrl/preferences', // Legacy key for migration
   RECENT_SEARCHES: '@ntrl/recent_searches',
+  SAVED_SEARCHES: '@ntrl/saved_searches',
   CACHED_BRIEF: '@ntrl/cached_brief',
   LAST_SESSION_COMPLETED_AT: '@ntrl/last_session_completed_at',
   LAST_OPENED_AT: '@ntrl/last_opened_at',
@@ -36,6 +38,7 @@ const SECURE_KEYS = {
 // Limits
 const HISTORY_MAX_ENTRIES = 50;
 const RECENT_SEARCHES_MAX = 10;
+const SAVED_SEARCHES_MAX = 20;
 const READING_SESSIONS_MAX = 200;
 const ARTICLE_SPAN_CACHE_MAX = 100;
 
@@ -151,6 +154,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   textSize: 'medium', // Default reading text size
   colorMode: 'system', // Follow device appearance by default
   todayArticleCap: 7, // Default articles shown in Today feed
+  sectionsArticleCap: 7, // Default articles shown per section in Sections feed
 };
 
 /**
@@ -297,6 +301,157 @@ export async function clearRecentSearches(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.RECENT_SEARCHES);
   } catch (error) {
     console.warn('[Storage] Failed to clear recent searches:', error);
+  }
+}
+
+// ============================================
+// Saved Searches
+// ============================================
+
+export async function getSavedSearches(): Promise<SavedSearch[]> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS.SAVED_SEARCHES);
+    if (!json) return [];
+    return JSON.parse(json) as SavedSearch[];
+  } catch (error) {
+    console.warn('[Storage] Failed to get saved searches:', error);
+    return [];
+  }
+}
+
+export async function addSavedSearch(query: string): Promise<void> {
+  try {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    let searches = await getSavedSearches();
+    // Check if already saved (case-insensitive)
+    if (searches.some((s) => s.query.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    const newEntry: SavedSearch = {
+      query: trimmed,
+      savedAt: new Date().toISOString(),
+    };
+    // Add to beginning
+    searches.unshift(newEntry);
+    // Cap at max
+    if (searches.length > SAVED_SEARCHES_MAX) {
+      searches = searches.slice(0, SAVED_SEARCHES_MAX);
+    }
+    await AsyncStorage.setItem(KEYS.SAVED_SEARCHES, JSON.stringify(searches));
+  } catch (error) {
+    console.warn('[Storage] Failed to add saved search:', error);
+  }
+}
+
+export async function removeSavedSearch(query: string): Promise<void> {
+  try {
+    const searches = await getSavedSearches();
+    const filtered = searches.filter((s) => s.query !== query);
+    await AsyncStorage.setItem(KEYS.SAVED_SEARCHES, JSON.stringify(filtered));
+  } catch (error) {
+    console.warn('[Storage] Failed to remove saved search:', error);
+  }
+}
+
+export async function clearSavedSearches(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.SAVED_SEARCHES);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear saved searches:', error);
+  }
+}
+
+export async function isSearchSaved(query: string): Promise<boolean> {
+  try {
+    const searches = await getSavedSearches();
+    return searches.some((s) => s.query.toLowerCase() === query.toLowerCase());
+  } catch (error) {
+    console.warn('[Storage] Failed to check saved search status:', error);
+    return false;
+  }
+}
+
+// ============================================
+// Saved Search Badge Counts
+// ============================================
+
+const KEYS_SEARCH_COUNTS = '@ntrl/saved_search_counts';
+
+/**
+ * Get saved search count cache for badge display.
+ * Returns a map of query -> { count, countedAt }
+ */
+export async function getSavedSearchCounts(): Promise<
+  Record<string, { count: number; countedAt: string }>
+> {
+  try {
+    const json = await AsyncStorage.getItem(KEYS_SEARCH_COUNTS);
+    if (!json) return {};
+    return JSON.parse(json);
+  } catch (error) {
+    console.warn('[Storage] Failed to get saved search counts:', error);
+    return {};
+  }
+}
+
+/**
+ * Update the cached count for a saved search.
+ * Called after executing a saved search to track new article counts.
+ */
+export async function updateSavedSearchCount(
+  query: string,
+  count: number
+): Promise<void> {
+  try {
+    const counts = await getSavedSearchCounts();
+    counts[query.toLowerCase()] = {
+      count,
+      countedAt: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(KEYS_SEARCH_COUNTS, JSON.stringify(counts));
+  } catch (error) {
+    console.warn('[Storage] Failed to update saved search count:', error);
+  }
+}
+
+/**
+ * Get the cached count for a specific saved search.
+ */
+export async function getSavedSearchCount(
+  query: string
+): Promise<{ count: number; countedAt: string } | null> {
+  try {
+    const counts = await getSavedSearchCounts();
+    return counts[query.toLowerCase()] || null;
+  } catch (error) {
+    console.warn('[Storage] Failed to get saved search count:', error);
+    return null;
+  }
+}
+
+/**
+ * Remove count cache for a saved search (when search is removed).
+ */
+export async function removeSavedSearchCount(query: string): Promise<void> {
+  try {
+    const counts = await getSavedSearchCounts();
+    delete counts[query.toLowerCase()];
+    await AsyncStorage.setItem(KEYS_SEARCH_COUNTS, JSON.stringify(counts));
+  } catch (error) {
+    console.warn('[Storage] Failed to remove saved search count:', error);
+  }
+}
+
+/**
+ * Clear all saved search counts.
+ */
+export async function clearSavedSearchCounts(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS_SEARCH_COUNTS);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear saved search counts:', error);
   }
 }
 
