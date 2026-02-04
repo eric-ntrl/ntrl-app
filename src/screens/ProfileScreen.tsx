@@ -14,15 +14,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-import { getPreferences, updatePreferences } from '../storage/storageService';
+import { getPreferences, updatePreferences, getWeeklyReadingStats, type WeeklyReadingStats } from '../storage/storageService';
 import { lightTap } from '../utils/haptics';
 import type { ProfileScreenProps } from '../navigation/types';
-import { getUserStatsOverview, type StatsOverview } from '../services/statsService';
-import { MyStatsCard } from '../components/stats';
-import Stepper from '../components/Stepper';
+// import { getUserStatsOverview, type StatsOverview } from '../services/statsService';
+// import { MyStatsCard } from '../components/stats';
+import ReadingInsightsCard from '../components/stats/ReadingInsightsCard';
+import Slider from '../components/Slider';
 
-// Topic options matching API feed categories
-const TOPICS = [
+// Topic options matching API feed categories (renamed to Sections)
+const SECTIONS = [
   { key: 'world', label: 'World' },
   { key: 'us', label: 'U.S.' },
   { key: 'local', label: 'Local' },
@@ -102,7 +103,7 @@ function NavigationRow({
   );
 }
 
-function TopicChip({
+function SectionChip({
   label,
   selected,
   onToggle,
@@ -121,7 +122,7 @@ function TopicChip({
         pressed && styles.chipPressed,
       ]}
       onPress={onToggle}
-      accessibilityLabel={`${label} topic ${selected ? 'selected' : 'not selected'}`}
+      accessibilityLabel={`${label} section ${selected ? 'selected' : 'not selected'}`}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
     >
@@ -137,11 +138,14 @@ function TopicChip({
  *
  * Section order:
  * 1. How NTRL Works
- * 2. Reading History
- * 3. Saved Articles
- * 4. Topics
- * 5. Share NTRL
- * 6. About NTRL
+ * 2. Reading Insights
+ * 3. Your Content
+ * 4. Your Sections
+ * 5. Today Feed
+ * 6. Sections Feed
+ * 7. Invite Friends
+ * 8. About NTRL
+ * (My Stats — removed)
  */
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
@@ -149,46 +153,62 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [articleCap, setArticleCap] = useState(7);
-  const [stats, setStats] = useState<StatsOverview>({
-    ntrlDays: 0,
-    totalSessions: 0,
-    ntrlMinutes: 0,
-    phrasesAvoided: 0,
+  const [sectionsArticleCap, setSectionsArticleCap] = useState(7);
+  // const [stats, setStats] = useState<StatsOverview>({
+  //   ntrlDays: 0,
+  //   totalSessions: 0,
+  //   ntrlMinutes: 0,
+  //   phrasesAvoided: 0,
+  // });
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyReadingStats>({
+    weeklyMinutes: 0,
+    articlesCompleted: 0,
+    termsNeutralized: 0,
+    savedThisWeek: 0,
+    readThisWeek: 0,
   });
 
   // Load preferences and stats when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       async function loadData() {
-        const [prefs, statsData] = await Promise.all([
+        const [prefs, weeklyData] = await Promise.all([
           getPreferences(),
-          getUserStatsOverview(),
+          // getUserStatsOverview(),
+          getWeeklyReadingStats(),
         ]);
-        setSelectedTopics(prefs.topics);
+        setSelectedSections(prefs.topics);
         setArticleCap(prefs.todayArticleCap ?? 7);
-        setStats(statsData);
+        setSectionsArticleCap(prefs.sectionsArticleCap ?? 7);
+        // setStats(statsData);
+        setWeeklyStats(weeklyData);
       }
       loadData();
     }, [])
   );
 
-  const handleTopicToggle = async (topicKey: string) => {
+  const handleSectionToggle = async (sectionKey: string) => {
     lightTap();
-    let newTopics: string[];
-    if (selectedTopics.includes(topicKey)) {
-      newTopics = selectedTopics.filter((t) => t !== topicKey);
+    let newSections: string[];
+    if (selectedSections.includes(sectionKey)) {
+      newSections = selectedSections.filter((s) => s !== sectionKey);
     } else {
-      newTopics = [...selectedTopics, topicKey];
+      newSections = [...selectedSections, sectionKey];
     }
-    setSelectedTopics(newTopics);
-    await updatePreferences({ topics: newTopics });
+    setSelectedSections(newSections);
+    await updatePreferences({ topics: newSections });
   };
 
   const handleArticleCapChange = async (value: number) => {
     setArticleCap(value);
     await updatePreferences({ todayArticleCap: value });
+  };
+
+  const handleSectionsArticleCapChange = async (value: number) => {
+    setSectionsArticleCap(value);
+    await updatePreferences({ sectionsArticleCap: value });
   };
 
   const handleInviteFriends = async () => {
@@ -202,14 +222,14 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   };
 
-  const handleShareStats = async () => {
-    try {
-      const message = `My NTRL Stats\n\n${stats.ntrlDays} NTRL Days\n${stats.totalSessions} Reading Sessions\n${stats.ntrlMinutes} NTRL Minutes\n${stats.phrasesAvoided} Phrases Avoided\n\nNTRL removes manipulative language from news so you can read what actually happened.`;
-      await Share.share({ message });
-    } catch (error) {
-      // User cancelled or share failed - no action needed
-    }
-  };
+  // const handleShareStats = async () => {
+  //   try {
+  //     const message = `My NTRL Stats\n\n${stats.ntrlDays} NTRL Days\n${stats.totalSessions} Reading Sessions\n${stats.ntrlMinutes} NTRL Minutes\n${stats.phrasesAvoided} Phrases Avoided\n\nNTRL removes manipulative language from news so you can read what actually happened.`;
+  //     await Share.share({ message });
+  //   } catch (error) {
+  //     // User cancelled or share failed - no action needed
+  //   }
+  // };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -238,7 +258,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </Text>
         </View>
 
-        {/* 2. My Stats */}
+        {/* My Stats — commented out
         <SectionHeader title="My Stats" styles={styles} />
         <MyStatsCard
           ntrlDays={stats.ntrlDays}
@@ -247,6 +267,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           phrasesAvoided={stats.phrasesAvoided}
           onPhrasesPress={() => navigation.navigate('ManipulationAvoided')}
           onSharePress={handleShareStats}
+        />
+        */}
+
+        {/* 2. Reading Insights */}
+        <SectionHeader title="Reading Insights" styles={styles} />
+        <ReadingInsightsCard
+          weeklyMinutes={weeklyStats.weeklyMinutes}
+          articlesCompleted={weeklyStats.articlesCompleted}
+          termsNeutralized={weeklyStats.termsNeutralized}
         />
 
         {/* 3. Your Content */}
@@ -267,49 +296,61 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           />
         </View>
 
-        {/* 4. Topics */}
-        <SectionHeader title="Topics" styles={styles} />
+        {/* 4. Your Sections (formerly Topics) */}
+        <SectionHeader title="Your Sections" styles={styles} />
         <View style={styles.card}>
           <View style={styles.chipContainer}>
-            {TOPICS.map((topic) => (
-              <TopicChip
-                key={topic.key}
-                label={topic.label}
-                selected={selectedTopics.includes(topic.key)}
-                onToggle={() => handleTopicToggle(topic.key)}
+            {SECTIONS.map((section) => (
+              <SectionChip
+                key={section.key}
+                label={section.label}
+                selected={selectedSections.includes(section.key)}
+                onToggle={() => handleSectionToggle(section.key)}
                 styles={styles}
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>Select topics to customize your feed</Text>
+          <Text style={styles.cardHint}>Choose sections to personalize your feed</Text>
         </View>
 
         {/* 5. Today Feed */}
         <SectionHeader title="Today Feed" styles={styles} />
         <View style={styles.card}>
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Stories shown</Text>
-            <Stepper
-              value={articleCap}
-              min={3}
-              max={15}
-              onChange={handleArticleCapChange}
-            />
-          </View>
+          <Slider
+            value={articleCap}
+            min={3}
+            max={15}
+            onChange={handleArticleCapChange}
+            label="Stories shown"
+            description="Select how many stories appear in your Today feed"
+          />
         </View>
 
-        {/* 6. Share NTRL */}
-        <SectionHeader title="Share NTRL" styles={styles} />
+        {/* 6. Sections Feed */}
+        <SectionHeader title="Sections Feed" styles={styles} />
+        <View style={styles.card}>
+          <Slider
+            value={sectionsArticleCap}
+            min={3}
+            max={15}
+            onChange={handleSectionsArticleCapChange}
+            label="Stories per section"
+            description="Select how many stories appear per section"
+          />
+        </View>
+
+        {/* 7. Invite Friends */}
+        <SectionHeader title="Share" styles={styles} />
         <View style={styles.navCard}>
           <NavigationRow
             icon="↗"
-            label="Invite friends to NTRL"
+            label="Invite friends"
             onPress={handleInviteFriends}
             styles={styles}
           />
         </View>
 
-        {/* 7. About NTRL */}
+        {/* 8. About NTRL */}
         <Pressable
           style={({ pressed }) => [styles.aboutLink, pressed && styles.aboutLinkPressed]}
           onPress={() => navigation.navigate('About')}
@@ -410,18 +451,6 @@ function createStyles(theme: Theme) {
       fontStyle: 'italic',
     },
 
-    // Settings Row
-    settingRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    settingLabel: {
-      fontSize: 15,
-      fontWeight: '400',
-      color: colors.textPrimary,
-    },
-
     // Navigation Card
     navCard: {
       backgroundColor: colors.surface,
@@ -459,7 +488,7 @@ function createStyles(theme: Theme) {
       marginLeft: layout.cardPadding + 28,
     },
 
-    // Topic Chips
+    // Section Chips
     chipContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
