@@ -8,7 +8,9 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider, useTheme } from './src/theme';
+import { ToastProvider } from './src/context/ToastContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import CustomTabBar from './src/components/CustomTabBar';
 import {
@@ -64,6 +66,13 @@ function TodayStackScreen() {
         {(props) => (
           <ErrorBoundary>
             <TodayScreen {...props} />
+          </ErrorBoundary>
+        )}
+      </TodayStackNav.Screen>
+      <TodayStackNav.Screen name="Search">
+        {(props) => (
+          <ErrorBoundary>
+            <SearchScreen {...props} />
           </ErrorBoundary>
         )}
       </TodayStackNav.Screen>
@@ -294,10 +303,14 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppNavigator />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <AppNavigator />
+          </ToastProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
