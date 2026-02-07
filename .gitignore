@@ -43,9 +43,16 @@ yarn-error.*
 # Playwright E2E testing
 e2e-report/
 e2e-results/
-e2e/snapshots/*.png
+e2e/snapshots/**/*.png
 playwright-report/
 test-results/
+
+# Dev capture/test scripts (throwaway Playwright utilities)
+capture*.cjs
+ntrl-*.cjs
+test-*.cjs
+profile-flow-capture.cjs
+e2e/capture-dark-light.cjs
 
 # Maestro
 .maestro/
