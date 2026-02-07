@@ -51,7 +51,7 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Run tests
-        run: npm test -- --ci --coverage
+        run: npm test -- --ci
 
       - name: Upload coverage
         if: always()
