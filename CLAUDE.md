@@ -343,8 +343,9 @@ Follow the branch and commit conventions in the root `CLAUDE.md`. Key points for
 
 - **Branch prefixes**: `feature/`, `fix/`, `docs/`, `refactor/`, `chore/`
 - **Conventional commits**: `type: description` format, enforced by `scripts/commit-msg` hook
-- **Pre-commit checks**: ESLint + Prettier + TypeScript, runs on staged `.ts/.tsx` files
-- **CI**: GitHub Actions runs lint + typecheck + Jest on every PR to `main`
+- **Pre-commit checks**: ESLint + Prettier + TypeScript + secret detection, runs on staged `.ts/.tsx` files via `scripts/pre-commit`
+- **CI** (`ci.yml`): ESLint + Prettier + TypeScript + Jest (164 tests) with coverage upload
+- **ESLint config notes**: `react/no-unescaped-entities` is off (not relevant for React Native). React Compiler rules (`react-hooks/refs`, `purity`, `immutability`, `set-state-in-effect`) from react-hooks v7 are set to `warn`. `@typescript-eslint/no-explicit-any` is `warn`.
 
 Install hooks after cloning: `npm install` (runs `prepare` script automatically)
 
