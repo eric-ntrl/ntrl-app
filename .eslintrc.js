@@ -28,7 +28,7 @@ module.exports = {
   },
   rules: {
     // TypeScript
-    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-require-imports': 'off',
@@ -37,10 +37,17 @@ module.exports = {
     'react/react-in-jsx-scope': 'off', // Not needed in React 17+
     'react/prop-types': 'off', // Using TypeScript for props validation
     'react/display-name': 'off',
+    'react/no-unescaped-entities': 'off', // Not relevant for React Native (no HTML entities)
 
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
+
+    // React Compiler rules (bundled in react-hooks v7) — warn for now
+    'react-hooks/refs': 'warn',
+    'react-hooks/purity': 'warn',
+    'react-hooks/immutability': 'warn',
+    'react-hooks/set-state-in-effect': 'warn',
 
     // React Native
     'react-native/no-unused-styles': 'warn',

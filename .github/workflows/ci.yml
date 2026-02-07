@@ -30,7 +30,6 @@ jobs:
 
       - name: TypeScript check
         run: npm run typecheck
-        continue-on-error: true  # TODO: commit untracked src/ files, then remove
 
   test:
     name: Tests
