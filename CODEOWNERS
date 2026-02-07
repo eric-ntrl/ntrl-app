@@ -1,0 +1,8 @@
+# NTRL App Code Owners
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @eric-ntrl
+
+# Theme system (expand as team grows)
+# src/theme/ @eric-ntrl

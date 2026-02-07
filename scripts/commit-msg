@@ -1,0 +1,32 @@
+#!/bin/bash
+# Conventional commit message validation for ntrl-app
+# Bypass with: git commit --no-verify
+
+commit_msg_file="$1"
+commit_msg=$(cat "$commit_msg_file")
+
+# Skip merge commits
+if echo "$commit_msg" | grep -qE "^Merge "; then
+    exit 0
+fi
+
+# Conventional commit pattern: type: description
+pattern="^(feat|fix|docs|refactor|test|chore|ci|perf|build|revert): .+"
+
+if ! echo "$commit_msg" | head -1 | grep -qE "$pattern"; then
+    echo ""
+    echo "ERROR: Commit message does not follow conventional format."
+    echo ""
+    echo "Expected: type: description"
+    echo "Got:      $(head -1 "$commit_msg_file")"
+    echo ""
+    echo "Valid types: feat, fix, docs, refactor, test, chore, ci, perf, build, revert"
+    echo ""
+    echo "Examples:"
+    echo "  feat: add dark mode toggle to settings"
+    echo "  fix: correct category pill scroll position"
+    echo "  docs: update CLAUDE.md with search filter docs"
+    echo ""
+    echo "Bypass with: git commit --no-verify"
+    exit 1
+fi

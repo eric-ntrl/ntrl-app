@@ -1,0 +1,73 @@
+#!/bin/bash
+# Pre-commit checks for ntrl-app
+# Runs ESLint, Prettier, TypeScript on staged .ts/.tsx files
+# Bypass with: git commit --no-verify
+
+set -e
+
+# Get staged .ts and .tsx files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+
+if [ -z "$STAGED_FILES" ]; then
+    # No TypeScript files staged, skip checks
+    exit 0
+fi
+
+echo "Running pre-commit checks on staged TypeScript files..."
+
+# --- Secret Detection ---
+echo "Checking for secrets..."
+SECRETS_FOUND=0
+STAGED_CONTENT=$(git diff --cached --diff-filter=ACM)
+
+if echo "$STAGED_CONTENT" | grep -qEi "sk-[a-zA-Z0-9]{20,}"; then
+    echo "ERROR: Possible OpenAI API key detected"
+    SECRETS_FOUND=1
+fi
+if echo "$STAGED_CONTENT" | grep -qEi "AKIA[A-Z0-9]{16}"; then
+    echo "ERROR: Possible AWS access key detected"
+    SECRETS_FOUND=1
+fi
+if echo "$STAGED_CONTENT" | grep -qEi "ghp_[a-zA-Z0-9]{36}"; then
+    echo "ERROR: Possible GitHub token detected"
+    SECRETS_FOUND=1
+fi
+
+if [ "$SECRETS_FOUND" -eq 1 ]; then
+    echo ""
+    echo "Secrets detected in staged changes. Remove them before committing."
+    echo "Bypass with: git commit --no-verify"
+    exit 1
+fi
+
+# --- ESLint ---
+echo "Running ESLint..."
+if ! ESLINT_USE_FLAT_CONFIG=false npx eslint $STAGED_FILES --ext .ts,.tsx --quiet 2>/dev/null; then
+    echo ""
+    echo "ESLint found errors. Fix them before committing."
+    echo "Run: npm run lint:fix"
+    echo "Bypass with: git commit --no-verify"
+    exit 1
+fi
+
+# --- Prettier ---
+echo "Running Prettier check..."
+if ! npx prettier --check $STAGED_FILES 2>/dev/null; then
+    echo ""
+    echo "Prettier found formatting issues. Fix them before committing."
+    echo "Run: npm run format"
+    echo "Bypass with: git commit --no-verify"
+    exit 1
+fi
+
+# --- TypeScript ---
+echo "Running TypeScript check..."
+if ! npx tsc --noEmit 2>/dev/null; then
+    echo ""
+    echo "TypeScript found type errors. Fix them before committing."
+    echo "Run: npm run typecheck"
+    echo "Bypass with: git commit --no-verify"
+    exit 1
+fi
+
+echo "All pre-commit checks passed."

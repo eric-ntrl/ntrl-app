@@ -337,6 +337,17 @@ The stats feature follows NTRL's calm UX principles:
 | No data for selected range | "No reading activity in this period." |
 | Sessions but 0 spans | Shows "0 phrases avoided" (not an error) |
 
+## Git Workflow
+
+Follow the branch and commit conventions in the root `CLAUDE.md`. Key points for ntrl-app:
+
+- **Branch prefixes**: `feature/`, `fix/`, `docs/`, `refactor/`, `chore/`
+- **Conventional commits**: `type: description` format, enforced by `scripts/commit-msg` hook
+- **Pre-commit checks**: ESLint + Prettier + TypeScript, runs on staged `.ts/.tsx` files
+- **CI**: GitHub Actions runs lint + typecheck + Jest on every PR to `main`
+
+Install hooks after cloning: `npm install` (runs `prepare` script automatically)
+
 ## Commands
 ```bash
 npm start          # Start Expo dev server
