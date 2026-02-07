@@ -11,9 +11,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Item } from '../types';
 
 // Local type - NtrlView route removed from RootStack but file kept as reference
-type NtrlViewScreenProps = NativeStackScreenProps<{
-  NtrlView: { item: Item; fullOriginalText?: string | null; transformations?: Transformation[] };
-}, 'NtrlView'>;
+type NtrlViewScreenProps = NativeStackScreenProps<
+  {
+    NtrlView: { item: Item; fullOriginalText?: string | null; transformations?: Transformation[] };
+  },
+  'NtrlView'
+>;
 import type { ThemeColors } from '../theme/types';
 
 /**
@@ -174,10 +177,7 @@ function HighlightedText({
         segment.highlighted ? (
           <Text
             key={index}
-            style={[
-              styles.highlightedSpan,
-              { backgroundColor: segment.highlightColor }
-            ]}
+            style={[styles.highlightedSpan, { backgroundColor: segment.highlightColor }]}
             testID={`highlight-span-${index}`}
           >
             {segment.text}
@@ -253,9 +253,7 @@ function HighlightLegend({
         accessibilityRole="button"
         accessibilityLabel={expanded ? 'Hide color legend' : 'Show color legend'}
       >
-        <Text style={styles.legendToggleText}>
-          {expanded ? '▾' : '▸'} What do colors mean?
-        </Text>
+        <Text style={styles.legendToggleText}>{expanded ? '▾' : '▸'} What do colors mean?</Text>
       </Pressable>
       {expanded && (
         <View style={styles.legendContent}>
@@ -336,7 +334,8 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
                 <View style={styles.badgeRow}>
                   <View style={styles.highlightBadge}>
                     <Text style={styles.badgeText}>
-                      {transformations.length} phrase{transformations.length !== 1 ? 's' : ''} flagged
+                      {transformations.length} phrase{transformations.length !== 1 ? 's' : ''}{' '}
+                      flagged
                     </Text>
                   </View>
                 </View>
@@ -394,7 +393,12 @@ export default function NtrlViewScreen({ route, navigation }: NtrlViewScreenProp
       </ScrollView>
 
       {/* Source error modal */}
-      <Modal visible={showSourceError} transparent animationType="fade" onRequestClose={() => setShowSourceError(false)}>
+      <Modal
+        visible={showSourceError}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSourceError(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Source unavailable</Text>

@@ -5,8 +5,12 @@ function SettingsIcon({ color }: { color: string }) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}>
       <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75 }} />
-      <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }} />
-      <View style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }} />
+      <View
+        style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }}
+      />
+      <View
+        style={{ width: 14, height: 1.5, backgroundColor: color, borderRadius: 0.75, marginTop: 4 }}
+      />
     </View>
   );
 }
@@ -14,7 +18,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-import { getPreferences, updatePreferences, getWeeklyReadingStats, type WeeklyReadingStats } from '../storage/storageService';
+import {
+  getPreferences,
+  updatePreferences,
+  getWeeklyReadingStats,
+  type WeeklyReadingStats,
+} from '../storage/storageService';
 import { lightTap } from '../utils/haptics';
 import type { ProfileScreenProps } from '../navigation/types';
 // import { getUserStatsOverview, type StatsOverview } from '../services/statsService';
@@ -237,11 +246,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header
-        onSettings={() => navigation.navigate('Settings')}
-        styles={styles}
-        colors={colors}
-      />
+      <Header onSettings={() => navigation.navigate('Settings')} styles={styles} colors={colors} />
 
       <ScrollView
         style={styles.scrollView}

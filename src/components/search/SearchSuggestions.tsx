@@ -38,31 +38,36 @@ export default function SearchSuggestions({
   }, [query, recentSearches]);
 
   // Combine suggestions and recent, limit to 8
-  const allSuggestions: Array<{ type: 'suggestion' | 'recent'; data: SearchSuggestion | RecentSearch }> =
-    useMemo(() => {
-      const items: Array<{ type: 'suggestion' | 'recent'; data: SearchSuggestion | RecentSearch }> = [];
+  const allSuggestions: Array<{
+    type: 'suggestion' | 'recent';
+    data: SearchSuggestion | RecentSearch;
+  }> = useMemo(() => {
+    const items: Array<{ type: 'suggestion' | 'recent'; data: SearchSuggestion | RecentSearch }> =
+      [];
 
-      // Add API suggestions first (sections, publishers)
-      for (const s of suggestions.slice(0, 5)) {
-        items.push({ type: 'suggestion', data: s });
+    // Add API suggestions first (sections, publishers)
+    for (const s of suggestions.slice(0, 5)) {
+      items.push({ type: 'suggestion', data: s });
+    }
+
+    // Add matching recent searches
+    for (const r of matchingRecent) {
+      if (items.length >= 8) break;
+      // Don't duplicate if same text
+      const exists = items.some(
+        (i) =>
+          (i.type === 'suggestion' &&
+            (i.data as SearchSuggestion).label.toLowerCase() === r.query.toLowerCase()) ||
+          (i.type === 'recent' &&
+            (i.data as RecentSearch).query.toLowerCase() === r.query.toLowerCase())
+      );
+      if (!exists) {
+        items.push({ type: 'recent', data: r });
       }
+    }
 
-      // Add matching recent searches
-      for (const r of matchingRecent) {
-        if (items.length >= 8) break;
-        // Don't duplicate if same text
-        const exists = items.some(
-          (i) =>
-            (i.type === 'suggestion' && (i.data as SearchSuggestion).label.toLowerCase() === r.query.toLowerCase()) ||
-            (i.type === 'recent' && (i.data as RecentSearch).query.toLowerCase() === r.query.toLowerCase())
-        );
-        if (!exists) {
-          items.push({ type: 'recent', data: r });
-        }
-      }
-
-      return items.slice(0, 8);
-    }, [suggestions, matchingRecent]);
+    return items.slice(0, 8);
+  }, [suggestions, matchingRecent]);
 
   if (allSuggestions.length === 0) {
     return null;

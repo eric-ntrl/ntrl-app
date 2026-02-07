@@ -29,9 +29,7 @@ const FETCH_TIMEOUT_MS = 10000; // 10 seconds
  * console.log(`${topics.topics.length} trending topics`);
  * ```
  */
-export async function getTrendingTopics(
-  windowHours: number = 24
-): Promise<TrendingTopicsResponse> {
+export async function getTrendingTopics(windowHours: number = 24): Promise<TrendingTopicsResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 

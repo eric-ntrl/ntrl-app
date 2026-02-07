@@ -8,15 +8,24 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-import { getHistory, clearHistory } from '../storage/storageService';
+import {
+  getHistory,
+  clearHistory,
+  removeHistoryEntry,
+  getWeeklyReadingStats,
+} from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
 import { formatTimeAgo } from '../utils/dateFormatters';
 import { LIMITS } from '../constants';
+import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
+import SwipeableRow from '../components/SwipeableRow';
 import type { HistoryEntry } from '../storage/types';
 import type { Item } from '../types';
 import type { HistoryScreenProps } from '../navigation/types';
@@ -77,7 +86,7 @@ function Header({
   return (
     <View style={styles.header}>
       <BackButton onPress={onBack} styles={styles} />
-      <Text style={styles.headerTitle}>Reading History</Text>
+      <Text style={styles.headerTitle}>HISTORY</Text>
       {showClear ? (
         <ClearButton onPress={onClear} styles={styles} />
       ) : (
@@ -124,21 +133,22 @@ function ArticleCard({
   );
 }
 
-function EmptyState({ styles }: { styles: ReturnType<typeof createStyles> }) {
-  return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>◷</Text>
-      <Text style={styles.emptyMessage}>No reading history yet</Text>
-      <Text style={styles.emptyHint}>Articles you read will appear here.</Text>
-    </View>
-  );
-}
-
-function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
+function EndOfList({
+  readThisWeek,
+  styles,
+}: {
+  readThisWeek: number;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.endOfList}>
       <View style={styles.endDivider} />
-      <Text style={styles.endMessage}>End of history</Text>
+      {readThisWeek > 0 && (
+        <Text style={styles.endStats}>
+          You've read {readThisWeek} {readThisWeek === 1 ? 'article' : 'articles'} this week.
+        </Text>
+      )}
+      <Text style={styles.endMessage}>You're all caught up.</Text>
     </View>
   );
 }
@@ -146,7 +156,7 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
 /**
  * Displays the user's reading history in a paginated list.
  * - Loads history entries from local storage on focus, with pull-to-refresh
- * - Supports clearing all history via a header button
+ * - Supports swipe-to-remove and clearing all history
  * - Navigates to ArticleDetail on tap
  */
 export default function HistoryScreen({ navigation }: HistoryScreenProps) {
@@ -154,11 +164,13 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { showToast } = useToast();
 
   const [allHistory, setAllHistory] = useState<HistoryEntry[]>([]);
   const [displayedCount, setDisplayedCount] = useState<number>(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [readThisWeek, setReadThisWeek] = useState(0);
 
   // Displayed history (paginated)
   const displayedHistory = useMemo(
@@ -170,6 +182,8 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
   const loadHistory = useCallback(async () => {
     const entries = await getHistory();
     setAllHistory(entries);
+    const stats = await getWeeklyReadingStats();
+    setReadThisWeek(stats.readThisWeek);
   }, []);
 
   // Load history when screen comes into focus
@@ -198,19 +212,45 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
     }, 300);
   }, [loadingMore, hasMore, allHistory.length]);
 
-  const handleClear = useCallback(async () => {
-    await clearHistory();
-    setAllHistory([]);
-    setDisplayedCount(PAGE_SIZE);
-  }, []);
+  const handleRemove = useCallback(
+    async (itemId: string) => {
+      await removeHistoryEntry(itemId);
+      setAllHistory((prev) => prev.filter((h) => h.item.id !== itemId));
+      showToast('Removed from history');
+    },
+    [showToast]
+  );
 
-  const renderItem = ({ item }: { item: HistoryEntry }) => (
-    <ArticleCard
-      item={item.item}
-      viewedAt={item.viewedAt}
-      onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
-      styles={styles}
-    />
+  const handleClear = useCallback(() => {
+    Alert.alert('Clear History', 'Are you sure you want to clear your reading history?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          await clearHistory();
+          setAllHistory([]);
+          setDisplayedCount(PAGE_SIZE);
+          showToast('History cleared');
+        },
+      },
+    ]);
+  }, [showToast]);
+
+  const handleNavigateToToday = useCallback(() => {
+    // Navigate to Today tab
+    navigation.getParent()?.navigate('TodayTab');
+  }, [navigation]);
+
+  const renderItem = ({ item, index }: { item: HistoryEntry; index: number }) => (
+    <SwipeableRow onDelete={() => handleRemove(item.item.id)}>
+      <ArticleCard
+        item={item.item}
+        viewedAt={item.viewedAt}
+        onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
+        styles={styles}
+      />
+    </SwipeableRow>
   );
 
   const ListFooter = () => {
@@ -222,7 +262,7 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
       );
     }
     if (!hasMore && displayedHistory.length > 0) {
-      return <EndOfList styles={styles} />;
+      return <EndOfList readThisWeek={readThisWeek} styles={styles} />;
     }
     return null;
   };
@@ -241,7 +281,13 @@ export default function HistoryScreen({ navigation }: HistoryScreenProps) {
       />
 
       {allHistory.length === 0 ? (
-        <EmptyState styles={styles} />
+        <EmptyState
+          icon="clock"
+          heading="No reading history yet"
+          motivation="Articles you read will appear here."
+          ctaLabel="Start Reading"
+          onCtaPress={handleNavigateToToday}
+        />
       ) : (
         <FlatList
           data={displayedHistory}
@@ -300,8 +346,9 @@ function createStyles(theme: Theme) {
       marginTop: -4,
     },
     headerTitle: {
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '600',
+      letterSpacing: 1.5,
       color: colors.textPrimary,
     },
     headerSpacer: {
@@ -333,6 +380,7 @@ function createStyles(theme: Theme) {
       paddingVertical: spacing.lg,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
+      backgroundColor: colors.background,
     },
     cardPressed: {
       opacity: 0.6,
@@ -362,32 +410,6 @@ function createStyles(theme: Theme) {
       color: colors.textMuted,
     },
 
-    // Empty state
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: layout.screenPadding,
-    },
-    emptyIcon: {
-      fontSize: 32,
-      color: colors.textSubtle,
-      marginBottom: spacing.lg,
-    },
-    emptyMessage: {
-      fontSize: 17,
-      fontWeight: '500',
-      color: colors.textMuted,
-      marginBottom: spacing.sm,
-    },
-    emptyHint: {
-      fontSize: 15,
-      fontWeight: '400',
-      color: colors.textSubtle,
-      textAlign: 'center',
-      lineHeight: 22,
-    },
-
     // End of list
     endOfList: {
       alignItems: 'center',
@@ -400,9 +422,15 @@ function createStyles(theme: Theme) {
       backgroundColor: colors.divider,
       marginBottom: spacing.xl,
     },
+    endStats: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
     endMessage: {
       fontSize: 13,
-      fontWeight: '400',
+      fontWeight: '500',
       color: colors.textSubtle,
     },
 

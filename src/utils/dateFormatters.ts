@@ -18,7 +18,7 @@ export function formatHeaderDate(date: Date = new Date()): string {
  * Ensure UTC parsing for API timestamps.
  * API returns UTC timestamps without 'Z' suffix.
  */
-function ensureUtcParsing(dateString: string): Date {
+export function ensureUtcParsing(dateString: string): Date {
   const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
   return new Date(utcString);
 }
@@ -64,7 +64,7 @@ export function formatTodayTimestamp(dateString: string | null | undefined): str
  */
 export function formatTimeAgo(
   dateString: string | null | undefined,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): string {
   if (!dateString) return '';
 
@@ -142,4 +142,24 @@ export function formatCurrentTime(): string {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+/**
+ * Format timestamp for Sections feed - calm, non-urgent style.
+ * Returns "Published earlier today", "Published yesterday", or date.
+ */
+export function formatSectionsTimestamp(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+
+  const date = ensureUtcParsing(dateString);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) return 'Published earlier today';
+  if (isYesterday) return 'Published yesterday';
+  return `Published ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 }

@@ -45,17 +45,11 @@ export default function MyStatsCard({
         <View style={styles.divider} />
         <StatBucket value={ntrlMinutes} label="NTRL Minutes" />
         <View style={styles.divider} />
-        <StatBucket
-          value={phrasesAvoided}
-          label="Phrases Avoided"
-          onPress={onPhrasesPress}
-        />
+        <StatBucket value={phrasesAvoided} label="Phrases Avoided" onPress={onPhrasesPress} />
       </View>
 
       {/* Empty state hint */}
-      {isEmpty && (
-        <Text style={styles.emptyHint}>Start reading to see your stats.</Text>
-      )}
+      {isEmpty && <Text style={styles.emptyHint}>Start reading to see your stats.</Text>}
 
       {/* Share button */}
       {!isEmpty && onSharePress && (

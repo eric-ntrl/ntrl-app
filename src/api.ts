@@ -99,30 +99,34 @@ function transformBrief(api: ApiBriefResponse): Brief {
   return {
     generated_at: api.assembled_at,
     sections: api.sections
-      .map((section): Section => ({
-        key: section.name,
-        title: section.display_name,
-        items: section.stories
-          // Filter out stories with empty titles (failed neutralization)
-          .filter((story) => story.feed_title && story.feed_title.trim() !== '')
-          .map((story): Item => ({
-            id: story.id,
-            source: story.source_name,
-            source_url: story.source_url,
-            published_at: story.published_at,
-            headline: story.feed_title || '',
-            summary: story.feed_summary || '',
-            url: story.source_url,
-            has_manipulative_content: story.has_manipulative_content,
-            // Detail fields now embedded from API (no N+1 calls needed)
-            detail: {
-              title: story.detail_title || story.feed_title || '',
-              brief: story.detail_brief || story.feed_summary || '',
-              full: story.detail_full,
-              disclosure: story.disclosure,
-            },
-          })),
-      }))
+      .map(
+        (section): Section => ({
+          key: section.name,
+          title: section.display_name,
+          items: section.stories
+            // Filter out stories with empty titles (failed neutralization)
+            .filter((story) => story.feed_title && story.feed_title.trim() !== '')
+            .map(
+              (story): Item => ({
+                id: story.id,
+                source: story.source_name,
+                source_url: story.source_url,
+                published_at: story.published_at,
+                headline: story.feed_title || '',
+                summary: story.feed_summary || '',
+                url: story.source_url,
+                has_manipulative_content: story.has_manipulative_content,
+                // Detail fields now embedded from API (no N+1 calls needed)
+                detail: {
+                  title: story.detail_title || story.feed_title || '',
+                  brief: story.detail_brief || story.feed_summary || '',
+                  full: story.detail_full,
+                  disclosure: story.disclosure,
+                },
+              })
+            ),
+        })
+      )
       // Filter out empty sections
       .filter((section) => section.items.length > 0),
   };
@@ -400,7 +404,7 @@ export async function fetchTransparency(storyId: string): Promise<TransparencyFe
   const response = await fetchWithRetry(
     `${API_BASE_URL}/v1/stories/${storyId}/transparency`,
     {},
-    1  // Only 1 retry (2 attempts max) — transparency is non-critical
+    1 // Only 1 retry (2 attempts max) — transparency is non-critical
   );
 
   if (!response.ok) {

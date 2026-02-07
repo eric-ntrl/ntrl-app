@@ -100,6 +100,14 @@ export async function isArticleSaved(itemId: string): Promise<boolean> {
   }
 }
 
+export async function clearAllSavedArticles(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.SAVED_ARTICLES);
+  } catch (error) {
+    console.warn('[Storage] Failed to clear all saved articles:', error);
+  }
+}
+
 // ============================================
 // Reading History
 // ============================================
@@ -144,13 +152,31 @@ export async function clearHistory(): Promise<void> {
   }
 }
 
+export async function removeHistoryEntry(itemId: string): Promise<void> {
+  try {
+    const history = await getHistory();
+    const filtered = history.filter((h) => h.item.id !== itemId);
+    await AsyncStorage.setItem(KEYS.HISTORY, JSON.stringify(filtered));
+  } catch (error) {
+    console.warn('[Storage] Failed to remove history entry:', error);
+  }
+}
+
 // ============================================
 // User Preferences (Stored in SecureStore)
 // ============================================
 
 const ALL_TOPICS = [
-  'world', 'us', 'local', 'business', 'technology',
-  'science', 'health', 'environment', 'sports', 'culture',
+  'world',
+  'us',
+  'local',
+  'business',
+  'technology',
+  'science',
+  'health',
+  'environment',
+  'sports',
+  'culture',
 ];
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -404,10 +430,7 @@ export async function getSavedSearchCounts(): Promise<
  * Update the cached count for a saved search.
  * Called after executing a saved search to track new article counts.
  */
-export async function updateSavedSearchCount(
-  query: string,
-  count: number
-): Promise<void> {
+export async function updateSavedSearchCount(query: string, count: number): Promise<void> {
   try {
     const counts = await getSavedSearchCounts();
     counts[query.toLowerCase()] = {
@@ -681,6 +704,77 @@ export async function clearUserStats(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.USER_STATS);
   } catch (error) {
     console.warn('[Storage] Failed to clear user stats:', error);
+  }
+}
+
+/**
+ * Weekly reading stats for Reading Insights section.
+ */
+export type WeeklyReadingStats = {
+  weeklyMinutes: number;
+  articlesCompleted: number;
+  termsNeutralized: number;
+  savedThisWeek: number;
+  readThisWeek: number;
+};
+
+/**
+ * Get aggregated reading stats for the past 7 days.
+ * Used for the Reading Insights section on ProfileScreen.
+ */
+export async function getWeeklyReadingStats(): Promise<WeeklyReadingStats> {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const weekAgoISO = weekAgo.toISOString();
+
+  try {
+    // Get reading sessions from the past week
+    const sessions = await getReadingSessions();
+    const weeklySessions = sessions.filter((s) => s.startedAt >= weekAgoISO);
+
+    // Calculate weekly minutes from session durations
+    const weeklySeconds = weeklySessions.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
+    const weeklyMinutes = Math.round(weeklySeconds / 60);
+
+    // Count completed articles
+    const articlesCompleted = weeklySessions.filter((s) => s.completed).length;
+
+    // Get span counts for completed sessions to calculate terms neutralized
+    let termsNeutralized = 0;
+    const spanCache = await getArticleSpanCache();
+    for (const session of weeklySessions) {
+      if (session.completed) {
+        const cached = spanCache.find((c) => c.storyId === session.storyId);
+        if (cached) {
+          termsNeutralized += cached.spanCount;
+        }
+      }
+    }
+
+    // Count articles saved this week
+    const savedArticles = await getSavedArticles();
+    const savedThisWeek = savedArticles.filter((s) => s.savedAt >= weekAgoISO).length;
+
+    // Count articles read (viewed) this week
+    const history = await getHistory();
+    const readThisWeek = history.filter((h) => h.viewedAt >= weekAgoISO).length;
+
+    return {
+      weeklyMinutes,
+      articlesCompleted,
+      termsNeutralized,
+      savedThisWeek,
+      readThisWeek,
+    };
+  } catch (error) {
+    console.warn('[Storage] Failed to get weekly reading stats:', error);
+    return {
+      weeklyMinutes: 0,
+      articlesCompleted: 0,
+      termsNeutralized: 0,
+      savedThisWeek: 0,
+      readThisWeek: 0,
+    };
   }
 }
 

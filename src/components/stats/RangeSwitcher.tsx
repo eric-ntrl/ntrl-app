@@ -20,10 +20,6 @@ const SEGMENTS: { key: StatsTimeRange; label: string }[] = [
  */
 export default function RangeSwitcher({ selected, onSelect }: Props) {
   return (
-    <SegmentedControl<StatsTimeRange>
-      segments={SEGMENTS}
-      selected={selected}
-      onSelect={onSelect}
-    />
+    <SegmentedControl<StatsTimeRange> segments={SEGMENTS} selected={selected} onSelect={onSelect} />
   );
 }

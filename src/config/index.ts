@@ -76,4 +76,3 @@ export const isProduction = ENV === 'production';
  * Check if running in development environment.
  */
 export const isDevelopment = ENV === 'development';
-

@@ -24,15 +24,13 @@ jobs:
 
       - name: ESLint
         run: npm run lint
-        continue-on-error: true  # TODO: fix existing lint issues, then remove
 
       - name: Prettier check
         run: npm run format:check
-        continue-on-error: true  # TODO: fix existing format issues, then remove
 
       - name: TypeScript check
         run: npm run typecheck
-        continue-on-error: true  # TODO: commit missing files, then remove
+        continue-on-error: true  # TODO: commit untracked src/ files, then remove
 
   test:
     name: Tests
@@ -52,7 +50,6 @@ jobs:
 
       - name: Run tests
         run: npm test -- --ci
-        continue-on-error: true  # TODO: fix storageService test, then remove
 
       - name: Upload coverage
         if: always()

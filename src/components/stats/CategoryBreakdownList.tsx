@@ -30,10 +30,7 @@ const CATEGORY_COLORS: Record<SpanReason, string> = {
  * Category breakdown list showing span counts by reason.
  * Shows top categories with "Show all" expansion option.
  */
-export default function CategoryBreakdownList({
-  categories,
-  initialVisibleCount = 4,
-}: Props) {
+export default function CategoryBreakdownList({ categories, initialVisibleCount = 4 }: Props) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);
@@ -42,9 +39,7 @@ export default function CategoryBreakdownList({
     return null;
   }
 
-  const visibleCategories = expanded
-    ? categories
-    : categories.slice(0, initialVisibleCount);
+  const visibleCategories = expanded ? categories : categories.slice(0, initialVisibleCount);
 
   const hasMore = categories.length > initialVisibleCount;
 

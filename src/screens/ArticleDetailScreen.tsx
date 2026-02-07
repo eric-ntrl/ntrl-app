@@ -40,11 +40,17 @@ import {
   type ShareTargetConfig,
 } from '../utils/sharing';
 import { lightTap } from '../utils/haptics';
+import { formatTodayTimestamp } from '../utils/dateFormatters';
 import type { Item } from '../types';
 import type { ArticleDetailScreenProps } from '../navigation/types';
 import SegmentedControl from '../components/SegmentedControl';
 import ArticleBrief from '../components/ArticleBrief';
 import NtrlContent from '../components/NtrlContent';
+import TransparencyDisclaimer from '../components/TransparencyDisclaimer';
+import AdjustedLanguageMicrocopy from '../components/AdjustedLanguageMicrocopy';
+import InfoModal from '../components/InfoModal';
+import ActionBar from '../components/ActionBar';
+import { countByCategory } from '../utils/taxonomy';
 
 type ViewMode = 'brief' | 'full' | 'ntrl';
 
@@ -76,8 +82,13 @@ function mapReasonToType(reason: string): TransformationType {
  */
 function castToSpanReason(reason: string): SpanReason {
   const validReasons: SpanReason[] = [
-    'clickbait', 'urgency_inflation', 'emotional_trigger',
-    'selling', 'agenda_signaling', 'rhetorical_framing', 'editorial_voice'
+    'clickbait',
+    'urgency_inflation',
+    'emotional_trigger',
+    'selling',
+    'agenda_signaling',
+    'rhetorical_framing',
+    'editorial_voice',
   ];
   const reasonLower = reason.toLowerCase() as SpanReason;
   if (validReasons.includes(reasonLower)) {
@@ -98,22 +109,6 @@ function mapSpansToTransformations(spans: TransparencySpan[]): Transformation[] 
     original: span.original_text,
     filtered: span.replacement_text || '',
   }));
-}
-
-/**
- * Format relative time for display
- */
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return 'Today';
 }
 
 /**
@@ -284,7 +279,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const { item } = route.params;
-  const timeLabel = formatRelativeTime(item.published_at);
+  const timeLabel = formatTodayTimestamp(item.published_at);
 
   // Reading progress bar state (Full article only)
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -295,10 +290,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
       const depth = Math.min(1, contentOffset.y / scrollableHeight);
       setScrollProgress(depth);
       // Track max scroll depth for session completion
-      sessionRef.current.maxScrollDepth = Math.max(
-        sessionRef.current.maxScrollDepth,
-        depth
-      );
+      sessionRef.current.maxScrollDepth = Math.max(sessionRef.current.maxScrollDepth, depth);
     }
   }, []);
 
@@ -318,6 +310,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     lightTap();
     setViewMode(mode);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   }, []);
 
   // Debug logging for detail content
@@ -336,8 +329,10 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
   }, [item.id, item.detail]);
   const [isSaved, setIsSaved] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
   const [shareTargets, setShareTargets] = useState<ShareTargetConfig[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMountedRef = useRef(true);
@@ -440,7 +435,11 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
 
   // Determine if content was modified
   const allTransformations = [...titleTransformations, ...bodyTransformations];
-  const hasRemovedContent = item.has_manipulative_content || allTransformations.length > 0 || !!item.detail.disclosure;
+  const hasRemovedContent =
+    item.has_manipulative_content || allTransformations.length > 0 || !!item.detail.disclosure;
+
+  // Compute category counts for microcopy
+  const categoryCounts = useMemo(() => countByCategory(allTransformations), [allTransformations]);
 
   // Handle external source link with error fallback
   const handleViewSource = async () => {
@@ -541,6 +540,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
       )}
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -550,9 +550,9 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         {/* Headline */}
         <Text style={styles.headline}>{decodeHtmlEntities(item.headline)}</Text>
 
-        {/* Metadata band: Source · Time | Brief | Full | Ntrl */}
+        {/* Metadata band: Source / Time | Brief | Full | Ntrl */}
         <View style={styles.metadataBand}>
-          {/* Left: Source + Timestamp */}
+          {/* Left: Source + Timestamp (stacked) */}
           <View style={styles.metadataLeft}>
             <Pressable
               onPress={() =>
@@ -567,7 +567,6 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
             >
               <Text style={styles.metadataSource}>{item.source}</Text>
             </Pressable>
-            <Text style={styles.metadataSeparator}>·</Text>
             <Text style={styles.metadataTime}>{timeLabel}</Text>
           </View>
 
@@ -596,78 +595,96 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
         {/* Body - Brief, Full, or Ntrl mode */}
         <View style={styles.bodySection}>
           {viewMode === 'brief' ? (
-            // Brief mode: show detail_brief from API
-            <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+            // Brief mode: show detail_brief from API with microcopy
+            <>
+              <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+              {categoryCounts.length > 0 && (
+                <AdjustedLanguageMicrocopy
+                  categoryCounts={categoryCounts}
+                  onInfoPress={() => setShowInfoModal(true)}
+                  showBriefSuffix={true}
+                />
+              )}
+            </>
           ) : viewMode === 'full' ? (
             // Full mode: show detail_full from API (already neutralized)
-            item.detail.full ? (
-              <Text style={styles.bodyText}>{item.detail.full}</Text>
-            ) : (
-              <>
-                <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
-                <Text style={styles.thinContentNotice}>
-                  Full text not available from this source.
-                </Text>
-              </>
-            )
+            <>
+              {item.detail.full ? (
+                <Text style={styles.bodyText}>{item.detail.full}</Text>
+              ) : (
+                <>
+                  <ArticleBrief text={item.detail.brief || summaryParagraphs.join('\n\n')} />
+                  <Text style={styles.thinContentNotice}>
+                    Full text not available from this source.
+                  </Text>
+                </>
+              )}
+              {/* Adjusted language microcopy */}
+              {hasRemovedContent && (
+                <AdjustedLanguageMicrocopy
+                  categoryCounts={categoryCounts}
+                  onInfoPress={() => setShowInfoModal(true)}
+                />
+              )}
+            </>
+          ) : // Ntrl mode — inline transparency content
+          transparencyLoading ? (
+            <View style={styles.loadingSection}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+              <Text style={styles.loadingText}>Loading transparency data...</Text>
+            </View>
           ) : (
-            // Ntrl mode — inline transparency content
-            transparencyLoading ? (
-              <View style={styles.loadingSection}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
-                <Text style={styles.loadingText}>Loading transparency data...</Text>
-              </View>
-            ) : (
-              <NtrlContent
-                item={item}
-                fullOriginalText={originalBodyText}
-                originalTitle={originalTitleText}
-                transformations={bodyTransformations}
-                titleTransformations={titleTransformations}
-              />
-            )
+            <NtrlContent
+              item={item}
+              fullOriginalText={originalBodyText}
+              originalTitle={originalTitleText}
+              transformations={bodyTransformations}
+              titleTransformations={titleTransformations}
+              onInfoPress={() => setShowInfoModal(true)}
+            />
           )}
         </View>
 
-        {/* Disclosure */}
-        {hasRemovedContent && viewMode !== 'ntrl' && (
-          <Text style={styles.disclosure}>Language adjusted for clarity.</Text>
-        )}
+        {/* Footer navigation — mirrors header metadata band */}
+        <View style={styles.footerNav}>
+          <View style={styles.metadataLeft}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('SourceTransparency', {
+                  sourceName: item.source,
+                  sourceUrl: item.url,
+                })
+              }
+              style={({ pressed }) => pressed && styles.metadataPressed}
+              accessibilityRole="link"
+              accessibilityLabel={`Source: ${item.source}. Tap for source info.`}
+            >
+              <Text style={styles.metadataSource}>{item.source}</Text>
+            </Pressable>
+            <Text style={styles.metadataTime}>{timeLabel}</Text>
+          </View>
+
+          <SegmentedControl<ViewMode>
+            segments={[
+              { key: 'brief', label: 'Brief' },
+              { key: 'full', label: 'Full' },
+              { key: 'ntrl', label: 'Ntrl' },
+            ]}
+            selected={viewMode}
+            onSelect={handleViewModeChange}
+          />
+        </View>
 
         {/* Breathing space before footer actions */}
         <View style={styles.footerSpacer} />
 
-        {/* Footer actions - quiet inline text row */}
-        <View style={styles.footerActions}>
-          <Pressable
-            onPress={handleToggleSave}
-            style={({ pressed }) => pressed && styles.footerActionPressed}
-            accessibilityLabel={isSaved ? 'Remove from saved' : 'Save article'}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.footerActionText, isSaved && styles.footerActionActive]}>
-              {isSaved ? 'Saved' : 'Save'}
-            </Text>
-          </Pressable>
-          <Text style={styles.footerSeparator}>·</Text>
-          <Pressable
-            onPress={handleShare}
-            style={({ pressed }) => pressed && styles.footerActionPressed}
-            accessibilityLabel="Share article"
-            accessibilityRole="button"
-          >
-            <Text style={styles.footerActionText}>Share</Text>
-          </Pressable>
-          <Text style={styles.footerSeparator}>·</Text>
-          <Pressable
-            onPress={handleViewSource}
-            style={({ pressed }) => pressed && styles.footerActionPressed}
-            accessibilityLabel="View original source"
-            accessibilityRole="link"
-          >
-            <Text style={styles.footerActionText}>View original</Text>
-          </Pressable>
-        </View>
+        {/* ActionBar - consistent across all views */}
+        <ActionBar
+          isSaved={isSaved}
+          onSave={handleToggleSave}
+          onShare={handleShare}
+          onViewOriginal={handleViewSource}
+        />
       </ScrollView>
 
       {/* Source error modal */}
@@ -731,6 +748,9 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
           </View>
         </View>
       </Modal>
+
+      {/* Info modal explaining adjustment categories */}
+      <InfoModal visible={showInfoModal} onClose={() => setShowInfoModal(false)} />
     </View>
   );
 }
@@ -819,26 +839,20 @@ function createStyles(theme: Theme) {
     // Metadata band - single line with source/time, mode toggle, ntrl view
     metadataBand: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       marginBottom: 28, // Clear zone separation
       paddingTop: spacing.xs,
     },
     metadataLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
     },
     metadataSource: {
       fontSize: typography.meta.fontSize,
       fontWeight: typography.meta.fontWeight,
       fontFamily: serifFamily,
       color: colors.textSubtle,
-    },
-    metadataSeparator: {
-      fontSize: typography.meta.fontSize,
-      fontWeight: typography.meta.fontWeight,
-      color: colors.textSubtle,
-      marginHorizontal: spacing.xs,
     },
     metadataTime: {
       fontSize: typography.meta.fontSize,
@@ -885,6 +899,14 @@ function createStyles(theme: Theme) {
       lineHeight: 18,
       color: colors.textSubtle,
       marginBottom: spacing.lg,
+    },
+    // Footer navigation — mirrors header metadataBand
+    footerNav: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginTop: spacing.xl,
+      paddingTop: spacing.xs,
     },
 
     // Loading state

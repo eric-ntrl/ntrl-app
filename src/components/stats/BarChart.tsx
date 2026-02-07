@@ -19,11 +19,7 @@ type Props = {
  * Simple vertical bar chart using react-native-svg.
  * Uses neutral single color (accent), no axis lines, minimal labels.
  */
-export default function BarChart({
-  data,
-  height = 120,
-  showLabels = true,
-}: Props) {
+export default function BarChart({ data, height = 120, showLabels = true }: Props) {
   const { theme } = useTheme();
   const { colors, spacing } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -64,10 +60,7 @@ export default function BarChart({
                 </View>
                 {showLabels && (
                   <Text
-                    style={[
-                      styles.label,
-                      !showThisLabel && styles.labelHidden,
-                    ]}
+                    style={[styles.label, !showThisLabel && styles.labelHidden]}
                     numberOfLines={1}
                   >
                     {point.label}

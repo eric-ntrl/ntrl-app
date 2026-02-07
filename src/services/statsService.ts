@@ -5,12 +5,7 @@
  * for the My Stats / Manipulation Avoided dashboard.
  */
 
-import type {
-  ReadingSession,
-  ArticleSpanCache,
-  UserStats,
-  StatsTimeRange,
-} from '../storage/types';
+import type { ReadingSession, ArticleSpanCache, UserStats, StatsTimeRange } from '../storage/types';
 import type { SpanReason } from '../navigation/types';
 import {
   getReadingSessions,
@@ -157,10 +152,7 @@ async function updateStatsForSession(session: ReadingSession): Promise<void> {
 /**
  * Build span cache entry from transparency spans.
  */
-function buildSpanCache(
-  storyId: string,
-  spans: Array<{ reason: string }>
-): ArticleSpanCache {
+function buildSpanCache(storyId: string, spans: Array<{ reason: string }>): ArticleSpanCache {
   const byReason: Partial<Record<SpanReason, number>> = {};
 
   for (const span of spans) {
@@ -266,10 +258,7 @@ export async function getStatsBreakdown(
 /**
  * Get date range bounds for a stats time range.
  */
-function getDateRangeForStats(
-  range: StatsTimeRange,
-  anchorDate: Date
-): { start: Date; end: Date } {
+function getDateRangeForStats(range: StatsTimeRange, anchorDate: Date): { start: Date; end: Date } {
   const today = startOfDay(anchorDate);
 
   switch (range) {
@@ -289,10 +278,7 @@ function getDateRangeForStats(
 /**
  * Generate empty series data for a time range (for empty state).
  */
-function generateEmptySeries(
-  range: StatsTimeRange,
-  anchorDate: Date
-): SeriesDataPoint[] {
+function generateEmptySeries(range: StatsTimeRange, anchorDate: Date): SeriesDataPoint[] {
   const { start, end } = getDateRangeForStats(range, anchorDate);
 
   switch (range) {
@@ -345,10 +331,7 @@ function generateSeries(
     const sessionDate = parseLocalDateString(session.localDate);
     const bucketKey = getBucketKey(sessionDate, range);
 
-    bucketCounts.set(
-      bucketKey,
-      (bucketCounts.get(bucketKey) || 0) + cached.spanCount
-    );
+    bucketCounts.set(bucketKey, (bucketCounts.get(bucketKey) || 0) + cached.spanCount);
   }
 
   // Build series with all buckets

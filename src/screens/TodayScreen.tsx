@@ -21,13 +21,12 @@ import { formatTodayTimestamp } from '../utils/dateFormatters';
 import { SkeletonSection } from '../components/SkeletonCard';
 import type { Item, Brief } from '../types';
 import type { TodayScreenProps } from '../navigation/types';
+import ProgressBar from '../components/ProgressBar';
 
 const DEFAULT_HOURS_BACK = 12;
 const DEFAULT_ARTICLE_CAP = 7;
 
-type Row =
-  | { type: 'item'; item: Item }
-  | { type: 'endOfFeed' };
+type Row = { type: 'item'; item: Item } | { type: 'endOfFeed' };
 
 // Map section keys to display names for header
 const TOPIC_DISPLAY_NAMES: Record<string, string> = {
@@ -83,14 +82,15 @@ function filterForToday(
 }
 
 /**
- * Format date for header: "Monday, January 27"
+ * Format date line for header: "Today • Monday, January 27"
  */
-function formatHeaderDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
+function formatHeaderDateLine(date: Date): string {
+  const formatted = date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
+  return `Today • ${formatted}`;
 }
 
 /**
@@ -109,24 +109,56 @@ function getGreeting(): string {
 }
 
 function Header({
-  date,
+  dateLine,
   sections,
+  onSearchPress,
+  onSectionsPress,
   styles,
 }: {
-  date: string;
+  dateLine: string;
   sections: string[]; // Display names: ['World', 'Business', 'Sports']
+  onSearchPress: () => void;
+  onSectionsPress: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
   const greeting = getGreeting();
 
+  // Truncate to first 3 sections with ellipsis if more
+  const displaySections = sections.slice(0, 3);
+  const hasMore = sections.length > 3;
+  const sectionsText = displaySections.join(' • ') + (hasMore ? '…' : '');
+
   return (
     <View style={styles.header}>
-      <Text style={styles.todayLabel}>TODAY</Text>
-      <Text style={styles.greeting}>{greeting}</Text>
-      <Text style={styles.date}>{date}</Text>
-      <Text style={styles.tagline}>Today's highlights from your sections</Text>
+      {/* Top bar: NTRL brand + search icon */}
+      <View style={styles.headerTopBar}>
+        <Text style={styles.brand}>NTRL</Text>
+        <Pressable
+          style={({ pressed }) => [styles.headerIcon, pressed && styles.headerIconPressed]}
+          onPress={onSearchPress}
+          hitSlop={8}
+          accessibilityLabel="Search"
+          accessibilityRole="button"
+        >
+          <Text style={styles.headerIconText}>⌕</Text>
+        </Pressable>
+      </View>
+
+      {/* Line 1: "Today • Monday, January 27" */}
+      <Text style={styles.dateLine}>{dateLine}</Text>
+
+      {/* Line 2: "{Greeting}. Highlights from your sections." */}
+      <Text style={styles.greetingLine}>{greeting}. Highlights from your sections.</Text>
+
+      {/* Line 3: Truncated sections list (tappable if more than 3) */}
       {sections.length > 0 && (
-        <Text style={styles.sectionsText}>{sections.join(' · ')}</Text>
+        <Pressable onPress={hasMore ? onSectionsPress : undefined} disabled={!hasMore} hitSlop={8}>
+          {({ pressed }) => (
+            <Text style={[styles.sectionsText, hasMore && pressed && { opacity: 0.6 }]}>
+              {sectionsText}
+            </Text>
+          )}
+        </Pressable>
       )}
     </View>
   );
@@ -327,7 +359,7 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
   }, [loadBrief]);
 
   const now = useMemo(() => new Date(), [refreshKey]);
-  const headerDate = formatHeaderDate(now);
+  const headerDateLine = formatHeaderDateLine(now);
 
   const { rows, hasMore } = useMemo(() => {
     if (!brief || !sessionCutoff) return { rows: [], hasMore: false };
@@ -372,6 +404,7 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
     if (item.type === 'endOfFeed') {
       return (
         <>
+          <ProgressBar current={currentIndex} total={articleCount} />
           <ProgressHint current={currentIndex} total={articleCount} styles={styles} />
           <EndOfFeed hasMore={hasMore} onSeeEarlier={handleSeeEarlier} styles={styles} />
         </>
@@ -394,7 +427,13 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header date={headerDate} sections={sectionNames} styles={styles} />
+      <Header
+        dateLine={headerDateLine}
+        sections={sectionNames}
+        onSearchPress={() => navigation.navigate('Search')}
+        onSectionsPress={() => navigation.navigate('ProfileTab', { screen: 'Profile' })}
+        styles={styles}
+      />
 
       {loading && !brief ? (
         <LoadingState />
@@ -408,9 +447,7 @@ export default function TodayScreen({ navigation }: TodayScreenProps) {
       ) : (
         <FlatList
           data={rows}
-          keyExtractor={(r) =>
-            r.type === 'endOfFeed' ? 'end-of-feed' : `item-${r.item.id}`
-          }
+          keyExtractor={(r) => (r.type === 'endOfFeed' ? 'end-of-feed' : `item-${r.item.id}`)}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -441,39 +478,52 @@ function createStyles(theme: Theme) {
     // Header
     header: {
       paddingHorizontal: layout.screenPadding,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
     },
-    todayLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 2,
-      color: colors.textSubtle,
+    headerTopBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginBottom: spacing.lg,
     },
-    greeting: {
+    brand: {
       fontSize: typography.brand.fontSize,
       fontWeight: typography.brand.fontWeight,
       letterSpacing: typography.brand.letterSpacing,
       color: colors.textPrimary,
     },
-    date: {
-      fontSize: typography.date.fontSize,
-      fontWeight: typography.date.fontWeight,
-      color: colors.textMuted,
-      marginTop: spacing.md,
+    headerIcon: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    tagline: {
+    headerIconPressed: {
+      opacity: 0.5,
+    },
+    headerIconText: {
+      fontSize: 26,
+      color: colors.textMuted,
+    },
+    dateLine: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 2,
+      color: colors.textSubtle,
+      textTransform: 'uppercase',
+      marginBottom: spacing.md,
+    },
+    greetingLine: {
       fontSize: 14,
       fontWeight: '400',
       color: colors.textSecondary,
-      marginTop: spacing.xl,
+      marginBottom: spacing.sm,
     },
     sectionsText: {
       fontSize: 13,
       fontWeight: '400',
       color: colors.textSubtle,
-      marginTop: spacing.sm,
     },
 
     // List

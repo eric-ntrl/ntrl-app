@@ -21,10 +21,7 @@ type ManipulationGaugeProps = {
  * - Score number displayed prominently above bar
  * - Subtext shows phrases per paragraph
  */
-export default function ManipulationGauge({
-  score,
-  phrasesPerParagraph,
-}: ManipulationGaugeProps) {
+export default function ManipulationGauge({ score, phrasesPerParagraph }: ManipulationGaugeProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { colors } = theme;
@@ -101,9 +98,7 @@ export default function ManipulationGauge({
       </View>
 
       {/* Subtext */}
-      <Text style={styles.subtext}>
-        {phrasesPerParagraph} phrases per paragraph
-      </Text>
+      <Text style={styles.subtext}>{phrasesPerParagraph} phrases per paragraph</Text>
     </View>
   );
 }

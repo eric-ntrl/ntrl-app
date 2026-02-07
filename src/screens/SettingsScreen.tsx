@@ -1,24 +1,27 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  StatusBar,
+  Alert,
+  Linking,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import type { Theme, TextSizePreference, ColorModePreference } from '../theme/types';
+import type { Theme, TextSizePreference, ColorModePreference, ColorMode } from '../theme/types';
 import { lightTap } from '../utils/haptics';
+import TextSizePreview from '../components/TextSizePreview';
+import ThemePreviewCard from '../components/ThemePreviewCard';
 import type { SettingsScreenProps } from '../navigation/types';
 
-// Text size options
-const TEXT_SIZE_OPTIONS: { key: TextSizePreference; label: string }[] = [
-  { key: 'small', label: 'Small' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'large', label: 'Large' },
-];
+// Text size options (now 4)
+const TEXT_SIZE_OPTIONS: TextSizePreference[] = ['small', 'medium', 'large', 'extraLarge'];
 
-// Color mode options
-const COLOR_MODE_OPTIONS: { key: ColorModePreference; label: string }[] = [
-  { key: 'light', label: 'Light' },
-  { key: 'dark', label: 'Dark' },
-  { key: 'system', label: 'System' },
-];
+// Color mode options (now includes sepia, excludes system for visual simplicity)
+const COLOR_MODE_OPTIONS: ColorMode[] = ['light', 'dark', 'sepia'];
 
 function BackButton({
   onPress,
@@ -70,36 +73,9 @@ function SectionHeader({
   );
 }
 
-function OptionButton({
-  label,
-  selected,
-  onSelect,
-  styles,
-}: {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.optionButton,
-        selected && styles.optionButtonSelected,
-        pressed && styles.optionButtonPressed,
-      ]}
-      onPress={onSelect}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-    >
-      <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 /**
  * SettingsScreen — app configuration accessed via gear icon in Profile.
- * Contains: Text Size, Appearance, Account stub.
+ * Contains: Reading (text size), Appearance (theme), Account.
  */
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const insets = useSafeAreaInsets();
@@ -118,7 +94,15 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   };
 
   const handleSignIn = () => {
-    Alert.alert('Coming Soon', 'Account sign-in coming soon.');
+    Alert.alert('Coming Soon', 'Account sign-in and sync coming soon.');
+  };
+
+  const handlePrivacyPolicy = () => {
+    Linking.openURL('https://ntrl.news/privacy');
+  };
+
+  const handleTermsOfService = () => {
+    Linking.openURL('https://ntrl.news/terms');
   };
 
   return (
@@ -134,51 +118,76 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Text Size */}
-        <SectionHeader title="Text Size" styles={styles} />
+        {/* Reading (Text Size) */}
+        <SectionHeader title="Reading" styles={styles} />
         <View style={styles.card}>
-          <View style={styles.optionContainer}>
-            {TEXT_SIZE_OPTIONS.map((option) => (
-              <OptionButton
-                key={option.key}
-                label={option.label}
-                selected={textSize === option.key}
-                onSelect={() => handleTextSizeChange(option.key)}
-                styles={styles}
+          <View style={styles.textSizeContainer}>
+            {TEXT_SIZE_OPTIONS.map((size) => (
+              <TextSizePreview
+                key={size}
+                size={size}
+                selected={textSize === size}
+                onSelect={() => handleTextSizeChange(size)}
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>Adjusts article text and headlines across the app</Text>
+          <Text style={styles.previewText}>This is how article text will appear.</Text>
+          <Text style={styles.cardHint}>Adjust font size throughout the app</Text>
         </View>
 
         {/* Appearance */}
         <SectionHeader title="Appearance" styles={styles} />
         <View style={styles.card}>
-          <View style={styles.optionContainer}>
-            {COLOR_MODE_OPTIONS.map((option) => (
-              <OptionButton
-                key={option.key}
-                label={option.label}
-                selected={colorModePreference === option.key}
-                onSelect={() => handleColorModeChange(option.key)}
-                styles={styles}
+          <View style={styles.themeContainer}>
+            {COLOR_MODE_OPTIONS.map((mode) => (
+              <ThemePreviewCard
+                key={mode}
+                mode={mode}
+                selected={colorMode === mode}
+                onSelect={() => handleColorModeChange(mode)}
               />
             ))}
           </View>
-          <Text style={styles.cardHint}>System follows your device settings</Text>
+          {colorMode === 'sepia' && (
+            <Text style={styles.sepiaHint}>Sepia is designed for low-light reading</Text>
+          )}
         </View>
 
-        {/* Account */}
-        <SectionHeader title="Account" styles={styles} />
+        {/* Account & Sync */}
+        <SectionHeader title="Account & Sync" styles={styles} />
         <View style={styles.navCard}>
           <Pressable
             style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}
             onPress={handleSignIn}
-            accessibilityLabel="Sign in"
+            accessibilityLabel="Sign in to sync"
             accessibilityRole="button"
           >
-            <Text style={styles.navLabel}>Sign In</Text>
+            <Text style={styles.navLabel}>Sign in to sync</Text>
             <Text style={styles.navChevron}>›</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.syncHint}>
+          Sync your saved articles and preferences across devices.
+        </Text>
+
+        {/* Legal Links */}
+        <View style={styles.legalSection}>
+          <Pressable
+            style={({ pressed }) => [styles.legalLink, pressed && styles.legalLinkPressed]}
+            onPress={handlePrivacyPolicy}
+            accessibilityLabel="Privacy Policy"
+            accessibilityRole="link"
+          >
+            <Text style={styles.legalLinkText}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.legalDivider}>·</Text>
+          <Pressable
+            style={({ pressed }) => [styles.legalLink, pressed && styles.legalLinkPressed]}
+            onPress={handleTermsOfService}
+            accessibilityLabel="Terms of Service"
+            accessibilityRole="link"
+          >
+            <Text style={styles.legalLinkText}>Terms of Service</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -265,36 +274,33 @@ function createStyles(theme: Theme) {
       fontStyle: 'italic',
     },
 
-    // Option buttons (text size, appearance)
-    optionContainer: {
+    // Text Size Preview
+    textSizeContainer: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
       gap: spacing.sm,
     },
-    optionButton: {
-      flex: 1,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.divider,
-      backgroundColor: colors.background,
-      alignItems: 'center',
-    },
-    optionButtonSelected: {
-      borderColor: colors.accentSecondary,
-      backgroundColor: colors.accentSecondarySubtle,
-    },
-    optionButtonPressed: {
-      opacity: 0.6,
-    },
-    optionLabel: {
-      fontSize: 14,
+    previewText: {
+      fontSize: 15,
       fontWeight: '400',
-      color: colors.textMuted,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: spacing.lg,
+      fontFamily: 'Georgia',
     },
-    optionLabelSelected: {
-      color: colors.textPrimary,
-      fontWeight: '500',
+
+    // Theme Preview
+    themeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+    },
+    sepiaHint: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      fontStyle: 'italic',
     },
 
     // Navigation Card
@@ -323,6 +329,40 @@ function createStyles(theme: Theme) {
       fontSize: 20,
       fontWeight: '300',
       color: colors.textMuted,
+    },
+
+    // Sync hint
+    syncHint: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      marginTop: spacing.sm,
+      marginHorizontal: spacing.sm,
+    },
+
+    // Legal Links
+    legalSection: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: spacing.xxl,
+      paddingVertical: spacing.lg,
+    },
+    legalLink: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    legalLinkPressed: {
+      opacity: 0.5,
+    },
+    legalLinkText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textMuted,
+    },
+    legalDivider: {
+      fontSize: 13,
+      color: colors.textSubtle,
     },
   });
 }

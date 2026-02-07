@@ -14,7 +14,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { colorsV1, colorsV2, colorsV1Dark, colorsV2Dark } from './colors';
+import {
+  colorsV1,
+  colorsV2,
+  colorsV1Dark,
+  colorsV2Dark,
+  colorsV1Sepia,
+  colorsV2Sepia,
+} from './colors';
 import { createTypographyV1, createTypographyV2 } from './typography';
 import { spacing, layout } from './spacing';
 import type {
@@ -76,6 +83,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     if (colorModePreference === 'system') {
       return systemColorScheme === 'dark' ? 'dark' : 'light';
     }
+    // sepia, light, and dark are returned directly
     return colorModePreference;
   }, [colorModePreference, systemColorScheme]);
 
@@ -127,9 +135,21 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // Select colors based on version and color mode
     let colors;
     if (ACTIVE_THEME_VERSION === 'v2') {
-      colors = colorMode === 'dark' ? colorsV2Dark : colorsV2;
+      if (colorMode === 'dark') {
+        colors = colorsV2Dark;
+      } else if (colorMode === 'sepia') {
+        colors = colorsV2Sepia;
+      } else {
+        colors = colorsV2;
+      }
     } else {
-      colors = colorMode === 'dark' ? colorsV1Dark : colorsV1;
+      if (colorMode === 'dark') {
+        colors = colorsV1Dark;
+      } else if (colorMode === 'sepia') {
+        colors = colorsV1Sepia;
+      } else {
+        colors = colorsV1;
+      }
     }
 
     // Create typography with colors (for color-dependent styles)

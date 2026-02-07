@@ -1,81 +1,74 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, LayoutChangeEvent } from 'react-native';
 import { useTheme } from '../theme';
 import type { Theme, ThemeColors } from '../theme/types';
 import { serifFamily } from '../theme/typography';
-import type { TransformationType, Transformation, SpanReason } from '../navigation/types';
+import type { Transformation, SpanReason, L1Category } from '../navigation/types';
 import type { Item } from '../types';
-import ManipulationGauge from './ManipulationGauge';
+import HorizontalSegmentedGauge from './HorizontalSegmentedGauge';
+import NtrlIndexDetailSheet from './NtrlIndexDetailSheet';
+import TransparencyDisclaimer from './TransparencyDisclaimer';
+import HighlightTooltip from './HighlightTooltip';
+import {
+  mapSpanReasonToL1Category,
+  L1_CATEGORY_METADATA,
+  SPAN_REASON_METADATA,
+  SPAN_REASONS,
+} from '../utils/taxonomy';
 
 /**
- * Get human-readable label for transformation type
+ * Get highlight color for an L1 category from theme colors.
  */
-function getTypeLabel(type: TransformationType): string {
-  switch (type) {
-    case 'urgency':
-      return 'Urgency language';
-    case 'emotional':
-      return 'Emotional triggers';
-    case 'clickbait':
-      return 'Clickbait phrases';
-    case 'sensational':
-      return 'Sensational wording';
-    case 'opinion':
-      return 'Opinion as fact';
-    case 'other':
-    default:
-      return 'Other adjustments';
-  }
+function getL1HighlightColor(category: L1Category, colors: ThemeColors): string {
+  const colorKey = L1_CATEGORY_METADATA[category].colorKey;
+  return colors[colorKey as keyof ThemeColors] as string;
 }
 
 /**
- * Get highlight color based on span reason
+ * Get highlight color based on span reason, mapped through L1 category.
  */
 function getHighlightColor(reason: SpanReason | undefined, colors: ThemeColors): string {
   if (!reason) {
-    return colors.highlight;
+    return colors.highlightFraming; // Default fallback
   }
 
-  switch (reason) {
-    case 'urgency_inflation':
-      return colors.highlightUrgency;
-    case 'emotional_trigger':
-      return colors.highlightEmotional;
-    case 'editorial_voice':
-    case 'agenda_signaling':
-      return colors.highlightEditorial;
-    case 'clickbait':
-    case 'selling':
-      return colors.highlightClickbait;
-    case 'rhetorical_framing':
-    default:
-      return colors.highlight;
-  }
+  const l1Category = mapSpanReasonToL1Category(reason);
+  return getL1HighlightColor(l1Category, colors);
 }
 
 /**
- * Count transformations by type
+ * Count transformations by SpanReason (backend category).
  */
-function countByType(transformations: Transformation[]): Map<TransformationType, number> {
-  const counts = new Map<TransformationType, number>();
+function countBySpanReason(transformations: Transformation[]): Map<SpanReason, number> {
+  const counts = new Map<SpanReason, number>();
   for (const t of transformations) {
-    counts.set(t.type, (counts.get(t.type) || 0) + 1);
+    counts.set(t.reason, (counts.get(t.reason) || 0) + 1);
   }
   return counts;
 }
 
 /**
- * Legend item data for highlight colors
+ * Get highlight color for a SpanReason from theme colors.
  */
-const LEGEND_ITEMS = [
-  { label: 'Emotional language', colorKey: 'highlightEmotional' as const },
-  { label: 'Urgency/hype', colorKey: 'highlightUrgency' as const },
-  { label: 'Editorial opinion', colorKey: 'highlightEditorial' as const },
-  { label: 'Clickbait/selling', colorKey: 'highlightClickbait' as const },
-];
+function getSpanReasonHighlightColor(reason: SpanReason, colors: ThemeColors): string {
+  const colorKey = SPAN_REASON_METADATA[reason].colorKey;
+  return colors[colorKey as keyof ThemeColors] as string;
+}
 
 /**
- * Render text with inline highlights — always ON (no toggle).
+ * Segment data for highlighted text with tap info.
+ */
+type HighlightSegment = {
+  text: string;
+  highlighted: boolean;
+  highlightColor?: string;
+  reason?: SpanReason;
+  replacement?: string;
+};
+
+/**
+ * Render text with inline highlights + strikethrough — always ON (no toggle).
+ * Supports tap handling for showing tooltips.
  */
 function HighlightedText({
   text,
@@ -83,12 +76,14 @@ function HighlightedText({
   styles,
   colors,
   textStyle,
+  onSpanPress,
 }: {
   text: string;
   transformations: Transformation[];
   styles: ReturnType<typeof createStyles>;
   colors: ThemeColors;
   textStyle?: object;
+  onSpanPress?: (reason: SpanReason, replacement: string | undefined, x: number, y: number) => void;
 }) {
   if (!text) {
     return null;
@@ -102,11 +97,7 @@ function HighlightedText({
 
   const sorted = [...transformations].sort((a, b) => a.start - b.start);
 
-  const segments: Array<{
-    text: string;
-    highlighted: boolean;
-    highlightColor?: string;
-  }> = [];
+  const segments: HighlightSegment[] = [];
   let currentPos = 0;
 
   for (const transform of sorted) {
@@ -126,6 +117,8 @@ function HighlightedText({
       text: text.substring(transform.start, endPos),
       highlighted: true,
       highlightColor: getHighlightColor(transform.reason, colors),
+      reason: transform.reason,
+      replacement: transform.filtered,
     });
     currentPos = endPos;
   }
@@ -145,9 +138,18 @@ function HighlightedText({
             key={index}
             style={[
               styles.highlightedSpan,
-              { backgroundColor: segment.highlightColor }
+              styles.strikethrough,
+              { backgroundColor: segment.highlightColor },
             ]}
             testID={`highlight-span-${index}`}
+            onPress={
+              onSpanPress && segment.reason
+                ? (e) => {
+                    const { pageX, pageY } = e.nativeEvent;
+                    onSpanPress(segment.reason!, segment.replacement, pageX, pageY);
+                  }
+                : undefined
+            }
           >
             {segment.text}
           </Text>
@@ -156,46 +158,6 @@ function HighlightedText({
         )
       )}
     </Text>
-  );
-}
-
-/**
- * Collapsible legend explaining highlight colors
- */
-function HighlightLegend({
-  expanded,
-  onToggle,
-  styles,
-  colors,
-}: {
-  expanded: boolean;
-  onToggle: () => void;
-  styles: ReturnType<typeof createStyles>;
-  colors: ThemeColors;
-}) {
-  return (
-    <View style={styles.legendContainer}>
-      <Pressable
-        onPress={onToggle}
-        style={({ pressed }) => [styles.legendToggle, pressed && styles.legendTogglePressed]}
-        accessibilityRole="button"
-        accessibilityLabel={expanded ? 'Hide color legend' : 'Show color legend'}
-      >
-        <Text style={styles.legendToggleText}>
-          {expanded ? '▾' : '▸'} What do colors mean?
-        </Text>
-      </Pressable>
-      {expanded && (
-        <View style={styles.legendContent}>
-          {LEGEND_ITEMS.map((item) => (
-            <View key={item.colorKey} style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors[item.colorKey] }]} />
-              <Text style={styles.legendLabel}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -209,6 +171,7 @@ function OriginalArticleSection({
   bodyTransformations,
   styles,
   colors,
+  onSpanPress,
 }: {
   title: string;
   body: string;
@@ -216,6 +179,7 @@ function OriginalArticleSection({
   bodyTransformations: Transformation[];
   styles: ReturnType<typeof createStyles>;
   colors: ThemeColors;
+  onSpanPress?: (reason: SpanReason, replacement: string | undefined, x: number, y: number) => void;
 }) {
   return (
     <View style={styles.originalArticleContainer}>
@@ -228,6 +192,7 @@ function OriginalArticleSection({
         styles={styles}
         colors={colors}
         textStyle={styles.originalTitleText}
+        onSpanPress={onSpanPress}
       />
 
       {/* Spacer between title and body */}
@@ -240,24 +205,35 @@ function OriginalArticleSection({
         styles={styles}
         colors={colors}
         textStyle={styles.articleText}
+        onSpanPress={onSpanPress}
       />
     </View>
   );
 }
 
 /**
- * Change categories list
+ * Change categories list - displays SpanReason categories with counts.
+ * Shows the actual backend categories for more granular information.
  */
 function ChangeCategories({
   transformations,
   styles,
+  colors,
 }: {
   transformations: Transformation[];
   styles: ReturnType<typeof createStyles>;
+  colors: ThemeColors;
 }) {
-  const typeCounts = useMemo(() => countByType(transformations), [transformations]);
+  const reasonCounts = useMemo(() => countBySpanReason(transformations), [transformations]);
 
-  if (typeCounts.size === 0) {
+  // Sort categories by count (descending)
+  const sortedReasons = useMemo(() => {
+    return SPAN_REASONS.filter((reason) => (reasonCounts.get(reason) || 0) > 0).sort(
+      (a, b) => (reasonCounts.get(b) || 0) - (reasonCounts.get(a) || 0)
+    );
+  }, [reasonCounts]);
+
+  if (sortedReasons.length === 0) {
     return null;
   }
 
@@ -265,10 +241,29 @@ function ChangeCategories({
     <View style={styles.categoriesSection}>
       <Text style={styles.categoriesTitle}>Changes made</Text>
       <View style={styles.categoriesList}>
-        {Array.from(typeCounts.entries()).map(([type, count]) => (
-          <View key={type} style={styles.categoryRow}>
-            <Text style={styles.categoryLabel}>{getTypeLabel(type)}</Text>
-            <Text style={styles.categoryCount}>{count}</Text>
+        {sortedReasons.map((reason) => (
+          <View key={reason} style={styles.categoryRow}>
+            <View style={styles.categoryLeft}>
+              <View
+                style={[
+                  styles.categorySwatch,
+                  { backgroundColor: getSpanReasonHighlightColor(reason, colors) },
+                ]}
+              />
+              <Text style={styles.categoryLabel}>
+                {(() => {
+                  const meta = SPAN_REASON_METADATA[reason];
+                  const shortName = meta.shortName;
+                  const harm =
+                    meta.harmExplanation.charAt(0).toLowerCase() + meta.harmExplanation.slice(1);
+                  const isNoun = ['clickbait', 'selling', 'loaded verbs'].includes(
+                    shortName.toLowerCase()
+                  );
+                  return isNoun ? `${shortName} (${harm})` : `${shortName} phrase (${harm})`;
+                })()}
+              </Text>
+            </View>
+            <Text style={styles.categoryCount}>{reasonCounts.get(reason)}</Text>
           </View>
         ))}
       </View>
@@ -282,43 +277,43 @@ type NtrlContentProps = {
   originalTitle?: string;
   transformations: Transformation[];
   titleTransformations?: Transformation[];
+  /** Callback when info icon is pressed */
+  onInfoPress?: () => void;
 };
 
 /**
- * Calculate integrity score using sigmoid curve.
- *
- * @param spanCount - Total number of manipulation spans
- * @param paragraphCount - Number of paragraphs in content
- * @returns Score from 0-100 (100 = clean, 0 = highly manipulative)
+ * Calculate NTRL Index (0-100 scale, higher = more polluted).
+ * Uses phrases per 100 words as the density metric.
  */
-function calculateIntegrityScore(spanCount: number, paragraphCount: number): number {
-  if (spanCount === 0) return 100;
-  if (paragraphCount === 0) return 100;
+function calculateNtrlIndex(spanCount: number, wordCount: number): number {
+  if (spanCount === 0) return 0;
+  if (wordCount === 0) return 0;
 
-  const phrasesPerParagraph = spanCount / paragraphCount;
+  // Density: flagged phrases per 100 words
+  const phrasesPer100Words = (spanCount / wordCount) * 100;
 
-  // Sigmoid curve calibration:
-  // 0.0 phrases/para → 100 (perfect)
-  // 0.5 phrases/para → ~90 (clean)
-  // 1.0 phrases/para → ~78 (acceptable)
-  // 1.5 phrases/para → ~62 (concerning)
-  // 2.0 phrases/para → ~44 (problematic)
-  // 3.0+ phrases/para → <30 (highly manipulative)
+  // More pessimistic sigmoid calibration:
+  // 0 phrases/100w → 0 (clean)
+  // 0.5 phrases/100w → ~15
+  // 1.0 phrases/100w → ~35
+  // 2.0 phrases/100w → ~60
+  // 3.0 phrases/100w → ~75
+  // 5.0+ phrases/100w → ~90+
 
-  const midpoint = 1.2;  // Density where score ≈ 70
-  const steepness = 1.8; // Curve sharpness
-  const floor = 15;      // Minimum score
+  const midpoint = 1.5; // Lower = more pessimistic
+  const steepness = 1.2;
+  const ceiling = 95; // Higher ceiling for more range
 
-  const x = steepness * (phrasesPerParagraph - midpoint);
-  const sigmoidValue = 1 / (1 + Math.exp(x));
-
-  return Math.round(floor + sigmoidValue * (100 - floor));
+  const x = steepness * (phrasesPer100Words - midpoint);
+  const sigmoidValue = 1 / (1 + Math.exp(-x));
+  return Math.round(sigmoidValue * ceiling);
 }
 
 /**
  * NtrlContent — inline transparency content for ArticleDetailScreen.
- * Shows original title with highlights, manipulation gauge, legend,
- * highlighted article text, change categories, and empty states.
+ * Shows TransparencyDisclaimer, HorizontalSegmentedGauge,
+ * original article with highlighted+strikethrough text, category change list,
+ * tap tooltips, and empty states.
  */
 export default function NtrlContent({
   item,
@@ -331,65 +326,65 @@ export default function NtrlContent({
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [showLegend, setShowLegend] = useState(false);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
+
+  // Tooltip state
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipReason, setTooltipReason] = useState<SpanReason>('rhetorical_framing');
+  const [tooltipReplacement, setTooltipReplacement] = useState<string | undefined>(undefined);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const hasContent = !!fullOriginalText;
   const allTransformations = [...titleTransformations, ...transformations];
   const hasChanges = allTransformations.length > 0;
 
-  // Calculate paragraph count from original text
-  const paragraphCount = useMemo(() => {
-    if (!fullOriginalText) return 1;
-    const paragraphs = fullOriginalText.split(/\n\n+/).filter(p => p.trim().length > 0);
-    return Math.max(1, paragraphs.length);
-  }, [fullOriginalText]);
+  // Calculate word count from original text (title + body)
+  const wordCount = useMemo(() => {
+    let text = fullOriginalText || '';
+    if (originalTitle) {
+      text = originalTitle + ' ' + text;
+    }
+    const words = text
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
+    return words.length;
+  }, [fullOriginalText, originalTitle]);
 
-  // Calculate integrity score using sigmoid curve
-  const integrityScore = useMemo(() => {
-    return calculateIntegrityScore(allTransformations.length, paragraphCount);
-  }, [allTransformations.length, paragraphCount]);
+  // Calculate NTRL Index (0 = clean, 100 = polluted)
+  const ntrlIndex = useMemo(() => {
+    return calculateNtrlIndex(allTransformations.length, wordCount);
+  }, [allTransformations.length, wordCount]);
 
-  // Calculate phrases per paragraph for display
-  const phrasesPerParagraph = useMemo(() => {
-    if (paragraphCount === 0) return '0.0';
-    return (allTransformations.length / paragraphCount).toFixed(1);
-  }, [allTransformations.length, paragraphCount]);
+  // Handle span tap to show tooltip
+  const handleSpanPress = useCallback(
+    (reason: SpanReason, replacement: string | undefined, x: number, y: number) => {
+      setTooltipReason(reason);
+      setTooltipReplacement(replacement);
+      setTooltipPosition({ x, y });
+      setTooltipVisible(true);
+    },
+    []
+  );
 
-  // Show clean message only when score is exactly 100
-  const showCleanMessage = integrityScore === 100;
+  // Dismiss tooltip
+  const dismissTooltip = useCallback(() => {
+    setTooltipVisible(false);
+  }, []);
 
   return (
     <View testID="ntrl-view-screen">
       {hasContent ? (
         <>
-          {/* 1. Manipulation gauge */}
-          {hasChanges && (
-            <View style={styles.gaugeSection}>
-              <ManipulationGauge
-                score={integrityScore}
-                phrasesPerParagraph={phrasesPerParagraph}
-              />
-            </View>
-          )}
+          {/* 1. Transparency disclaimer at top */}
+          <TransparencyDisclaimer variant="ntrl" />
 
-          {/* 2. Legend */}
-          {hasChanges && (
-            <HighlightLegend
-              expanded={showLegend}
-              onToggle={() => setShowLegend(!showLegend)}
-              styles={styles}
-              colors={colors}
-            />
-          )}
+          {/* 2. Horizontal segmented gauge (always shown, tappable) */}
+          <View style={styles.gaugeSection}>
+            <HorizontalSegmentedGauge score={ntrlIndex} onPress={() => setShowDetailSheet(true)} />
+          </View>
 
-          {/* 3. Clean message BEFORE article (only when score = 100) */}
-          {showCleanMessage && (
-            <View style={styles.cleanMessageContainer}>
-              <Text style={styles.cleanMessage}>No manipulation detected</Text>
-            </View>
-          )}
-
-          {/* 4. Unified Original Article section with title and body */}
+          {/* 3. Unified Original Article section with title and body */}
           {originalTitle && fullOriginalText && (
             <OriginalArticleSection
               title={originalTitle}
@@ -398,6 +393,7 @@ export default function NtrlContent({
               bodyTransformations={transformations}
               styles={styles}
               colors={colors}
+              onSpanPress={handleSpanPress}
             />
           )}
 
@@ -410,19 +406,36 @@ export default function NtrlContent({
                 transformations={transformations}
                 styles={styles}
                 colors={colors}
+                onSpanPress={handleSpanPress}
               />
             </View>
           )}
 
-          {/* 5. Clean message AFTER article (only when score = 100) */}
-          {showCleanMessage && (
-            <View style={styles.cleanMessageContainer}>
-              <Text style={styles.cleanMessage}>No manipulation detected</Text>
-            </View>
+          {/* 5. Change categories with L1 taxonomy (only when there are changes) */}
+          {hasChanges && (
+            <ChangeCategories
+              transformations={allTransformations}
+              styles={styles}
+              colors={colors}
+            />
           )}
 
-          {/* 6. Change categories (only when there are changes) */}
-          {hasChanges && <ChangeCategories transformations={allTransformations} styles={styles} />}
+          {/* 6. Tooltip overlay */}
+          <HighlightTooltip
+            visible={tooltipVisible}
+            reason={tooltipReason}
+            replacement={tooltipReplacement}
+            position={tooltipPosition}
+            onDismiss={dismissTooltip}
+          />
+
+          {/* 7. Detail sheet modal */}
+          <NtrlIndexDetailSheet
+            visible={showDetailSheet}
+            onClose={() => setShowDetailSheet(false)}
+            score={ntrlIndex}
+            transformations={allTransformations}
+          />
         </>
       ) : (
         <View style={styles.emptyState}>
@@ -432,7 +445,6 @@ export default function NtrlContent({
           </Text>
         </View>
       )}
-
     </View>
   );
 }
@@ -468,58 +480,10 @@ function createStyles(theme: Theme) {
       height: spacing.lg,
     },
 
-    // Clean message (shown before/after article when score = 100)
-    cleanMessageContainer: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      marginVertical: spacing.sm,
-    },
-    cleanMessage: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textSecondary,
-    },
-
     // Gauge section
     gaugeSection: {
       alignItems: 'center',
       marginBottom: spacing.lg,
-    },
-
-    // Highlight legend
-    legendContainer: {
-      marginBottom: spacing.lg,
-    },
-    legendToggle: {
-      paddingVertical: spacing.sm,
-    },
-    legendTogglePressed: {
-      opacity: 0.5,
-    },
-    legendToggleText: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: colors.textMuted,
-    },
-    legendContent: {
-      marginTop: spacing.sm,
-      paddingLeft: spacing.md,
-      gap: spacing.xs,
-    },
-    legendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-    },
-    legendSwatch: {
-      width: 14,
-      height: 14,
-      borderRadius: 2,
-    },
-    legendLabel: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: colors.textSecondary,
     },
 
     articleText: {
@@ -532,6 +496,9 @@ function createStyles(theme: Theme) {
     highlightedSpan: {
       backgroundColor: colors.highlight,
       borderRadius: 2,
+    },
+    strikethrough: {
+      textDecorationLine: 'line-through',
     },
 
     // Categories section
@@ -550,13 +517,25 @@ function createStyles(theme: Theme) {
       marginBottom: spacing.md,
     },
     categoriesList: {
-      gap: spacing.sm,
+      gap: spacing.md,
     },
     categoryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.xs,
+      alignItems: 'flex-start',
+      paddingVertical: spacing.sm,
+    },
+    categoryLeft: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      flex: 1,
+    },
+    categorySwatch: {
+      width: 14,
+      height: 14,
+      borderRadius: 3,
+      marginTop: 2,
     },
     categoryLabel: {
       fontSize: 14,
@@ -567,6 +546,7 @@ function createStyles(theme: Theme) {
       fontSize: 14,
       fontWeight: '500',
       color: colors.textMuted,
+      marginLeft: spacing.md,
     },
 
     // Empty state
@@ -586,6 +566,5 @@ function createStyles(theme: Theme) {
       color: colors.textSubtle,
       textAlign: 'center',
     },
-
   });
 }

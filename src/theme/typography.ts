@@ -27,6 +27,7 @@ const TEXT_SIZE_MULTIPLIERS: Record<TextSizePreference, number> = {
   small: 0.9,
   medium: 1.0,
   large: 1.15,
+  extraLarge: 1.3,
 };
 
 // V1 Typography - Original values

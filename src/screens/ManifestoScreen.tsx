@@ -69,7 +69,8 @@ export default function ManifestoScreen({ navigation }: ManifestoScreenProps) {
         </Text>
 
         <Text style={styles.text}>
-          The news doesn't start this way; it becomes this way — compressed, sharpened, pushed toward reaction, toward a click, toward an agenda.
+          The news doesn't start this way; it becomes this way — compressed, sharpened, pushed
+          toward reaction, toward a click, toward an agenda.
         </Text>
 
         <Text style={styles.text}>

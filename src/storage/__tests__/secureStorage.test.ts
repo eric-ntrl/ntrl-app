@@ -85,9 +85,7 @@ describe('Native platform (iOS/Android)', () => {
     });
 
     it('throws when SecureStore fails', async () => {
-      (SecureStore.setItemAsync as jest.Mock).mockRejectedValueOnce(
-        new Error('Keychain error')
-      );
+      (SecureStore.setItemAsync as jest.Mock).mockRejectedValueOnce(new Error('Keychain error'));
 
       await expect(setSecureItem('key', 'value')).rejects.toThrow('Keychain error');
     });
@@ -110,9 +108,7 @@ describe('Native platform (iOS/Android)', () => {
     });
 
     it('returns null on SecureStore error', async () => {
-      (SecureStore.getItemAsync as jest.Mock).mockRejectedValueOnce(
-        new Error('read error')
-      );
+      (SecureStore.getItemAsync as jest.Mock).mockRejectedValueOnce(new Error('read error'));
 
       const result = await getSecureItem('key');
       expect(result).toBeNull();
@@ -127,9 +123,7 @@ describe('Native platform (iOS/Android)', () => {
     });
 
     it('does not throw on delete error', async () => {
-      (SecureStore.deleteItemAsync as jest.Mock).mockRejectedValueOnce(
-        new Error('delete error')
-      );
+      (SecureStore.deleteItemAsync as jest.Mock).mockRejectedValueOnce(new Error('delete error'));
 
       // Should not throw
       await expect(deleteSecureItem('key')).resolves.toBeUndefined();
@@ -147,9 +141,7 @@ describe('Native platform (iOS/Android)', () => {
     });
 
     it('returns false when SecureStore fails', async () => {
-      (SecureStore.setItemAsync as jest.Mock).mockRejectedValue(
-        new Error('not available')
-      );
+      (SecureStore.setItemAsync as jest.Mock).mockRejectedValue(new Error('not available'));
 
       const result = await isSecureStorageAvailable();
       expect(result).toBe(false);
@@ -217,10 +209,7 @@ describe('Web platform (localStorage fallback)', () => {
     const webModule = getWebModule();
     await webModule.setSecureItem('key', 'value');
 
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-      '@ntrl/secure/key',
-      'value'
-    );
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('@ntrl/secure/key', 'value');
   });
 
   it('getSecureItem reads from localStorage with prefix', async () => {
@@ -302,9 +291,7 @@ describe('setSecureJSON / getSecureJSON', () => {
 
     await setSecureJSON('big', largeObj);
 
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining('exceeds 2048 byte limit')
-    );
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('exceeds 2048 byte limit'));
     // Should still attempt to store
     expect(SecureStore.setItemAsync).toHaveBeenCalled();
 

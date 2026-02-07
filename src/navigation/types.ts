@@ -36,12 +36,12 @@ export type SpanReason =
  * Used for grouping SpanReasons into higher-level categories for display.
  */
 export type L1Category =
-  | 'attention_engagement'      // A - Attention & Engagement
-  | 'emotional_affective'       // B - Emotional & Affective
-  | 'cognitive_epistemic'       // C - Cognitive & Epistemic
-  | 'linguistic_framing'        // D - Linguistic & Framing
-  | 'structural_editorial'      // E - Structural & Editorial
-  | 'incentive_meta';           // F - Incentive & Meta
+  | 'attention_engagement' // A - Attention & Engagement
+  | 'emotional_affective' // B - Emotional & Affective
+  | 'cognitive_epistemic' // C - Cognitive & Epistemic
+  | 'linguistic_framing' // D - Linguistic & Framing
+  | 'structural_editorial' // E - Structural & Editorial
+  | 'incentive_meta'; // F - Incentive & Meta
 
 /**
  * Transformation record showing what was changed.
@@ -62,7 +62,7 @@ export type Transformation = {
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
   ArticleDetail: { item: Item };
-SourceTransparency: { sourceName: string; sourceUrl: string };
+  SourceTransparency: { sourceName: string; sourceUrl: string };
   Settings: undefined;
   About: undefined;
   Manifesto: undefined;
@@ -84,6 +84,7 @@ export type TabParamList = {
 
 export type TodayStackParamList = {
   Today: undefined;
+  Search: undefined;
 };
 
 export type SectionsStackParamList = {
@@ -118,6 +119,9 @@ export type SectionsScreenProps = CompositeScreenProps<
   >
 >;
 
+// SearchScreen can be accessed from both TodayStack and SectionsStack.
+// Using SectionsStack type works for both since the Search route params are identical
+// and the composite props provide access to RootStack for ArticleDetail navigation.
 export type SearchScreenProps = CompositeScreenProps<
   NativeStackScreenProps<SectionsStackParamList, 'Search'>,
   CompositeScreenProps<
@@ -163,7 +167,10 @@ export type ManipulationAvoidedScreenProps = CompositeScreenProps<
 // ============================================
 
 export type ArticleDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'ArticleDetail'>;
-export type SourceTransparencyScreenProps = NativeStackScreenProps<RootStackParamList, 'SourceTransparency'>;
+export type SourceTransparencyScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  'SourceTransparency'
+>;
 export type SettingsScreenProps = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
 export type ManifestoScreenProps = NativeStackScreenProps<RootStackParamList, 'Manifesto'>;

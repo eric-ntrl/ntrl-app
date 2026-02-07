@@ -1,5 +1,14 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
+} from 'react-native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { selectionTap } from '../utils/haptics';
@@ -17,7 +26,13 @@ export type CategoryPillsProps = {
  * Used on Sections screen to provide quick navigation to each section.
  * Features edge fades to indicate scrollable content and optional label/sublabel row.
  */
-export function CategoryPills({ categories, onPillPress, activeKey, label, sublabel }: CategoryPillsProps) {
+export function CategoryPills({
+  categories,
+  onPillPress,
+  activeKey,
+  label,
+  sublabel,
+}: CategoryPillsProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -45,7 +60,7 @@ export function CategoryPills({ categories, onPillPress, activeKey, label, subla
     if (viewWidth === 0) return;
 
     // Center the active pill in the scroll view
-    const targetX = pillPos.x - (viewWidth / 2) + (pillPos.width / 2);
+    const targetX = pillPos.x - viewWidth / 2 + pillPos.width / 2;
     const scrollX = Math.max(0, targetX);
 
     scrollViewRef.current.scrollTo({ x: scrollX, animated: true });
@@ -93,10 +108,7 @@ export function CategoryPills({ categories, onPillPress, activeKey, label, subla
                 onPillPress(category.key);
               }}
             >
-              <Text style={[
-                styles.pillText,
-                category.key === activeKey && styles.pillTextActive,
-              ]}>
+              <Text style={[styles.pillText, category.key === activeKey && styles.pillTextActive]}>
                 {category.title}
               </Text>
             </Pressable>

@@ -663,7 +663,12 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
   // Execute search using V2 API with multi-value filters
   const executeSearch = useCallback(
-    async (searchQuery: string, newOffset: number = 0, append: boolean = false, currentFilters?: SearchFiltersV2) => {
+    async (
+      searchQuery: string,
+      newOffset: number = 0,
+      append: boolean = false,
+      currentFilters?: SearchFiltersV2
+    ) => {
       if (searchQuery.trim().length < MIN_QUERY_LENGTH) {
         setSearchResponse(null);
         setIsTyping(false);
@@ -856,11 +861,14 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
     setIsCurrentQuerySaved(true);
   }, [query]);
 
-  const handleSuggestionTap = useCallback((topic: string) => {
-    setQuery(topic);
-    setShowSuggestions(false);
-    executeSearch(topic);
-  }, [executeSearch]);
+  const handleSuggestionTap = useCallback(
+    (topic: string) => {
+      setQuery(topic);
+      setShowSuggestions(false);
+      executeSearch(topic);
+    },
+    [executeSearch]
+  );
 
   const handleSuggestionPress = useCallback(
     (suggestion: SearchSuggestion) => {
@@ -1024,7 +1032,11 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
     // Add section cards for matching categories (max 2)
     const matchingCategories = searchResponse.facets.categories
-      .filter((c) => c.label.toLowerCase().includes(query.toLowerCase()) || c.key.toLowerCase().includes(query.toLowerCase()))
+      .filter(
+        (c) =>
+          c.label.toLowerCase().includes(query.toLowerCase()) ||
+          c.key.toLowerCase().includes(query.toLowerCase())
+      )
       .slice(0, 2);
 
     for (const cat of matchingCategories) {
@@ -1033,7 +1045,11 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
     // Add publisher cards for matching publishers (max 2)
     const matchingPublishers = searchResponse.facets.sources
-      .filter((s) => s.label.toLowerCase().includes(query.toLowerCase()) || s.key.toLowerCase().includes(query.toLowerCase()))
+      .filter(
+        (s) =>
+          s.label.toLowerCase().includes(query.toLowerCase()) ||
+          s.key.toLowerCase().includes(query.toLowerCase())
+      )
       .slice(0, 2);
 
     for (const pub of matchingPublishers) {
@@ -1138,7 +1154,10 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
         {searchResponse && query.trim() && !isCurrentQuerySaved && (
           <Pressable
             onPress={handleSaveCurrentSearch}
-            style={({ pressed }) => [styles.saveSearchButton, pressed && styles.saveSearchButtonPressed]}
+            style={({ pressed }) => [
+              styles.saveSearchButton,
+              pressed && styles.saveSearchButtonPressed,
+            ]}
           >
             <Text style={styles.saveSearchIcon}>★</Text>
             <Text style={styles.saveSearchText}>Save this search</Text>
@@ -1226,9 +1245,7 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
           <FlatList
             data={mixedResults}
             keyExtractor={(item, index) =>
-              item.type === 'article'
-                ? item.data.id
-                : `${item.type}-${item.data.key}-${index}`
+              item.type === 'article' ? item.data.id : `${item.type}-${item.data.key}-${index}`
             }
             renderItem={renderMixedItem}
             contentContainerStyle={styles.resultsList}

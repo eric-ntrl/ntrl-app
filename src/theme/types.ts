@@ -2,10 +2,10 @@
  * NTRL Theme System - Type Definitions
  */
 
-export type TextSizePreference = 'small' | 'medium' | 'large';
+export type TextSizePreference = 'small' | 'medium' | 'large' | 'extraLarge';
 export type ThemeVersion = 'v1' | 'v2';
-export type ColorMode = 'light' | 'dark';
-export type ColorModePreference = 'light' | 'dark' | 'system';
+export type ColorMode = 'light' | 'dark' | 'sepia';
+export type ColorModePreference = 'light' | 'dark' | 'sepia' | 'system';
 
 export interface ThemeColors {
   // Backgrounds
@@ -32,11 +32,18 @@ export interface ThemeColors {
   highlight: string;
   highlightBorder: string;
 
-  // Category-specific highlights (muted, calm colors)
-  highlightUrgency: string;      // Muted dusty rose - urgency inflation
-  highlightEmotional: string;    // Muted slate blue - emotional triggers
-  highlightEditorial: string;    // Muted lavender - editorial voice
-  highlightClickbait: string;    // Muted amber/tan - clickbait
+  // Category-specific highlights (muted, calm colors) - Legacy keys
+  highlightUrgency: string; // Muted dusty rose - urgency inflation
+  highlightEmotional: string; // Muted slate blue - emotional triggers
+  highlightEditorial: string; // Muted lavender - editorial voice
+  highlightClickbait: string; // Muted amber/tan - clickbait
+
+  // L1 Category highlight colors (NTRL taxonomy)
+  highlightAttention: string; // Dusty rose - attention & engagement
+  highlightCognitive: string; // Lavender - cognitive & epistemic
+  highlightFraming: string; // Gold - linguistic & framing
+  highlightStructural: string; // Warm taupe - structural & editorial
+  highlightIncentive: string; // Amber - incentive & meta
 
   // Interactive
   link: string;

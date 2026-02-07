@@ -52,11 +52,7 @@ import {
   clearBriefCache,
   isBriefCacheStale,
 } from '../storageService';
-import {
-  getSecureJSON,
-  setSecureJSON,
-  getSecureItem,
-} from '../secureStorage';
+import { getSecureJSON, setSecureJSON, getSecureItem } from '../secureStorage';
 import type { Item, Brief } from '../../types';
 import type { CachedBrief, UserPreferences } from '../types';
 
@@ -94,21 +90,17 @@ beforeEach(() => {
   resetStore();
 
   // Re-apply AsyncStorage implementations (clearAllMocks wipes them)
-  (AsyncStorage.getItem as jest.Mock).mockImplementation(
-    (key: string) => Promise.resolve(_asyncStore[key] ?? null)
+  (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+    Promise.resolve(_asyncStore[key] ?? null)
   );
-  (AsyncStorage.setItem as jest.Mock).mockImplementation(
-    (key: string, value: string) => {
-      _asyncStore[key] = value;
-      return Promise.resolve();
-    }
-  );
-  (AsyncStorage.removeItem as jest.Mock).mockImplementation(
-    (key: string) => {
-      delete _asyncStore[key];
-      return Promise.resolve();
-    }
-  );
+  (AsyncStorage.setItem as jest.Mock).mockImplementation((key: string, value: string) => {
+    _asyncStore[key] = value;
+    return Promise.resolve();
+  });
+  (AsyncStorage.removeItem as jest.Mock).mockImplementation((key: string) => {
+    delete _asyncStore[key];
+    return Promise.resolve();
+  });
 
   // Default secure storage returns (no stored data)
   (getSecureJSON as jest.Mock).mockResolvedValue(null);
@@ -239,8 +231,16 @@ describe('Reading History', () => {
 
 describe('User Preferences', () => {
   const ALL_TOPICS = [
-    'world', 'us', 'local', 'business', 'technology',
-    'science', 'health', 'environment', 'sports', 'culture',
+    'world',
+    'us',
+    'local',
+    'business',
+    'technology',
+    'science',
+    'health',
+    'environment',
+    'sports',
+    'culture',
   ];
 
   it('returns default preferences when none are stored', async () => {
@@ -292,6 +292,8 @@ describe('User Preferences', () => {
       topics: ALL_TOPICS,
       textSize: 'medium',
       colorMode: 'system',
+      todayArticleCap: 7,
+      sectionsArticleCap: 7,
     });
   });
 

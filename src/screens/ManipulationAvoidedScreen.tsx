@@ -59,9 +59,7 @@ function Header({
  * Displays time range switcher, bar chart, and category breakdown.
  * No gamification, no urgency, calm factual display.
  */
-export default function ManipulationAvoidedScreen({
-  navigation,
-}: ManipulationAvoidedScreenProps) {
+export default function ManipulationAvoidedScreen({ navigation }: ManipulationAvoidedScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme, colorMode } = useTheme();
   const { colors } = theme;

@@ -85,7 +85,9 @@ export default function AboutScreen({ navigation }: AboutScreenProps) {
         <Text style={styles.intro}>
           <Text style={styles.introBold}>NTRL removes manipulative language from information.</Text>
           {'\n\n'}
-          <Text style={styles.introBold}>Understand what matters without being sold to, provoked, or worked up.</Text>
+          <Text style={styles.introBold}>
+            Understand what matters without being sold to, provoked, or worked up.
+          </Text>
         </Text>
 
         <Section title="What this is" styles={styles}>

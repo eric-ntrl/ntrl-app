@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,24 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
-import { getSavedArticles, removeSavedArticle } from '../storage/storageService';
+import {
+  getSavedArticles,
+  removeSavedArticle,
+  clearAllSavedArticles,
+  getWeeklyReadingStats,
+} from '../storage/storageService';
 import { decodeHtmlEntities } from '../utils/text';
 import { formatTimeAgo } from '../utils/dateFormatters';
 import { LIMITS } from '../constants';
+import { useToast } from '../context/ToastContext';
+import EmptyState from '../components/EmptyState';
+import SwipeableRow from '../components/SwipeableRow';
 import type { SavedArticle } from '../storage/types';
 import type { Item } from '../types';
 import type { SavedArticlesScreenProps } from '../navigation/types';
@@ -43,18 +52,46 @@ function BackButton({
   );
 }
 
+function ClearAllButton({
+  onPress,
+  styles,
+}: {
+  onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.clearButton, pressed && styles.clearButtonPressed]}
+      hitSlop={12}
+      accessibilityLabel="Clear all saved articles"
+      accessibilityRole="button"
+    >
+      <Text style={styles.clearButtonText}>Clear all</Text>
+    </Pressable>
+  );
+}
+
 function Header({
   onBack,
+  onClearAll,
+  showClear,
   styles,
 }: {
   onBack: () => void;
+  onClearAll: () => void;
+  showClear: boolean;
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.header}>
       <BackButton onPress={onBack} styles={styles} />
-      <Text style={styles.headerTitle}>Saved Articles</Text>
-      <View style={styles.headerSpacer} />
+      <Text style={styles.headerTitle}>SAVED</Text>
+      {showClear ? (
+        <ClearAllButton onPress={onClearAll} styles={styles} />
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
     </View>
   );
 }
@@ -63,13 +100,11 @@ function ArticleCard({
   item,
   savedAt,
   onPress,
-  onRemove,
   styles,
 }: {
   item: Item;
   savedAt: string;
   onPress: () => void;
-  onRemove: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
   const timeLabel = formatTimeAgo(savedAt);
@@ -80,8 +115,7 @@ function ArticleCard({
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
-      onLongPress={onRemove}
-      accessibilityLabel={`${headline}. Saved ${timeLabel}. Long press to remove.`}
+      accessibilityLabel={`${headline}. Saved ${timeLabel}.`}
       accessibilityRole="button"
     >
       <View style={styles.textColumn}>
@@ -99,23 +133,22 @@ function ArticleCard({
   );
 }
 
-function EmptyState({ styles }: { styles: ReturnType<typeof createStyles> }) {
-  return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>★</Text>
-      <Text style={styles.emptyMessage}>No saved articles yet</Text>
-      <Text style={styles.emptyHint}>
-        Tap the bookmark icon on any article to save it for later.
-      </Text>
-    </View>
-  );
-}
-
-function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
+function EndOfList({
+  savedThisWeek,
+  styles,
+}: {
+  savedThisWeek: number;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.endOfList}>
       <View style={styles.endDivider} />
-      <Text style={styles.endMessage}>End of saved articles</Text>
+      {savedThisWeek > 0 && (
+        <Text style={styles.endStats}>
+          You've saved {savedThisWeek} {savedThisWeek === 1 ? 'article' : 'articles'} this week.
+        </Text>
+      )}
+      <Text style={styles.endMessage}>You're all caught up.</Text>
     </View>
   );
 }
@@ -123,7 +156,7 @@ function EndOfList({ styles }: { styles: ReturnType<typeof createStyles> }) {
 /**
  * Displays the user's saved articles in a paginated list.
  * - Loads saved articles from local storage on focus, with pull-to-refresh
- * - Supports long-press to remove a saved article
+ * - Supports swipe-to-remove for saved articles
  * - Navigates to ArticleDetail on tap
  */
 export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenProps) {
@@ -131,11 +164,13 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { showToast } = useToast();
 
   const [allArticles, setAllArticles] = useState<SavedArticle[]>([]);
   const [displayedCount, setDisplayedCount] = useState<number>(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [savedThisWeek, setSavedThisWeek] = useState(0);
 
   // Displayed articles (paginated)
   const displayedArticles = useMemo(
@@ -147,6 +182,8 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
   const loadSavedArticles = useCallback(async () => {
     const articles = await getSavedArticles();
     setAllArticles(articles);
+    const stats = await getWeeklyReadingStats();
+    setSavedThisWeek(stats.savedThisWeek);
   }, []);
 
   // Load saved articles when screen comes into focus
@@ -175,19 +212,60 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
     }, 300);
   }, [loadingMore, hasMore, allArticles.length]);
 
-  const handleRemove = useCallback(async (itemId: string) => {
-    await removeSavedArticle(itemId);
-    setAllArticles((prev) => prev.filter((s) => s.item.id !== itemId));
-  }, []);
+  const handleRemove = useCallback(
+    async (itemId: string) => {
+      // Store the removed article for undo
+      const removedArticle = allArticles.find((s) => s.item.id === itemId);
+
+      await removeSavedArticle(itemId);
+      setAllArticles((prev) => prev.filter((s) => s.item.id !== itemId));
+
+      showToast('Removed from Saved', {
+        action: removedArticle
+          ? {
+              label: 'Undo',
+              onPress: async () => {
+                // Re-add the article
+                const { saveArticle } = await import('../storage/storageService');
+                await saveArticle(removedArticle.item);
+                await loadSavedArticles();
+              },
+            }
+          : undefined,
+      });
+    },
+    [allArticles, showToast, loadSavedArticles]
+  );
+
+  const handleClearAll = useCallback(() => {
+    Alert.alert('Clear All Saved', 'Are you sure you want to remove all saved articles?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear All',
+        style: 'destructive',
+        onPress: async () => {
+          await clearAllSavedArticles();
+          setAllArticles([]);
+          showToast('All saved articles cleared');
+        },
+      },
+    ]);
+  }, [showToast]);
+
+  const handleNavigateToToday = useCallback(() => {
+    // Navigate to Today tab
+    navigation.getParent()?.navigate('TodayTab');
+  }, [navigation]);
 
   const renderItem = ({ item }: { item: SavedArticle }) => (
-    <ArticleCard
-      item={item.item}
-      savedAt={item.savedAt}
-      onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
-      onRemove={() => handleRemove(item.item.id)}
-      styles={styles}
-    />
+    <SwipeableRow onDelete={() => handleRemove(item.item.id)}>
+      <ArticleCard
+        item={item.item}
+        savedAt={item.savedAt}
+        onPress={() => navigation.navigate('ArticleDetail', { item: item.item })}
+        styles={styles}
+      />
+    </SwipeableRow>
   );
 
   const ListFooter = () => {
@@ -199,7 +277,7 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
       );
     }
     if (!hasMore && displayedArticles.length > 0) {
-      return <EndOfList styles={styles} />;
+      return <EndOfList savedThisWeek={savedThisWeek} styles={styles} />;
     }
     return null;
   };
@@ -210,10 +288,21 @@ export default function SavedArticlesScreen({ navigation }: SavedArticlesScreenP
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header onBack={() => navigation.goBack()} styles={styles} />
+      <Header
+        onBack={() => navigation.goBack()}
+        onClearAll={handleClearAll}
+        showClear={allArticles.length > 0}
+        styles={styles}
+      />
 
       {allArticles.length === 0 ? (
-        <EmptyState styles={styles} />
+        <EmptyState
+          icon="bookmark"
+          heading="No saved articles yet"
+          motivation="Save articles to read later when you have more time."
+          ctaLabel="Browse Today's News"
+          onCtaPress={handleNavigateToToday}
+        />
       ) : (
         <FlatList
           data={displayedArticles}
@@ -272,12 +361,25 @@ function createStyles(theme: Theme) {
       marginTop: -4,
     },
     headerTitle: {
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '600',
+      letterSpacing: 1.5,
       color: colors.textPrimary,
     },
     headerSpacer: {
-      width: 40,
+      width: 60,
+    },
+    clearButton: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    clearButtonPressed: {
+      opacity: 0.5,
+    },
+    clearButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
     },
 
     // List
@@ -291,6 +393,7 @@ function createStyles(theme: Theme) {
       paddingVertical: spacing.lg,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
+      backgroundColor: colors.background,
     },
     cardPressed: {
       opacity: 0.6,
@@ -320,32 +423,6 @@ function createStyles(theme: Theme) {
       color: colors.textMuted,
     },
 
-    // Empty state
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: layout.screenPadding,
-    },
-    emptyIcon: {
-      fontSize: 32,
-      color: colors.textSubtle,
-      marginBottom: spacing.lg,
-    },
-    emptyMessage: {
-      fontSize: 17,
-      fontWeight: '500',
-      color: colors.textMuted,
-      marginBottom: spacing.sm,
-    },
-    emptyHint: {
-      fontSize: 15,
-      fontWeight: '400',
-      color: colors.textSubtle,
-      textAlign: 'center',
-      lineHeight: 22,
-    },
-
     // End of list
     endOfList: {
       alignItems: 'center',
@@ -358,9 +435,15 @@ function createStyles(theme: Theme) {
       backgroundColor: colors.divider,
       marginBottom: spacing.xl,
     },
+    endStats: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+    },
     endMessage: {
       fontSize: 13,
-      fontWeight: '400',
+      fontWeight: '500',
       color: colors.textSubtle,
     },
 

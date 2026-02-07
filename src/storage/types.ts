@@ -16,8 +16,8 @@ export type HistoryEntry = {
   viewedAt: string; // ISO timestamp
 };
 
-export type TextSizePreference = 'small' | 'medium' | 'large';
-export type ColorModePreference = 'light' | 'dark' | 'system';
+export type TextSizePreference = 'small' | 'medium' | 'large' | 'extraLarge';
+export type ColorModePreference = 'light' | 'dark' | 'sepia' | 'system';
 
 export type UserPreferences = {
   topics: string[]; // Selected topic keys: 'world', 'us', 'local', 'business', 'technology', 'science', 'health', 'environment', 'sports', 'culture'

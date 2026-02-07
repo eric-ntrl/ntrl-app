@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  StatusBar,
-  Animated,
-} from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
@@ -44,10 +38,7 @@ export default function WhatNtrlIsScreen({ onComplete }: WhatNtrlIsScreenProps) 
   }, [onComplete]);
 
   // Gradient colors based on color mode
-  const gradientColors = useMemo(
-    () => getGradientColors(colorMode),
-    [colorMode]
-  );
+  const gradientColors = useMemo(() => getGradientColors(colorMode), [colorMode]);
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
@@ -65,7 +56,7 @@ export default function WhatNtrlIsScreen({ onComplete }: WhatNtrlIsScreenProps) 
       >
         <View style={styles.centerContent}>
           <Text style={styles.headline}>Welcome to NTRL</Text>
-          <Text style={styles.subheadline}>News, unaltered and free of spin.</Text>
+          <Text style={styles.subheadline}>News, unaltered.</Text>
         </View>
       </Animated.View>
     </LinearGradient>

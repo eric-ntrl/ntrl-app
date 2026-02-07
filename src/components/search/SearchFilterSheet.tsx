@@ -11,11 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import type { Theme } from '../../theme/types';
-import type {
-  DateRangePreset,
-  SearchFiltersV2,
-  FacetCount,
-} from '../../types/search';
+import type { DateRangePreset, SearchFiltersV2, FacetCount } from '../../types/search';
 
 // Category definitions with display names
 const CATEGORIES = [
@@ -71,7 +67,7 @@ export default function SearchFilterSheet({
   const { colors, spacing } = theme;
 
   const sheetMinHeight = windowHeight * 0.75;
-  const sheetMaxHeight = windowHeight * 0.90;
+  const sheetMaxHeight = windowHeight * 0.9;
 
   // Local editing state
   const [categories, setCategories] = useState<string[]>(initialFilters.categories);
@@ -91,17 +87,13 @@ export default function SearchFilterSheet({
 
   const handleCategoryToggle = useCallback((categoryKey: string) => {
     setCategories((prev) =>
-      prev.includes(categoryKey)
-        ? prev.filter((c) => c !== categoryKey)
-        : [...prev, categoryKey]
+      prev.includes(categoryKey) ? prev.filter((c) => c !== categoryKey) : [...prev, categoryKey]
     );
   }, []);
 
   const handleSourceToggle = useCallback((sourceKey: string) => {
     setSources((prev) =>
-      prev.includes(sourceKey)
-        ? prev.filter((s) => s !== sourceKey)
-        : [...prev, sourceKey]
+      prev.includes(sourceKey) ? prev.filter((s) => s !== sourceKey) : [...prev, sourceKey]
     );
   }, []);
 
@@ -123,27 +115,17 @@ export default function SearchFilterSheet({
   }, [onApply, onClose, categories, sources, dateRange, sort]);
 
   const hasFilters =
-    categories.length > 0 ||
-    sources.length > 0 ||
-    dateRange !== 'all' ||
-    sort !== 'relevance';
+    categories.length > 0 || sources.length > 0 || dateRange !== 'all' || sort !== 'relevance';
 
   const categoryCount = categories.length;
   const sourceCount = sources.length;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
 
-        <View
-          style={[styles.sheet, { minHeight: sheetMinHeight, maxHeight: sheetMaxHeight }]}
-        >
+        <View style={[styles.sheet, { minHeight: sheetMinHeight, maxHeight: sheetMaxHeight }]}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[
@@ -173,33 +155,22 @@ export default function SearchFilterSheet({
               <Text style={styles.sectionTitle}>SORT BY</Text>
               <View style={styles.optionGroup}>
                 <Pressable
-                  style={[
-                    styles.optionButton,
-                    sort === 'relevance' && styles.optionButtonActive,
-                  ]}
+                  style={[styles.optionButton, sort === 'relevance' && styles.optionButtonActive]}
                   onPress={() => setSort('relevance')}
                   accessibilityState={{ selected: sort === 'relevance' }}
                 >
                   <Text
-                    style={[
-                      styles.optionText,
-                      sort === 'relevance' && styles.optionTextActive,
-                    ]}
+                    style={[styles.optionText, sort === 'relevance' && styles.optionTextActive]}
                   >
                     Relevance
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[
-                    styles.optionButton,
-                    sort === 'recency' && styles.optionButtonActive,
-                  ]}
+                  style={[styles.optionButton, sort === 'recency' && styles.optionButtonActive]}
                   onPress={() => setSort('recency')}
                   accessibilityState={{ selected: sort === 'recency' }}
                 >
-                  <Text
-                    style={[styles.optionText, sort === 'recency' && styles.optionTextActive]}
-                  >
+                  <Text style={[styles.optionText, sort === 'recency' && styles.optionTextActive]}>
                     Most recent
                   </Text>
                 </Pressable>
@@ -245,19 +216,11 @@ export default function SearchFilterSheet({
                   return (
                     <Pressable
                       key={category.key}
-                      style={[
-                        styles.categoryChip,
-                        isSelected && styles.categoryChipActive,
-                      ]}
+                      style={[styles.categoryChip, isSelected && styles.categoryChipActive]}
                       onPress={() => handleCategoryToggle(category.key)}
                       accessibilityState={{ selected: isSelected }}
                     >
-                      <Text
-                        style={[
-                          styles.categoryText,
-                          isSelected && styles.categoryTextActive,
-                        ]}
-                      >
+                      <Text style={[styles.categoryText, isSelected && styles.categoryTextActive]}>
                         {category.label}
                       </Text>
                     </Pressable>
@@ -279,26 +242,17 @@ export default function SearchFilterSheet({
                     return (
                       <Pressable
                         key={publisher.key}
-                        style={[
-                          styles.publisherChip,
-                          isSelected && styles.publisherChipActive,
-                        ]}
+                        style={[styles.publisherChip, isSelected && styles.publisherChipActive]}
                         onPress={() => handleSourceToggle(publisher.key)}
                         accessibilityState={{ selected: isSelected }}
                       >
                         <Text
-                          style={[
-                            styles.publisherText,
-                            isSelected && styles.publisherTextActive,
-                          ]}
+                          style={[styles.publisherText, isSelected && styles.publisherTextActive]}
                         >
                           {publisher.label}
                         </Text>
                         <Text
-                          style={[
-                            styles.publisherCount,
-                            isSelected && styles.publisherCountActive,
-                          ]}
+                          style={[styles.publisherCount, isSelected && styles.publisherCountActive]}
                         >
                           ({publisher.count})
                         </Text>

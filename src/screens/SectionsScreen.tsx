@@ -18,30 +18,44 @@ import { getPreferences } from '../storage/storageService';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/types';
 import { decodeHtmlEntities } from '../utils/text';
-import { formatTimeAgo } from '../utils/dateFormatters';
+import { formatSectionsTimestamp } from '../utils/dateFormatters';
 import type { Item, Section, Brief } from '../types';
 import type { SectionsScreenProps } from '../navigation/types';
 import { CategoryPills } from '../components/CategoryPills';
+import ProgressBar from '../components/ProgressBar';
 
 type Row =
   | { type: 'section'; section: Section }
   | { type: 'item'; item: Item }
+  | { type: 'sectionEnd'; sectionKey: string; sectionTitle: string; hasMore: boolean }
   | { type: 'endOfFeed' };
 
 /**
  * Flatten brief into rows for FlatList rendering.
- * Note: 24h filtering is now done server-side via ?hours=24 parameter.
+ * Respects article cap per section with inline expansion support.
  */
-function flatten(b: Brief): Row[] {
+function flatten(b: Brief, articleCap: number, expandedSections: Set<string>): Row[] {
   const rows: Row[] = [];
 
   for (const section of b.sections) {
-    // Only add section if it has items
     if (section.items.length > 0) {
       rows.push({ type: 'section', section });
-      for (const item of section.items) {
+
+      const isExpanded = expandedSections.has(section.key);
+      const maxItems = isExpanded ? section.items.length : articleCap;
+      const displayItems = section.items.slice(0, maxItems);
+      const hasMore = section.items.length > maxItems;
+
+      for (const item of displayItems) {
         rows.push({ type: 'item', item });
       }
+
+      rows.push({
+        type: 'sectionEnd',
+        sectionKey: section.key,
+        sectionTitle: section.title,
+        hasMore,
+      });
     }
   }
 
@@ -60,13 +74,10 @@ function formatHeaderDate(date: Date): string {
   });
 }
 
-
 function Header({
-  date,
   onSearchPress,
   styles,
 }: {
-  date: string;
   onSearchPress: () => void;
   styles: ReturnType<typeof createStyles>;
 }) {
@@ -75,7 +86,6 @@ function Header({
       <View style={styles.headerTop}>
         <View style={styles.headerLeft}>
           <Text style={styles.brand}>NTRL</Text>
-          <Text style={styles.date}>{date}</Text>
         </View>
         <View style={styles.headerRight}>
           <Pressable
@@ -93,7 +103,7 @@ function Header({
   );
 }
 
-function SectionHeader({
+function StickySectionHeader({
   title,
   styles,
 }: {
@@ -101,8 +111,39 @@ function SectionHeader({
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
+    <View style={styles.stickySectionHeader}>
+      <Text style={styles.stickySectionText}>{title} — stories from the last 24 hours</Text>
+    </View>
+  );
+}
+
+function SectionEnd({
+  sectionTitle,
+  hasMore,
+  onSeeMore,
+  styles,
+}: {
+  sectionTitle: string;
+  hasMore: boolean;
+  onSeeMore: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View style={styles.sectionEnd}>
+      <Text style={styles.sectionEndText}>
+        {hasMore
+          ? `Showing top stories from ${sectionTitle}`
+          : `No more stories in ${sectionTitle} today.`}
+      </Text>
+      {hasMore && (
+        <Pressable onPress={onSeeMore} hitSlop={12}>
+          {({ pressed }) => (
+            <Text style={[styles.seeMoreLink, pressed && { opacity: 0.6 }]}>
+              See more stories in {sectionTitle}
+            </Text>
+          )}
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -132,27 +173,13 @@ function ArticleCard({
           {'  '}
           <Text style={styles.summary}>{summary}</Text>
         </Text>
-        <Text style={styles.meta}>
-          {item.source} · {timeLabel}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.source}>{item.source}</Text>
+          <Text style={styles.metaSeparator}> · </Text>
+          <Text style={styles.timestamp}>{timeLabel}</Text>
+        </View>
       </View>
     </Pressable>
-  );
-}
-
-function FeedIntro({
-  date,
-  styles,
-}: {
-  date: string;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  // Short version since header already shows the date
-  // Fallback includes date for defensive case where header might not render
-  return (
-    <Text style={styles.feedIntro}>
-      {date ? 'Here is your neutral brief.' : 'Here is your neutral brief for today.'}
-    </Text>
   );
 }
 
@@ -199,6 +226,8 @@ function ErrorState({
  * Displays the main daily news brief as a sectioned feed.
  * - Fetches and caches the brief from the API, with pull-to-refresh support
  * - Filters sections client-side based on user topic preferences
+ * - Configurable article cap per section with inline expansion
+ * - Calm timestamps and progress indicators
  * - Navigates to ArticleDetail, Search, or Profile on user interaction
  */
 export default function SectionsScreen({ navigation }: SectionsScreenProps) {
@@ -206,28 +235,30 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
   const { theme, colorMode } = useTheme();
   const { colors } = theme;
 
-  // Memoize styles to avoid recreation on every render
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const flatListRef = useRef<FlatList<Row>>(null);
   const isProgrammaticScrollRef = useRef(false);
   const scrollLockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50, // Item is "visible" when 50% on screen
+    itemVisiblePercentThreshold: 50,
   }).current;
   const [brief, setBrief] = useState<Brief | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0); // Triggers timestamp recalculation
+  const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
+  const [sectionsArticleCap, setSectionsArticleCap] = useState(7);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const loadBrief = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
-        setRefreshKey((k) => k + 1); // Update timestamps on refresh
+        setRefreshKey((k) => k + 1);
       } else {
         setLoading(true);
       }
@@ -252,10 +283,13 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
     loadBrief();
   }, [loadBrief]);
 
-  // Load topic preferences when screen gains focus (catches changes from ProfileScreen)
+  // Load topic preferences and article cap when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      getPreferences().then((prefs) => setSelectedTopics(prefs.topics));
+      getPreferences().then((prefs) => {
+        setSelectedTopics(prefs.topics);
+        setSectionsArticleCap(prefs.sectionsArticleCap ?? 7);
+      });
     }, [])
   );
 
@@ -273,12 +307,17 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
     };
   }, [brief, selectedTopics]);
 
-  // Use current time as anchor for all calculations
-  // refreshKey dependency ensures timestamps update on pull-to-refresh
   const now = useMemo(() => new Date(), [refreshKey]);
   const headerDate = formatHeaderDate(now);
-  // Note: 24h filtering is now done server-side via ?hours=24 parameter
-  const rows = useMemo(() => (filteredBrief ? flatten(filteredBrief) : []), [filteredBrief]);
+  const rows = useMemo(
+    () => (filteredBrief ? flatten(filteredBrief, sectionsArticleCap, expandedSections) : []),
+    [filteredBrief, sectionsArticleCap, expandedSections]
+  );
+
+  // Count total articles for progress bar
+  const articleCount = useMemo(() => {
+    return rows.filter((r) => r.type === 'item').length;
+  }, [rows]);
 
   // Build category list for pills from sections that have content
   const categories = useMemo(() => {
@@ -308,64 +347,93 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
     };
   }, []);
 
-  // Handle pill press to scroll to section using scrollToIndex
-  const handlePillPress = useCallback((key: string) => {
-    // Clear any pending unlock
-    if (scrollLockTimeoutRef.current) {
-      clearTimeout(scrollLockTimeoutRef.current);
-    }
+  // Handle pill press to scroll to section
+  const handlePillPress = useCallback(
+    (key: string) => {
+      if (scrollLockTimeoutRef.current) {
+        clearTimeout(scrollLockTimeoutRef.current);
+      }
 
-    // Lock scroll-based updates during programmatic scroll
-    isProgrammaticScrollRef.current = true;
+      isProgrammaticScrollRef.current = true;
+      setActiveSectionKey(key);
 
-    // Immediately highlight the pressed pill
-    setActiveSectionKey(key);
+      const index = sectionIndexMap[key];
+      if (index !== undefined && flatListRef.current) {
+        // Scroll to first article (index + 1), not section spacer row
+        flatListRef.current.scrollToIndex({
+          index: index + 1,
+          animated: true,
+          viewPosition: 0,
+        });
+      }
 
-    const index = sectionIndexMap[key];
-    if (index !== undefined && flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index,
-        animated: true,
-        viewPosition: 0,
-      });
-    }
+      scrollLockTimeoutRef.current = setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 500);
+    },
+    [sectionIndexMap]
+  );
 
-    // Unlock after animation completes (~500ms)
-    scrollLockTimeoutRef.current = setTimeout(() => {
-      isProgrammaticScrollRef.current = false;
-    }, 500);
-  }, [sectionIndexMap]);
+  // Handle inline expansion of sections
+  const handleSeeMore = useCallback((sectionKey: string) => {
+    setExpandedSections((prev) => new Set(prev).add(sectionKey));
+  }, []);
 
-  // Track which section is visible using FlatList's native viewport tracking
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken<Row>[] }) => {
-    // Skip during programmatic scroll (pill press animation)
-    if (isProgrammaticScrollRef.current) {
-      return;
-    }
+  // Track which section is visible and current progress
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<Row>[] }) => {
+      // Track current index for progress
+      const lastItem = viewableItems[viewableItems.length - 1];
+      if (lastItem?.index !== undefined && lastItem.index !== null) {
+        setCurrentIndex(lastItem.index);
+      }
 
-    // Find the first visible section header
-    const visibleSections = viewableItems
-      .filter(v => v.isViewable && v.item.type === 'section')
-      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+      // Skip section tracking during programmatic scroll
+      if (isProgrammaticScrollRef.current) {
+        return;
+      }
 
-    if (visibleSections.length > 0) {
-      const firstSection = visibleSections[0].item;
-      if (firstSection.type === 'section') {
-        setActiveSectionKey(firstSection.section.key);
+      // Find the first visible section header
+      const visibleSections = viewableItems
+        .filter((v) => v.isViewable && v.item.type === 'section')
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+
+      if (visibleSections.length > 0) {
+        const firstSection = visibleSections[0].item;
+        if (firstSection.type === 'section') {
+          setActiveSectionKey(firstSection.section.key);
+        }
       }
     }
-  }).current;
+  ).current;
 
   const renderItem = ({ item }: { item: Row }) => {
     if (item.type === 'section') {
-      return <SectionHeader title={item.section.title} styles={styles} />;
+      // Sticky header handles section titles; render spacing only
+      return <View style={styles.sectionSpacer} />;
+    }
+
+    if (item.type === 'sectionEnd') {
+      return (
+        <SectionEnd
+          sectionTitle={item.sectionTitle}
+          hasMore={item.hasMore}
+          onSeeMore={() => handleSeeMore(item.sectionKey)}
+          styles={styles}
+        />
+      );
     }
 
     if (item.type === 'endOfFeed') {
-      return <EndOfFeed styles={styles} />;
+      return (
+        <>
+          <ProgressBar current={currentIndex} total={articleCount} />
+          <EndOfFeed styles={styles} />
+        </>
+      );
     }
 
-    const timeLabel = formatTimeAgo(item.item.published_at, now);
+    const timeLabel = formatSectionsTimestamp(item.item.published_at);
     return (
       <ArticleCard
         item={item.item}
@@ -376,7 +444,6 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
     );
   };
 
-  // Check if feed is empty (no recent items)
   const hasContent = rows.some((r) => r.type === 'item');
 
   return (
@@ -385,16 +452,20 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
         barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <Header
-        date={headerDate}
-        onSearchPress={() => navigation.navigate('Search')}
-        styles={styles}
-      />
+      <Header onSearchPress={() => navigation.navigate('Search')} styles={styles} />
       {categories.length > 0 && (
         <CategoryPills
           categories={categories}
           onPillPress={handlePillPress}
           activeKey={activeSectionKey}
+          label="SECTIONS"
+          sublabel={headerDate}
+        />
+      )}
+      {activeSectionKey && (
+        <StickySectionHeader
+          title={categories.find((c) => c.key === activeSectionKey)?.title || ''}
+          styles={styles}
         />
       )}
 
@@ -413,9 +484,11 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
           keyExtractor={(r, idx) =>
             r.type === 'section'
               ? `section-${r.section.key}`
-              : r.type === 'endOfFeed'
-                ? 'end-of-feed'
-                : `item-${r.item.id}`
+              : r.type === 'sectionEnd'
+                ? `section-end-${r.sectionKey}`
+                : r.type === 'endOfFeed'
+                  ? 'end-of-feed'
+                  : `item-${r.item.id}`
           }
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
@@ -430,12 +503,10 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
             />
           }
           onScrollToIndexFailed={(info) => {
-            // First, jump to approximate position to trigger item rendering
             flatListRef.current?.scrollToOffset({
               offset: info.averageItemLength * info.index,
               animated: false,
             });
-            // Then retry scrollToIndex after layout completes
             setTimeout(() => {
               flatListRef.current?.scrollToIndex({
                 index: info.index,
@@ -450,7 +521,6 @@ export default function SectionsScreen({ navigation }: SectionsScreenProps) {
   );
 }
 
-// Dynamic styles factory - uses theme values
 function createStyles(theme: Theme) {
   const { colors, typography, spacing, layout } = theme;
 
@@ -464,12 +534,13 @@ function createStyles(theme: Theme) {
     header: {
       paddingHorizontal: layout.screenPadding,
       paddingTop: spacing.lg,
-      paddingBottom: spacing.lg,
+      paddingBottom: 0,
     },
     headerTop: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-start',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
     },
     headerLeft: {
       flex: 1,
@@ -498,11 +569,19 @@ function createStyles(theme: Theme) {
       letterSpacing: typography.brand.letterSpacing,
       color: colors.textPrimary,
     },
-    date: {
-      fontSize: typography.date.fontSize,
-      fontWeight: typography.date.fontWeight,
-      color: typography.date.color,
-      marginTop: spacing.xs,
+
+    // Sticky section header
+    stickySectionHeader: {
+      backgroundColor: colors.background,
+      paddingHorizontal: layout.screenPadding,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+    stickySectionText: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.textSecondary,
     },
 
     // List
@@ -511,22 +590,35 @@ function createStyles(theme: Theme) {
       paddingBottom: spacing.xxxl,
     },
 
-    // Section header - refined with more breathing room
-    sectionHeader: {
-      marginTop: spacing.xxxl,
-      marginBottom: spacing.lg,
-    },
-    sectionTitle: {
-      fontSize: typography.sectionHeader.fontSize,
-      fontWeight: typography.sectionHeader.fontWeight,
-      letterSpacing: typography.sectionHeader.letterSpacing,
-      color: typography.sectionHeader.color,
+    // Section spacer (title handled by sticky header)
+    sectionSpacer: {
+      height: spacing.xxxl,
     },
 
-    // Article card - with text wrapping fixes
+    // Section end
+    sectionEnd: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      paddingHorizontal: layout.screenPadding,
+    },
+    sectionEndText: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: colors.textSubtle,
+      textAlign: 'center',
+    },
+    seeMoreLink: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.accent,
+      marginTop: spacing.md,
+      textDecorationLine: 'underline',
+    },
+
+    // Article card
     card: {
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxxl,
+      paddingTop: spacing.xxl,
+      paddingBottom: spacing.xxl,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.divider,
       alignSelf: 'stretch',
@@ -541,14 +633,12 @@ function createStyles(theme: Theme) {
       minWidth: 0,
       alignSelf: 'stretch',
     },
-    // Container for inline headline + summary text
     articleText: {
       fontSize: typography.headline.fontSize,
       lineHeight: typography.summary.lineHeight,
       letterSpacing: typography.headline.letterSpacing,
       marginBottom: spacing.md,
     },
-    // Headline: bold, primary color (flows inline with summary)
     headline: {
       fontSize: typography.headline.fontSize,
       fontWeight: typography.headline.fontWeight,
@@ -556,7 +646,6 @@ function createStyles(theme: Theme) {
       letterSpacing: typography.headline.letterSpacing,
       color: typography.headline.color,
     },
-    // Summary: regular weight, secondary color (continues inline after headline)
     summary: {
       fontSize: typography.summary.fontSize,
       fontWeight: typography.summary.fontWeight,
@@ -564,20 +653,24 @@ function createStyles(theme: Theme) {
       letterSpacing: typography.summary.letterSpacing,
       color: typography.summary.color,
     },
-    meta: {
-      fontSize: typography.meta.fontSize,
-      fontWeight: typography.meta.fontWeight,
-      letterSpacing: typography.meta.letterSpacing,
-      color: typography.meta.color,
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginTop: spacing.sm,
     },
-
-    // Feed intro (top of list)
-    feedIntro: {
-      fontSize: 13,
-      fontWeight: '400',
+    source: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: '500',
       color: colors.textMuted,
-      marginBottom: spacing.sm,
+    },
+    metaSeparator: {
+      fontSize: typography.meta.fontSize,
+      color: colors.textSubtle,
+    },
+    timestamp: {
+      fontSize: typography.meta.fontSize,
+      fontWeight: '400',
+      color: colors.textSubtle,
     },
 
     // End of feed
@@ -591,20 +684,6 @@ function createStyles(theme: Theme) {
       fontWeight: '400',
       color: colors.textMuted,
       textAlign: 'center',
-    },
-
-    // About link (moved to footer)
-    aboutLink: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-    },
-    aboutLinkPressed: {
-      opacity: 0.5,
-    },
-    aboutLinkText: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: colors.textMuted,
     },
 
     // Loading state

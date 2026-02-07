@@ -22,12 +22,7 @@ jest.mock('../../storage/storageService', () => ({
 // Imports
 // ---------------------------------------------------------------------------
 
-import {
-  fetchBrief,
-  fetchBriefWithCache,
-  fetchStoryDetail,
-  fetchTransparency,
-} from '../../api';
+import { fetchBrief, fetchBriefWithCache, fetchStoryDetail, fetchTransparency } from '../../api';
 import { getCachedBrief, cacheBrief } from '../../storage/storageService';
 import type { Brief } from '../../types';
 
@@ -189,9 +184,7 @@ describe('fetchBrief', () => {
   });
 
   it('throws on non-OK response', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue(
-      mockResponse('Server Error', 500)
-    );
+    (global.fetch as jest.Mock).mockResolvedValue(mockResponse('Server Error', 500));
 
     await expect(fetchBrief()).rejects.toThrow('Server Error');
   });
@@ -530,9 +523,7 @@ describe('fetchTransparency', () => {
 
     const result = await fetchTransparency('story-1');
 
-    expect(result.originalBody).toBe(
-      'The original body text with manipulative language.'
-    );
+    expect(result.originalBody).toBe('The original body text with manipulative language.');
     expect(result.originalBodyAvailable).toBe(true);
     expect(result.originalBodyExpired).toBe(false);
     expect(result.sourceUrl).toBe('https://example.com/article');

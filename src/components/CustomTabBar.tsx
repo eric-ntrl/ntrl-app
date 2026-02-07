@@ -10,13 +10,16 @@ import type { Theme, TextSizePreference } from '../theme/types';
  * Pre-computed sizing values for each text size preference.
  * Keeps tab bar compact while maintaining accessibility.
  */
-const TAB_BAR_SIZING: Record<TextSizePreference, {
-  iconSize: number;
-  labelFontSize: number;
-  containerPaddingTop: number;
-  tabPaddingVertical: number;
-  tabMinHeight: number;
-}> = {
+const TAB_BAR_SIZING: Record<
+  TextSizePreference,
+  {
+    iconSize: number;
+    labelFontSize: number;
+    containerPaddingTop: number;
+    tabPaddingVertical: number;
+    tabMinHeight: number;
+  }
+> = {
   small: {
     iconSize: 22,
     labelFontSize: 10,
@@ -38,17 +41,20 @@ const TAB_BAR_SIZING: Record<TextSizePreference, {
     tabPaddingVertical: 3,
     tabMinHeight: 44,
   },
+  extraLarge: {
+    iconSize: 28,
+    labelFontSize: 13,
+    containerPaddingTop: 6,
+    tabPaddingVertical: 4,
+    tabMinHeight: 48,
+  },
 };
 
 /**
  * Custom tab bar with enhanced haptics, press feedback, and active state indicator.
  * Maintains NTRL's calm aesthetic while providing clear visual hierarchy.
  */
-export default function CustomTabBar({
-  state,
-  descriptors,
-  navigation,
-}: BottomTabBarProps) {
+export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme, textSize } = useTheme();
   const sizing = TAB_BAR_SIZING[textSize];
   const styles = useMemo(() => createStyles(theme, sizing), [theme, sizing]);
@@ -94,20 +100,19 @@ export default function CustomTabBar({
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={options.tabBarAccessibilityLabel}
           >
-            <View style={{ height: sizing.iconSize, justifyContent: 'center', alignItems: 'center' }}>
+            <View
+              style={{ height: sizing.iconSize, justifyContent: 'center', alignItems: 'center' }}
+            >
               {options.tabBarIcon?.({
                 focused: isFocused,
                 color: isFocused ? theme.colors.accent : theme.colors.textMuted,
                 size: sizing.iconSize,
               })}
             </View>
-            <Text
-              style={[styles.label, isFocused && styles.labelActive]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.label, isFocused && styles.labelActive]} numberOfLines={1}>
               {typeof options.tabBarLabel === 'string'
                 ? options.tabBarLabel
-                : options.title ?? route.name}
+                : (options.title ?? route.name)}
             </Text>
           </Pressable>
         );
@@ -116,10 +121,7 @@ export default function CustomTabBar({
   );
 }
 
-function createStyles(
-  theme: Theme,
-  sizing: typeof TAB_BAR_SIZING[TextSizePreference]
-) {
+function createStyles(theme: Theme, sizing: (typeof TAB_BAR_SIZING)[TextSizePreference]) {
   const { colors, spacing } = theme;
 
   return StyleSheet.create({

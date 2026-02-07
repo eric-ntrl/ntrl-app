@@ -25,16 +25,23 @@ const baseColors = {
 
   // Transparency highlights (soft, low-opacity, never alert red)
   // Default/fallback highlight
-  highlight: 'rgba(255, 200, 50, 0.50)', // Gold/amber at 50% for visibility
-  highlightBorder: 'rgba(255, 200, 50, 0.70)', // Slightly stronger for underline
+  highlight: 'rgba(195, 165, 75, 0.50)', // Ochre at 50% for visibility
+  highlightBorder: 'rgba(195, 165, 75, 0.65)', // Slightly stronger for underline
 
-  // Category-specific highlights - MUTED for calm aesthetic
+  // Category-specific highlights - EARTH TONES for calm aesthetic
   // Design philosophy: "Reading with warm lamplight, not alarm signals"
   // All colors have similar saturation/brightness for harmony
-  highlightUrgency: 'rgba(200, 120, 120, 0.30)',    // Muted dusty rose - urgency inflation
-  highlightEmotional: 'rgba(130, 160, 200, 0.30)', // Muted slate blue - emotional triggers
-  highlightEditorial: 'rgba(160, 130, 180, 0.30)', // Muted lavender - editorial voice
-  highlightClickbait: 'rgba(200, 160, 100, 0.30)', // Muted amber/tan - clickbait
+  highlightUrgency: 'rgba(180, 130, 100, 0.30)', // Clay/terracotta - urgency inflation
+  highlightEmotional: 'rgba(140, 155, 120, 0.30)', // Sage - emotional triggers
+  highlightEditorial: 'rgba(155, 140, 115, 0.30)', // Warm stone - editorial voice
+  highlightClickbait: 'rgba(185, 150, 95, 0.30)', // Sienna/sand - clickbait
+
+  // L1 Category highlights - NTRL taxonomy (light mode)
+  highlightAttention: 'rgba(180, 130, 100, 0.30)', // Clay/terracotta - attention & engagement
+  highlightCognitive: 'rgba(155, 140, 115, 0.30)', // Warm stone - cognitive & epistemic
+  highlightFraming: 'rgba(195, 165, 75, 0.50)', // Ochre - linguistic & framing
+  highlightStructural: 'rgba(165, 145, 125, 0.30)', // Umber - structural & editorial
+  highlightIncentive: 'rgba(185, 150, 95, 0.30)', // Sienna/sand - incentive & meta
 
   // Interactive
   link: '#5C7A8A', // Muted teal-gray for links
@@ -94,14 +101,21 @@ export const colorsV1Dark: ThemeColors = {
   dividerSubtle: '#2E2A27',
 
   // Soft warm highlights
-  highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
-  highlightBorder: 'rgba(255, 200, 50, 0.60)',
+  highlight: 'rgba(195, 165, 75, 0.40)', // Ochre at 40% for dark mode visibility
+  highlightBorder: 'rgba(195, 165, 75, 0.55)',
 
   // Category-specific highlights - reduced opacity for dark mode
-  highlightUrgency: 'rgba(200, 120, 120, 0.25)',    // Muted dusty rose
-  highlightEmotional: 'rgba(130, 160, 200, 0.25)', // Muted slate blue
-  highlightEditorial: 'rgba(160, 130, 180, 0.25)', // Muted lavender
-  highlightClickbait: 'rgba(200, 160, 100, 0.25)', // Muted amber/tan
+  highlightUrgency: 'rgba(180, 130, 100, 0.25)', // Clay/terracotta
+  highlightEmotional: 'rgba(140, 155, 120, 0.25)', // Sage
+  highlightEditorial: 'rgba(155, 140, 115, 0.25)', // Warm stone
+  highlightClickbait: 'rgba(185, 150, 95, 0.25)', // Sienna/sand
+
+  // L1 Category highlights - NTRL taxonomy (dark mode, reduced opacity)
+  highlightAttention: 'rgba(180, 130, 100, 0.25)', // Clay/terracotta
+  highlightCognitive: 'rgba(155, 140, 115, 0.25)', // Warm stone
+  highlightFraming: 'rgba(195, 165, 75, 0.40)', // Ochre
+  highlightStructural: 'rgba(165, 145, 125, 0.25)', // Umber
+  highlightIncentive: 'rgba(185, 150, 95, 0.25)', // Sienna/sand
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
@@ -133,15 +147,22 @@ export const colorsV2Dark: ThemeColors = {
   divider: '#3A3633',
   dividerSubtle: '#2E2A27',
 
-  // Soft warm highlights - gold/amber for visibility
-  highlight: 'rgba(255, 200, 50, 0.40)', // Gold at 40% for dark mode visibility
-  highlightBorder: 'rgba(255, 200, 50, 0.60)',
+  // Soft warm highlights - ochre for visibility
+  highlight: 'rgba(195, 165, 75, 0.40)', // Ochre at 40% for dark mode visibility
+  highlightBorder: 'rgba(195, 165, 75, 0.55)',
 
   // Category-specific highlights - reduced opacity for dark mode
-  highlightUrgency: 'rgba(200, 120, 120, 0.25)',    // Muted dusty rose
-  highlightEmotional: 'rgba(130, 160, 200, 0.25)', // Muted slate blue
-  highlightEditorial: 'rgba(160, 130, 180, 0.25)', // Muted lavender
-  highlightClickbait: 'rgba(200, 160, 100, 0.25)', // Muted amber/tan
+  highlightUrgency: 'rgba(180, 130, 100, 0.25)', // Clay/terracotta
+  highlightEmotional: 'rgba(140, 155, 120, 0.25)', // Sage
+  highlightEditorial: 'rgba(155, 140, 115, 0.25)', // Warm stone
+  highlightClickbait: 'rgba(185, 150, 95, 0.25)', // Sienna/sand
+
+  // L1 Category highlights - NTRL taxonomy (dark mode, reduced opacity)
+  highlightAttention: 'rgba(180, 130, 100, 0.25)', // Clay/terracotta
+  highlightCognitive: 'rgba(155, 140, 115, 0.25)', // Warm stone
+  highlightFraming: 'rgba(195, 165, 75, 0.40)', // Ochre
+  highlightStructural: 'rgba(165, 145, 125, 0.25)', // Umber
+  highlightIncentive: 'rgba(185, 150, 95, 0.25)', // Sienna/sand
 
   // Interactive - sage for dark mode links
   link: '#9AAE8A',
@@ -149,4 +170,105 @@ export const colorsV2Dark: ThemeColors = {
 
   // Tab bar
   tabBarActiveBackground: 'rgba(143, 160, 173, 0.15)', // lightened accent at 15%
+};
+
+/**
+ * Sepia Mode Colors - "Warm Reading Light for Low Light"
+ *
+ * Design vision: Like reading a vintage paperback by candlelight.
+ * Warm cream and tan tones that are gentle on the eyes in dim environments.
+ */
+
+// V1 Sepia - Original accent in sepia mode
+export const colorsV1Sepia: ThemeColors = {
+  // Warm sepia backgrounds - cream and parchment
+  background: '#F5EFE6',
+  surface: '#FBF8F3',
+
+  // Warm brown text for comfortable reading
+  textPrimary: '#3D3225',
+  textSecondary: '#5C5246',
+  textMuted: '#7A7064',
+  textSubtle: '#9A8F83',
+
+  // Accents (unchanged)
+  accent: '#7A8B99',
+  accentSecondary: '#7A8B99',
+  accentSecondaryMuted: '#7A8B99',
+  accentSecondarySubtle: 'rgba(122, 139, 153, 0.1)',
+
+  // Warm sepia dividers
+  divider: '#E5DED4',
+  dividerSubtle: '#EDE7DF',
+
+  // Soft warm highlights - slightly warmer than light mode
+  highlight: 'rgba(195, 165, 75, 0.45)',
+  highlightBorder: 'rgba(195, 165, 75, 0.60)',
+
+  // Category-specific highlights
+  highlightUrgency: 'rgba(180, 130, 100, 0.28)',
+  highlightEmotional: 'rgba(140, 155, 120, 0.28)',
+  highlightEditorial: 'rgba(155, 140, 115, 0.28)',
+  highlightClickbait: 'rgba(185, 150, 95, 0.28)',
+
+  // L1 Category highlights
+  highlightAttention: 'rgba(180, 130, 100, 0.28)',
+  highlightCognitive: 'rgba(155, 140, 115, 0.28)',
+  highlightFraming: 'rgba(195, 165, 75, 0.45)',
+  highlightStructural: 'rgba(165, 145, 125, 0.28)',
+  highlightIncentive: 'rgba(185, 150, 95, 0.28)',
+
+  // Interactive
+  link: '#6B7A64',
+  linkPressed: '#556050',
+
+  // Tab bar
+  tabBarActiveBackground: 'rgba(122, 139, 153, 0.12)',
+};
+
+// V2 Sepia - Sage accent in sepia mode (current refresh)
+export const colorsV2Sepia: ThemeColors = {
+  // Warm sepia backgrounds - cream and parchment
+  background: '#F5EFE6',
+  surface: '#FBF8F3',
+
+  // Warm brown text for comfortable reading
+  textPrimary: '#3D3225',
+  textSecondary: '#5C5246',
+  textMuted: '#7A7064',
+  textSubtle: '#9A8F83',
+
+  // Accents with sage (v2)
+  accent: '#7A8B99',
+  accentSecondary: '#8B9A7A',
+  accentSecondaryMuted: '#A3B094',
+  accentSecondarySubtle: 'rgba(139, 154, 122, 0.15)',
+
+  // Warm sepia dividers
+  divider: '#E5DED4',
+  dividerSubtle: '#EDE7DF',
+
+  // Soft warm highlights
+  highlight: 'rgba(195, 165, 75, 0.45)',
+  highlightBorder: 'rgba(195, 165, 75, 0.60)',
+
+  // Category-specific highlights
+  highlightUrgency: 'rgba(180, 130, 100, 0.28)',
+  highlightEmotional: 'rgba(140, 155, 120, 0.28)',
+  highlightEditorial: 'rgba(155, 140, 115, 0.28)',
+  highlightClickbait: 'rgba(185, 150, 95, 0.28)',
+
+  // L1 Category highlights
+  highlightAttention: 'rgba(180, 130, 100, 0.28)',
+  highlightCognitive: 'rgba(155, 140, 115, 0.28)',
+  highlightFraming: 'rgba(195, 165, 75, 0.45)',
+  highlightStructural: 'rgba(165, 145, 125, 0.28)',
+  highlightIncentive: 'rgba(185, 150, 95, 0.28)',
+
+  // Interactive - sage green for sepia mode
+  link: '#6B7A64',
+  linkPressed: '#556050',
+
+  // Tab bar
+  tabBarActiveBackground: 'rgba(122, 139, 153, 0.12)',
 };
