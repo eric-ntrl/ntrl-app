@@ -365,7 +365,14 @@ Available slash commands for development:
 |-------|-------------|
 | `/ntrl-ui` | UI component guidance with correct dark mode patterns (`useTheme()`, `createStyles`) |
 | `/ntrl-ui-test` | Capture screenshots via Playwright for visual verification |
+| `/ntrl-test-screen` | Capture a single screen by name (faster than full suite) |
+| `/ntrl-dark-check` | Capture light + dark mode variants for comparison |
+| `/ntrl-new-screen` | Scaffold a new screen with correct NTRL patterns + test |
+| `/ntrl-new-component` | Scaffold a new component with props, theme, + test |
+| `/ntrl-lint-fix` | Run ESLint fix + Prettier format + TypeScript check |
 | `/ntrl-typecheck` | Run TypeScript checking filtered to `src/` files |
+| `/ntrl-visual-diff` | Compare screenshots against baselines for visual regression |
+| `/ntrl-native-test` | Take native iOS Simulator screenshot via Expo MCP |
 | `/ntrl-ios-capture` | Capture screenshot from iOS Simulator via Expo |
 | `/ntrl-validate-highlights` | Validate manipulation highlights are rendering correctly |
 
@@ -504,11 +511,35 @@ npx playwright test e2e/claude-ui-check.spec.ts
 
 Screenshots saved to `e2e/snapshots/`. Note: Some tests may fail if Safari/WebKit not installed.
 
+### Alternative: Expo MCP (Native Simulator)
+
+Use `/ntrl-native-test` for native iOS Simulator screenshots via Expo MCP. More accurate than Playwright for safe area, scroll physics, and touch targets. Requires Expo dev server running + iOS Simulator booted.
+
 ### Alternative: iOS Simulator (Manual)
 
 Use `/ntrl-ios-capture` skill for iOS Simulator screenshots.
 
-**Note**: Maestro often has driver timeout issues. Playwright custom scripts are more reliable.
+### Visual Regression Testing
+
+Use `/ntrl-visual-diff` to compare current screenshots against approved baselines:
+```bash
+cd /Users/ericrbrown/Documents/NTRL/code/ntrl-app
+node e2e/capture-all-screens.cjs    # capture current state
+node e2e/compare-screenshots.cjs    # compare against baselines
+node e2e/update-baselines.cjs       # approve current as new baselines
+```
+
+### Maestro E2E Flows (Unstable)
+
+YAML-based native E2E tests in `maestro/flows/`. **Status: NO-GO as of Feb 2026** — Maestro 2.1.0 has persistent XCTest driver timeout issues with iOS 26.2 / Xcode 26. Flows are written but cannot run reliably.
+
+```bash
+# These fail with "iOS driver not ready in time" on current setup
+maestro test maestro/flows/feed-browse.yaml
+maestro test maestro/flows/article-tabs.yaml
+```
+
+Re-evaluate when Maestro releases an update with iOS 26 compatibility.
 
 ### When to Test
 

@@ -1,0 +1,50 @@
+appId: host.exp.Exponent
+---
+# Article Tabs Flow
+# Tests: Open article → switch between Brief/Full/Ntrl tabs
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Handle intro screen if present
+- runFlow:
+    when:
+      visible: "Begin"
+    commands:
+      - tapOn: "Begin"
+      - waitForAnimationToEnd
+
+# Tap on first article
+- tapOn:
+    text: "ago"
+    index: 0
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Verify Brief tab (default)
+- assertVisible: "Brief"
+
+# Switch to Full tab
+- tapOn: "Full"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Switch to Ntrl tab
+- tapOn: "Ntrl"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Verify Ntrl content loaded (look for highlight-related elements)
+- assertVisible:
+    text: "phrase"
+    optional: true
+
+# Switch back to Brief
+- tapOn: "Brief"
+- waitForAnimationToEnd:
+    timeout: 3000

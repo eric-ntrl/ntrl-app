@@ -1,0 +1,44 @@
+appId: host.exp.Exponent
+---
+# Feed Browse Flow
+# Tests: Launch app → scroll feed → tap article → verify detail loads
+
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Handle intro screen if present
+- runFlow:
+    when:
+      visible: "Begin"
+    commands:
+      - tapOn: "Begin"
+      - waitForAnimationToEnd
+
+# Verify Today screen loaded
+- assertVisible: "NTRL"
+
+# Scroll down in the feed
+- scroll
+
+- scroll
+
+# Tap on first article (look for common time indicators)
+- tapOn:
+    text: "ago"
+    index: 0
+    optional: true
+
+# Wait for article detail to load
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Verify article detail rendered (Brief tab is default)
+- assertVisible:
+    text: "Brief"
+- assertVisible:
+    text: "Full"
+- assertVisible:
+    text: "Ntrl"
