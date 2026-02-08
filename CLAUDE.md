@@ -146,196 +146,21 @@ Backend: `ntrl-api` (FastAPI/Python)
   - Navigation
   - User topic preferences (client-side filtering of brief sections)
 
-## Feed Categories & Topic Selection (Jan 2026)
+## Feed Categories
 
-### 10 Feed Categories
+10 categories (world, us, local, business, technology, science, health, environment, sports, culture). Client-side filtering via `selectedTopics` preference. Details: `.claude/reference/feed-categories.md`
 
-The brief is organized into 10 user-facing categories (classified by LLM on the backend):
+## First-Run Onboarding
 
-| Key | Display Name |
-|-----|-------------|
-| `world` | World |
-| `us` | U.S. |
-| `local` | Local |
-| `business` | Business |
-| `technology` | Technology |
-| `science` | Science |
-| `health` | Health |
-| `environment` | Environment |
-| `sports` | Sports |
-| `culture` | Culture |
+`WhatNtrlIsScreen.tsx` manifesto shown on first launch. Controlled by `hasSeenIntro` preference. Details: `.claude/reference/onboarding.md`
 
-### User Topic Selection
+## Search & Filters
 
-Users can toggle categories on/off in ProfileScreen. Filtering is **client-side** — the API always returns all categories, and `SectionsScreen`/`TodayScreen` filter `brief.sections` by the user's `selectedTopics` preference.
+Full-text search with trending topics, saved/recent searches, and filter sheet (sort, date, categories, publishers). Details: `.claude/reference/search-filters.md`
 
-**How it works:**
-1. ProfileScreen saves topic preferences to SecureStore via `updatePreferences()`
-2. SectionsScreen/TodayScreen loads preferences via `useFocusEffect` → `getPreferences()`
-3. `filteredBrief` memo filters `brief.sections` by `selectedTopics`
-4. All 10 topics are enabled by default for new users
+## My Stats / Reading Stats
 
-**Preference migration:** Existing users who had the old 5-topic format (`tech` key) are auto-migrated: `tech` → `technology`, and 5 new categories are auto-enabled. See `migrateTopics()` in `storageService.ts`.
-
-**Important:** `migrateTopics()` only runs when the `tech` key is detected (actual old-format data). It does NOT re-add topics on every `getPreferences()` call — this was a bug that was fixed. If you modify migration logic, ensure it doesn't override user deselections.
-
-### Category Pills Navigation (Jan 2026)
-
-SectionsScreen displays horizontal scrollable pills for quick section navigation. Tapping a pill scrolls to that section and highlights the pill.
-
-**Component:** `CategoryPills.tsx`
-- Horizontal ScrollView with pill buttons
-- Active pill has highlighted background
-- Auto-scrolls to keep active pill visible
-
-**Implementation notes:**
-- Uses `onViewableItemsChanged` (NOT `onLayout`) to track visible sections
-- `onLayout` returns incorrect values in virtualized FlatList items (positions relative to visible window, not absolute offsets)
-- `viewabilityConfig` with 50% threshold determines when a section is "visible"
-- `isProgrammaticScrollRef` prevents scroll-based updates during pill press animations (500ms lock)
-- `scrollToIndex` with `onScrollToIndexFailed` fallback handles virtualized item scrolling
-
-**Why NOT to use `onLayout` for scroll tracking:**
-FlatList uses transform-based virtualization internally. `e.nativeEvent.layout.y` returns position relative to the visible window, not absolute scroll offset. This causes the last section to always match during range checks.
-
-## First-Run Onboarding (Jan 2026)
-
-New users see a manifesto screen (`WhatNtrlIsScreen.tsx`) on first app launch, explaining NTRL's mission before entering the main app.
-
-**Flow:**
-1. `App.js` checks `hasSeenIntro` preference via `hasSeenIntro()` helper
-2. If false/undefined, renders `WhatNtrlIsScreen` instead of main navigation
-3. User reads manifesto and taps "Begin"
-4. `markIntroSeen()` sets `hasSeenIntro: true` in preferences
-5. App transitions to main feed
-
-**Storage:**
-- Preference key: `hasSeenIntro` (boolean) in `UserPreferences`
-- Helpers in `storageService.ts`: `hasSeenIntro()`, `markIntroSeen()`
-
-**Testing the intro screen:**
-```javascript
-// Reset to show intro again (run in browser console or via Playwright)
-localStorage.clear();
-location.reload();
-```
-
-**Design:**
-- Georgia serif font for manifesto text
-- Scrollable content area
-- Fixed "Begin" button at bottom
-- Supports light/dark mode
-- Fade-in animation on mount
-
-## Search & Filters (Feb 2026)
-
-SearchScreen provides full-text article search with filtering capabilities.
-
-### Pre-Search UI
-
-When the search screen opens (before typing), it displays:
-- **TRENDING TOPICS**: Fetched from `/v1/topics/trending` API with article counts (e.g., "Grammy Awards (8)")
-- **Saved Searches**: User's bookmarked search queries
-- **Recent Searches**: Previously executed searches
-
-Tapping a trending topic executes a search for that term.
-
-### Filter Sheet
-
-The filter sheet (`SearchFilterSheet.tsx`) provides filtering options:
-
-| Section | Options |
-|---------|---------|
-| Sort By | Relevance, Most recent |
-| Date Range | 24h, Week, Month, All time |
-| Categories | All 10 feed categories (multi-select) |
-| Publishers | From search facets with counts (multi-select) |
-
-**Key design decisions:**
-- Categories and Publishers are always visible (no mode toggle)
-- Filters persist across sessions via `storageService.ts`
-- Filter badge shows count of active filters
-
-### Filter State (`SearchFiltersV2`)
-
-```typescript
-type SearchFiltersV2 = {
-  categories: string[];   // Selected category keys
-  sources: string[];      // Selected publisher slugs
-  dateRange: DateRangePreset; // '24h' | 'week' | 'month' | 'all'
-  sort: 'relevance' | 'recency';
-};
-```
-
-### Related Files
-
-| File | Purpose |
-|------|---------|
-| `src/screens/SearchScreen.tsx` | Main search screen with results |
-| `src/components/search/SearchFilterSheet.tsx` | Filter bottom sheet |
-| `src/api/topics.ts` | Trending topics API client |
-| `src/api/search.ts` | Search API client |
-| `src/types/search.ts` | Search type definitions |
-
-## My Stats / Reading Stats (Jan 2026)
-
-ProfileScreen includes a "MY STATS" section showing reading activity. Users can tap "Phrases Avoided" to see a detailed breakdown.
-
-### Session Tracking
-
-Reading sessions are tracked in `ArticleDetailScreen.tsx`:
-- **Completion criteria**: Dwell time ≥30s OR scroll depth ≥75% (whichever first)
-- Sessions recorded on component unmount via `recordReadingSession()`
-- Transparency data fetched for completed sessions to count manipulation spans
-
-### Storage Types (`storage/types.ts`)
-
-| Type | Purpose | Limit |
-|------|---------|-------|
-| `ReadingSession` | Individual article reading sessions | 200 entries (rolling) |
-| `ArticleSpanCache` | Cached span counts per article | 100 entries (LRU) |
-| `UserStats` | Aggregated all-time totals | 1 entry (indefinite) |
-| `StatsTimeRange` | Time filter: 'day' \| 'week' \| 'month' \| 'all' | — |
-
-### Stats Service (`services/statsService.ts`)
-
-| Function | Description |
-|----------|-------------|
-| `recordReadingSession(session)` | Store session, fetch spans if completed, update aggregates |
-| `getUserStatsOverview()` | Returns `{ ntrlDays, totalSessions, ntrlMinutes, phrasesAvoided }` |
-| `getStatsBreakdown(range, anchorDate)` | Returns `{ total, series[], categories[] }` for charts |
-
-### UI Components (`components/stats/`)
-
-| Component | Description |
-|-----------|-------------|
-| `MyStatsCard` | Hero "NTRL Days" + grid of Sessions/Minutes/Phrases Avoided |
-| `StatBucket` | Reusable metric display (value + label), optionally tappable |
-| `BarChart` | Simple vertical bars using react-native-svg, single neutral color |
-| `CategoryBreakdownList` | Span counts by SpanReason with color swatches |
-| `RangeSwitcher` | Day/Week/Month/All time selector wrapping SegmentedControl |
-
-### Screens
-
-- **ProfileScreen**: "MY STATS" section between "How NTRL Works" and "Your Content"
-- **ManipulationAvoidedScreen**: Detail view with range switcher, bar chart, category breakdown
-
-### Red-Line Compliance (CRITICAL)
-
-The stats feature follows NTRL's calm UX principles:
-- **No gamification**: No badges, levels, streaks, confetti
-- **No urgency**: No "check back" prompts, no streak pressure
-- **No good/bad colors**: Uses neutral accent color only
-- **Calm copy**: "Start reading to see your stats.", "No reading activity in this period."
-- **No social comparison**: No leaderboards
-
-### Empty States
-
-| Scenario | Display |
-|----------|---------|
-| New user (0 sessions) | All zeros + "Start reading to see your stats." |
-| No data for selected range | "No reading activity in this period." |
-| Sessions but 0 spans | Shows "0 phrases avoided" (not an error) |
+Session tracking (dwell time/scroll depth), `statsService.ts` for aggregation, `components/stats/` for UI. No gamification — calm UX only. Details: `.claude/reference/reading-stats.md`
 
 ## Git Workflow
 
@@ -415,60 +240,9 @@ type NtrlContentProps = {
 - `bodyTransformations` - Spans where `field === 'body'`
 - `titleTransformations` - Spans where `field === 'title'`
 
-### Manipulation Gauge (Jan 2026)
+### Highlight Colors, Legend & Gauge
 
-The ntrl-view displays a semi-circular gauge showing manipulation density:
-
-```
-        ╭─────────────────╮
-       ╱   🟢  🟡  🔴      ╲
-      │        ↑            │
-      ╰─────────────────────╯
-         12% manipulation
-      15 phrases in 125 words
-```
-
-**Component:** `ManipulationGauge.tsx`
-- Uses `react-native-svg` for smooth arc rendering
-- Gradient: green (0%) → yellow (25%) → red (50%+)
-- Props: `percent`, `spanCount`, `wordCount`
-- Labels: Minimal (<5%), Low (<15%), Moderate (<30%), High (30%+)
-- Capped at 50% visually (anything above is "heavy manipulation")
-
-**Calculation:**
-```typescript
-const manipulationPercent = (allTransformations.length / wordCount) * 100;
-```
-
-### Category-Specific Highlight Colors (Jan 2026)
-
-ntrl-view uses different highlight colors based on manipulation type:
-
-| Reason | Color | Light Mode | Dark Mode |
-|--------|-------|------------|-----------|
-| `urgency_inflation` | Dusty rose | `rgba(200, 120, 120, 0.35)` | `rgba(200, 120, 120, 0.30)` |
-| `emotional_trigger` | Slate blue | `rgba(130, 160, 200, 0.35)` | `rgba(130, 160, 200, 0.30)` |
-| `editorial_voice`, `agenda_signaling` | Lavender | `rgba(160, 130, 180, 0.35)` | `rgba(160, 130, 180, 0.30)` |
-| `clickbait`, `selling` | Amber/tan | `rgba(200, 160, 100, 0.35)` | `rgba(200, 160, 100, 0.30)` |
-| Default (rhetorical_framing, etc.) | Gold | `rgba(255, 200, 50, 0.50)` | `rgba(255, 200, 50, 0.40)` |
-
-Colors are muted to maintain "calm reading" aesthetic. All have similar saturation for visual harmony.
-
-**SpanReason type** (`navigation/types.ts`):
-```typescript
-type SpanReason = 'clickbait' | 'urgency_inflation' | 'emotional_trigger'
-  | 'selling' | 'agenda_signaling' | 'rhetorical_framing' | 'editorial_voice';
-```
-
-### Highlight Legend (Jan 2026)
-
-The Ntrl tab includes a collapsible legend explaining what each highlight color means:
-- Collapsed by default ("What do colors mean?")
-- Shows 4 color swatches with human-readable labels: Emotional language, Urgency/hype, Editorial opinion, Clickbait/selling
-- Highlights are always ON (no toggle)
-- Component: `HighlightLegend` in `NtrlContent.tsx`
-
-The badge ("N phrases flagged") is always visible when changes exist.
+Category-colored highlights (rose/blue/lavender/amber/gold), collapsible legend, semi-circular manipulation gauge. Details: `.claude/reference/highlight-details.md`
 
 ## UI Self-Testing (CRITICAL for Claude)
 
