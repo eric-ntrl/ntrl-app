@@ -256,7 +256,7 @@ function ChangeCategories({
                   const shortName = meta.shortName;
                   const harm =
                     meta.harmExplanation.charAt(0).toLowerCase() + meta.harmExplanation.slice(1);
-                  const isNoun = ['clickbait', 'selling', 'loaded verbs'].includes(
+                  const isNoun = ['clickbait', 'selling', 'loaded verbs', 'quoting'].includes(
                     shortName.toLowerCase()
                   );
                   return isNoun ? `${shortName} (${harm})` : `${shortName} phrase (${harm})`;

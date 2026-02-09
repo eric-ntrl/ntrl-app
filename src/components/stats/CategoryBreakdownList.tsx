@@ -24,6 +24,7 @@ const CATEGORY_COLORS: Record<SpanReason, string> = {
   clickbait: 'rgba(200, 160, 100, 0.6)',
   selling: 'rgba(200, 160, 100, 0.6)',
   rhetorical_framing: 'rgba(255, 200, 50, 0.6)',
+  selective_quoting: 'rgba(160, 130, 180, 0.6)',
 };
 
 /**

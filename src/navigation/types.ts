@@ -29,7 +29,8 @@ export type SpanReason =
   | 'selling'
   | 'agenda_signaling'
   | 'rhetorical_framing'
-  | 'editorial_voice';
+  | 'editorial_voice'
+  | 'selective_quoting';
 
 /**
  * Level 1 manipulation categories from NTRL canonical taxonomy.

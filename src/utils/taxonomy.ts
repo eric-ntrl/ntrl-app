@@ -87,6 +87,14 @@ export const SPAN_REASON_METADATA: Record<SpanReason, SpanReasonMetadata> = {
       'Words like "revolutionary", "game-changer", "must-have" blur the line between news and advertising.',
     colorKey: 'highlightIncentive',
   },
+  selective_quoting: {
+    shortName: 'Quoting',
+    fullName: 'Selective Quoting',
+    harmExplanation: 'Uses quotes to frame or mislead',
+    whyItMatters:
+      'Reporters choose which quotes to include. Selecting the most dramatic or inflammatory phrasing \u2014 rather than paraphrasing or choosing a more measured statement \u2014 is an editorial framing decision that shapes your perception.',
+    colorKey: 'highlightStructural',
+  },
 };
 
 /**
@@ -100,6 +108,7 @@ export const SPAN_REASONS: SpanReason[] = [
   'rhetorical_framing',
   'editorial_voice',
   'selling',
+  'selective_quoting',
 ];
 
 /**
@@ -118,6 +127,8 @@ export function mapSpanReasonToL1Category(reason: SpanReason): L1Category {
     case 'rhetorical_framing':
       return 'linguistic_framing';
     case 'editorial_voice':
+      return 'structural_editorial';
+    case 'selective_quoting':
       return 'structural_editorial';
     case 'selling':
       return 'incentive_meta';
@@ -250,6 +261,7 @@ export function countByCategory(transformations: { reason: SpanReason }[]): Cate
     rhetorical_framing: 0,
     editorial_voice: 0,
     selling: 0,
+    selective_quoting: 0,
   };
 
   for (const t of transformations) {
