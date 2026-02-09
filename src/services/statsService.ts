@@ -70,6 +70,7 @@ const REASON_LABELS: Record<SpanReason, string> = {
   agenda_signaling: 'Agenda signaling',
   rhetorical_framing: 'Rhetorical framing',
   editorial_voice: 'Editorial opinion',
+  selective_quoting: 'Selective quoting',
 };
 
 // ============================================
