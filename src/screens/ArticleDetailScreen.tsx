@@ -559,6 +559,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
                 navigation.navigate('SourceTransparency', {
                   sourceName: item.source,
                   sourceUrl: item.url,
+                  publisherUrl: item.publisher_url || item.source_url,
                 })
               }
               style={({ pressed }) => pressed && styles.metadataPressed}
@@ -653,6 +654,7 @@ export default function ArticleDetailScreen({ route, navigation }: ArticleDetail
                 navigation.navigate('SourceTransparency', {
                   sourceName: item.source,
                   sourceUrl: item.url,
+                  publisherUrl: item.publisher_url || item.source_url,
                 })
               }
               style={({ pressed }) => pressed && styles.metadataPressed}

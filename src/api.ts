@@ -21,6 +21,7 @@ type ApiBriefStory = {
   feed_summary: string;
   source_name: string;
   source_url: string;
+  publisher_url?: string | null;
   published_at: string;
   has_manipulative_content: boolean;
   position: number;
@@ -110,11 +111,12 @@ function transformBrief(api: ApiBriefResponse): Brief {
               (story): Item => ({
                 id: story.id,
                 source: story.source_name,
-                source_url: story.source_url,
+                url: story.source_url,
+                source_url: story.publisher_url || undefined,
+                publisher_url: story.publisher_url || undefined,
                 published_at: story.published_at,
                 headline: story.feed_title || '',
                 summary: story.feed_summary || '',
-                url: story.source_url,
                 has_manipulative_content: story.has_manipulative_content,
                 // Detail fields now embedded from API (no N+1 calls needed)
                 detail: {

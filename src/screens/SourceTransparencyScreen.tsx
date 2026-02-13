@@ -87,13 +87,25 @@ export default function SourceTransparencyScreen({
   const { colors } = theme;
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const { sourceName, sourceUrl } = route.params;
+  const { sourceName, sourceUrl, publisherUrl } = route.params;
+
+  // Derive publisher homepage from article URL domain if no explicit publisherUrl
+  const effectivePublisherUrl =
+    publisherUrl ||
+    (() => {
+      try {
+        const url = new URL(sourceUrl);
+        return `${url.protocol}//${url.hostname}`;
+      } catch {
+        return sourceUrl;
+      }
+    })();
 
   const [showSourceError, setShowSourceError] = useState(false);
 
   const handleOpenSource = async () => {
-    if (!sourceUrl) return;
-    const success = await openExternalUrl(sourceUrl);
+    if (!effectivePublisherUrl) return;
+    const success = await openExternalUrl(effectivePublisherUrl);
     if (!success) {
       setShowSourceError(true);
     }
@@ -146,7 +158,7 @@ export default function SourceTransparencyScreen({
         </View>
 
         {/* Original source link */}
-        {sourceUrl && (
+        {effectivePublisherUrl && (
           <View style={styles.linkSection}>
             <Pressable
               onPress={handleOpenSource}
