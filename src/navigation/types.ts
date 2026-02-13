@@ -63,7 +63,7 @@ export type Transformation = {
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
   ArticleDetail: { item: Item };
-  SourceTransparency: { sourceName: string; sourceUrl: string };
+  SourceTransparency: { sourceName: string; sourceUrl: string; publisherUrl?: string };
   Settings: undefined;
   About: undefined;
   Manifesto: undefined;

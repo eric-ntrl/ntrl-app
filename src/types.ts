@@ -23,6 +23,7 @@ export type Item = {
   headline: string;
   summary: string;
   url: string; // Article URL (may 404)
+  publisher_url?: string; // Publisher homepage URL
   original_text?: string; // Original article text before neutralization
   has_manipulative_content: boolean; // Whether content was modified by NTRL
   detail: Detail;
